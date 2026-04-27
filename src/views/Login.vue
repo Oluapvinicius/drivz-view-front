@@ -3,18 +3,23 @@ import { ref } from 'vue';
 
 const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
-const asd = ref('')
+const email = ref('')
+const senha = ref('')
 
 </script>
 
 <template>
   <div class="conteinerAll">
 
-     <div class="containerLeft">
-    <img src="../assets/carro.png" alt="Imagem de Login" >
+    <div class="containerLeft">
+      <div class="left-overlay"></div>
+      <div class="left-text">
+        <span class="subtitle">A EXCELÊNCIA EM MOVIMENTO</span>
+        <h1 class="headline">DriveZ: A sua<br>jornada começa<br>aqui</h1>
+      </div>
     </div>
 
-  <div class="containerRight">
+    <div class="containerRight">
 
     <div class="box_place">
      
@@ -23,8 +28,8 @@ const asd = ref('')
       </div>
       
       <div class="campos">
-        <input type="email" id="Email" v-model="as" placeholder="Email">
-        <input type="password" id="Senha" v-model="asd" placeholder="Senha">
+        <input type="email" id="Email" v-model="email" placeholder="Email">
+        <input type="password" id="Senha" v-model="senha" placeholder="Senha">
       </div>
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
@@ -34,7 +39,7 @@ const asd = ref('')
       </button>
 
       <h1 class="cadastroH1">Ainda não tem conta?
-        <router-link to="" class="link-destaque">Cadastre-se</router-link>
+        <router-link to="/cadastro" class="link-destaque">Cadastre-se</router-link>
       </h1>
 
 
@@ -72,12 +77,64 @@ const asd = ref('')
   min-height: 100vh;
   width: 100%;
   justify-content: flex-end;
+  align-items: stretch;
+  background: #ffffff;
+}
+
+.containerLeft {
+  position: relative;
+  width: 38%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: flex-start;
   align-items: center;
-  background: linear-gradient(90deg, #8d0f11 50%, #ffffff 50%);
+  padding: 0 0 0 56px;
+  background: #8a0d11;
+  overflow: hidden;
+}
+
+.containerLeft::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("../assets/carro.png") center/cover no-repeat;
+  z-index: 1;
+}
+
+.left-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(175, 16, 26, 1), rgba(26, 28, 30, 1));
+  opacity: 0.6;
+  z-index: 2;
+}
+
+.left-text {
+  position: relative;
+  z-index: 3;
+  max-width: 70%;
+  padding: 0;
+}
+
+.subtitle {
+  display: inline-block;
+  color: rgba(242, 212, 213, 0.95);
+  font-size: 14px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+.headline {
+  color: #ffffff;
+  font-size: clamp(2.4rem, 4.5vw, 5rem);
+  line-height: 1.02;
+  font-weight: 700;
+  margin: 0;
 }
 
 .containerRight {
-  width: 60%;
+  width: 62%;
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -85,19 +142,64 @@ const asd = ref('')
   background: #ffffff;
 }
 
+@media (max-width: 1200px) {
+  .containerLeft {
+    width: 42%;
+    padding-left: 36px;
+  }
+
+  .containerRight {
+    width: 58%;
+  }
+}
+
+@media (max-width: 900px) {
+  .subtitle {
+    font-size: 12px;
+  }
+
+  .headline {
+    font-size: 2.2rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .subtitle {
+    font-size: 12px;
+    letter-spacing: 0.3em;
+  }
+
+  .headline {
+    font-size: 2.4rem;
+  }
+
+  .box_place {
+    padding: 28px 18px;
+  }
+
+  .button-entrar {
+    height: 52px;
+    font-size: 16px;
+  }
+
+  .campos input {
+    height: 54px;
+  }
+}
+
 .box_place {
   width: 100%;
-  max-width: 530px;
-  padding: 48px 40px;
+  max-width: 620px;
+  padding: 56px 48px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 24px;
+  gap: 28px;
   background: #ffffff;
 }
 
 .titulo_login {
-  font-size: 35px;  
+  font-size: 40px;  
   text-align: center;
   color: #111111;
 }
@@ -105,28 +207,28 @@ const asd = ref('')
 .campos {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .campos input {
   width: 100%;
-  height: 60px;
-  padding: 0 18px;
+  height: 68px;
+  padding: 0 20px;
   border: 1px solid #dfe7f2;
-  border-radius: 4px;
+  border-radius: 6px;
   background-color: #eef4fb;
-  font-size: 16px;
+  font-size: 17px;
   color: #111111;
 }
 
 .button-entrar {
   width: 100%;
-  height: 56px;
+  height: 64px;
   border: none;
   
   background: #b5080d;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -150,27 +252,17 @@ const asd = ref('')
   text-decoration: none;
   font-weight: 700;
   margin-left: 6px;
+  cursor: pointer;
 }
 .esqueceu-senha {
   text-align: right;
   color: #b5080d;
   font-size: 20px;
+  cursor: pointer;
 }
 .cadastroH1 {
   color: #111111;
   font-size: 21px;
-}
-
-
-.containerLeft {
-  width: 40%;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-img {
-  width: 100%;
-  height: auto; 
+  
 }
 </style>
