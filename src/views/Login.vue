@@ -1,11 +1,19 @@
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
 const email = ref('')
 const senha = ref('')
 
+const button = ref()
+
+const router = useRouter();
+
+const irParaHome = () => {
+  router.push('/home-c');
+};
 </script>
 
 <template>
@@ -34,7 +42,7 @@ const senha = ref('')
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
 
-      <button @click="" class="button-entrar">
+      <button @click="irParaHome" class="button-entrar" >
         Entrar
       </button>
 
