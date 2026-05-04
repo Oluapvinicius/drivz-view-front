@@ -2,15 +2,24 @@
   <div class="app-container">
     
     <aside class="sidebar" :class="{ active: sidebarOpen }">
-      <div class="sidebar__header">
-        <img src="../assets/profile.svg" alt="Logo" class="sidebar__logo">
-        <span class="sidebar__title">CLOTHILDE</span>
+      <div class="sidebar__top-row">
+        <button class="sidebar__menu-button" @click="toggleSidebar"></button>
+        <button class="sidebar__notification" @click="handleSidebarAction('notifications')">
+          <img src="../assets/notifica.svg" alt="Notificações" class="sidebar__notification-icon">
+        </button>
       </div>
 
-      <div class="sidebar__contact">
+      <div class="sidebar__profile-block">
+        <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+      </div>
+
+      <div class="sidebar__user-info">
+        <span class="sidebar__title">CLOTHILDE</span>
         <p class="sidebar__phone">(11) 96663-7777</p>
         <p class="sidebar__location">Jandira - SP</p>
       </div>
+
+      <div class="sidebar__divider"></div>
 
       <nav class="sidebar__menu">
         <button class="sidebar__item" @click="handleSidebarAction('messages')">
@@ -23,9 +32,11 @@
         </button>
       </nav>
 
-      <button class="sidebar__settings" @click="handleSidebarAction('settings')">
-        <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
-      </button>
+      <div class="sidebar__footer">
+        <button class="sidebar__settings" @click="handleSidebarAction('settings')">
+          <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
+        </button>
+      </div>
     </aside>
 
     
@@ -293,64 +304,96 @@ export default {
   position: fixed;
   left: 0;
   top: 0;
-  width: 280px;
+  width: 320px;
   height: 100vh;
-  background: linear-gradient(135deg, #E63946 0%, #D62828 100%);
+  background-color: #D62828;
   color: white;
-  padding: 24px 20px;
+  padding: 32px 24px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 18px rgba(0, 0, 0, 0.16);
 }
 
 .sidebar.active {
   transform: translateX(0);
 }
 
-.sidebar__header {
+.sidebar__top-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+}
+
+.sidebar__menu-button,
+.sidebar__notification {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.sidebar__menu-icon,
+.sidebar__notification-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar__profile-block {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 18px;
 }
 
 .sidebar__logo {
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.sidebar__title {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 1px;
+.sidebar__user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 22px;
 }
 
-.sidebar__contact {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  padding-bottom: 24px;
-  margin-bottom: 32px;
+.sidebar__title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: left;
 }
 
 .sidebar__phone {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .sidebar__location {
-  font-size: 14px;
+  font-size: 15px;
   opacity: 0.9;
+  margin: 0;
+}
+
+.sidebar__divider {
+  height: 1px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.18);
+  margin-bottom: 24px;
 }
 
 .sidebar__menu {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 14px;
   flex: 1;
   list-style: none;
 }
@@ -358,53 +401,61 @@ export default {
 .sidebar__item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  background: none;
+  gap: 18px;
+  background: transparent;
   border: none;
   color: white;
-  padding: 16px 12px;
+  padding: 18px 16px;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  border-radius: 16px;
 }
 
 .sidebar__item:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(2px);
 }
 
 .sidebar__icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
-
 
 .sidebar__label {
   flex: 1;
   text-align: left;
 }
 
+.sidebar__footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
 .sidebar__settings {
-  background: none;
+  background: transparent;
   border: none;
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .sidebar__settings:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
 }
 
 .sidebar__settings .sidebar__icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 
 
@@ -593,7 +644,7 @@ export default {
 
 .services {
   flex: 1;
-  padding: 32px 24px;
+  padding: 32px 24px 160px;
   overflow-y: auto;
 }
 
@@ -601,6 +652,7 @@ export default {
   max-width: 1520px;
   margin: 0 auto;
 }
+
 
 .services__grid {
   display: grid;
@@ -711,29 +763,29 @@ export default {
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(420px, calc(100% - 120px));
-  min-height: 72px;
-  padding: 0 40px;
-  background: #E63946;
+  width: min(520px, calc(100% - 180px));
+  min-height: 84px;
+  padding: 0 36px;
+  background: #D62828;
   color: white;
   border: none;
-  border-radius: 18px;
-  font-size: 22px;
-  font-weight: 700;
+  border-radius: 24px;
+  font-size: 24px;
+  font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   z-index: 100;
 }
 
 .call-button:hover {
   transform: translateX(-50%) scale(1.02);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
 }
 
 .call-button:active {
