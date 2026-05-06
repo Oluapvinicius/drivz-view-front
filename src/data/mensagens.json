@@ -1,0 +1,95 @@
+{
+  "contacts": [
+    {
+      "id": 1,
+      "name": "Rimberio - Guincho",
+      "subtitle": "Lorem Ipsum is simply text of...",
+      "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200&h=200",
+      "location": "Jandira - SP",
+      "email": "contato@rimberio.com"
+    },
+    {
+      "id": 2,
+      "name": "Lojão das Baterias",
+      "subtitle": "Lorem Ipsum is simply text of...",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200",
+      "location": "Cotia - SP",
+      "email": "contato@lojaobaterias.com"
+    },
+    {
+      "id": 3,
+      "name": "Brand - Borracheiro",
+      "subtitle": "Lorem Ipsum is simply text of...",
+      "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200&h=200",
+      "location": "Barueri - SP",
+      "email": "contato@brandborracharia.com"
+    },
+    {
+      "id": 4,
+      "name": "Rimberio - Guincho",
+      "subtitle": "Lorem Ipsum is simply text of...",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200",
+      "location": "Osasco - SP",
+      "email": "suporte@rimberio.com"
+    }
+  ],
+  "chats": [
+    {
+      "contactId": 1,
+      "messages": [
+        {
+          "id": 1,
+          "type": "incoming",
+          "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s",
+          "time": "22:32"
+        },
+        {
+          "id": 2,
+          "type": "incoming",
+          "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "time": "22:35"
+        },
+        {
+          "id": 3,
+          "type": "incoming",
+          "text": "Imagem enviada",
+          "time": "22:32",
+          "media": "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&q=80&w=400&h=240"
+        }
+      ]
+    },
+    {
+      "contactId": 2,
+      "messages": [
+        {
+          "id": 1,
+          "type": "incoming",
+          "text": "Olá, como posso ajudar com sua bateria?",
+          "time": "21:10"
+        }
+      ]
+    },
+    {
+      "contactId": 3,
+      "messages": [
+        {
+          "id": 1,
+          "type": "incoming",
+          "text": "Bom dia! Estamos prontos para atendimento rápido.",
+          "time": "09:45"
+        }
+      ]
+    },
+    {
+      "contactId": 4,
+      "messages": [
+        {
+          "id": 1,
+          "type": "incoming",
+          "text": "Olá, ainda podemos te socorrer em até 20 minutos.",
+          "time": "20:20"
+        }
+      ]
+    }
+  ]
+}

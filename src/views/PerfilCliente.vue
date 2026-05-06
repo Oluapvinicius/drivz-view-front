@@ -12,7 +12,7 @@
         <div class="profile-screen__photo-card">
           <div class="profile-screen__image-wrap">
             <img 
-              src="../assets/meme.jpg" 
+              src="../assets/download.jpeg" 
               alt="Perfil" 
               class="profile-screen__avatar" 
             />

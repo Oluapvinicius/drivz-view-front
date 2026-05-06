@@ -172,7 +172,7 @@
       <div v-if="serviceModalOpen" class="service-modal-overlay" @click="closeAllPopups">
         <div class="service-detail-modal" @click.stop>
           <div class="service-detail-modal__back-row">
-            <button class="service-detail-modal__back" @click="closeAllPopups">←</button>
+            <button class="service-detail-modal__back" @click="closeAllPopups"><img src="../assets/arrow.png" alt="" class="back-button"></button>
           </div>
           <div class="service-detail-modal__header">
             <img :src="selectedService?.image" :alt="selectedService?.title" class="service-detail-modal__image">
@@ -267,6 +267,13 @@ export default {
 
       if (action === 'profile') {
         this.activeScreen = 'profile';
+        this.sidebarOpen = false;
+        this.orderPopupOpen = false;
+        return;
+      }
+
+      if (action === 'messages') {
+        this.$router.push({ name: 'mensagem-cliente' });
         this.sidebarOpen = false;
         this.orderPopupOpen = false;
         return;
@@ -780,6 +787,10 @@ html, body {
 .service-detail-modal::-webkit-scrollbar-thumb {
   background: rgba(214, 40, 40, 0.75);
   border-radius: 999px;
+}
+.back-button {
+  width: 28px;
+  height: 28px;
 }
 
 .service-detail-modal__back-row {
