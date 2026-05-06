@@ -359,3 +359,59 @@ const enviarCadastro = () => {
   }
 }
 </style>
+
+@media (min-width: 2560px) {
+  .cadastro-panel--form {
+    padding: 128px 96px 96px;
+  }
+
+  .cadastro-box {
+    max-width: 640px;
+  }
+
+  .cadastro-title {
+    font-size: 48px;
+    margin-bottom: 56px;
+  }
+
+  .back-button {
+    top: 36px;
+    left: 36px;
+    width: 64px;
+    height: 64px;
+  }
+
+  .cadastro-switch {
+    height: 128px;
+    margin-bottom: 56px;
+  }
+
+  .cadastro-switch__item {
+    min-height: 140px;
+  }
+
+  .cadastro-switch__label {
+    font-size: 22px;
+  }
+
+  .cadastro-switch__sublabel {
+    font-size: 16px;
+    margin-top: 8px;
+  }
+
+  .cadastro-fields {
+    gap: 32px;
+    margin-bottom: 56px;
+  }
+
+  .cadastro-fields input {
+    height: 96px;
+    padding: 0 28px;
+    font-size: 20px;
+  }
+
+  .cadastro-button {
+    height: 96px;
+    font-size: 24px;
+  }
+}
