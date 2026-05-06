@@ -1,5 +1,7 @@
 <template>
-  <div class="app-container">
+  <PerfilCliente v-if="activeScreen === 'profile'" @back="activeScreen = 'home'" />
+
+  <div v-else class="app-container">
     
     <aside class="sidebar" :class="{ active: sidebarOpen }">
       <div class="sidebar__top-row">
@@ -37,10 +39,22 @@
           <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
         </button>
       </div>
+
+      <div v-if="orderPopupOpen" class="sidebar-popup">
+        <div class="sidebar-popup__header">
+          <h4>Menu</h4>
+          <button class="sidebar-popup__close" @click="closeAllPopups">×</button>
+        </div>
+        <div class="sidebar-popup__list">
+          <button class="sidebar-popup__option" @click="goToOrderScreen">
+            Registro de Pedidos
+          </button>
+        </div>
+      </div>
     </aside>
 
     
-    <div class="overlay" :class="{ active: sidebarOpen }" @click="closeSidebar"></div>
+    <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen || serviceModalOpen }" @click="closeAllPopups"></div>
 
  
     <main class="main-content">
@@ -83,148 +97,131 @@
       </header>
 
      
-      <section class="services">
-        <div class="services__container">
-          <div class="services__grid">
-            <div 
-              v-for="service in filteredServices" 
-              :key="service.id"
-              class="service-card"
-              @click="handleServiceClick(service)"
-            >
-              <img :src="service.image" :alt="service.title" class="service-card__image">
-              <div class="service-card__content">
-                <div class="service-card__header">
-                  <h3 class="service-card__title">{{ service.title }}</h3>
-                  <div class="service-card__rating">
-                    <span v-for="i in 5" :key="i" class="service-card__star">
-                      {{ i <= service.rating ? '★' : '☆' }}
-                    </span>
+      <template v-if="activeScreen === 'home'">
+        <section class="services">
+          <div class="services__container">
+            <div class="services__grid">
+              <div 
+                v-for="service in visibleServices" 
+                :key="service.id"
+                class="service-card"
+                @click="handleServiceClick(service)"
+              >
+                <img :src="service.image" :alt="service.title" class="service-card__image">
+                <div class="service-card__content">
+                  <div class="service-card__header">
+                    <h3 class="service-card__title">{{ service.title }}</h3>
+                    <div class="service-card__rating">
+                      <span v-for="i in 5" :key="i" class="service-card__star">
+                        {{ i <= service.rating ? '★' : '☆' }}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <p class="service-card__description">{{ service.description }}</p>
-                <div class="service-card__location">
-                  <span>{{ service.location }}</span>
+                  <p class="service-card__description">{{ service.description }}</p>
+                  <div class="service-card__location">
+                    <span>{{ service.location }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-  
-      <button class="call-button" @click="handleCallButtonClick">
-        <span>SOCORRO</span>
-      </button>
+        <button class="call-button" @click="handleCallButtonClick">
+          <span>SOCORRO</span>
+        </button>
+      </template>
+
+      <template v-else-if="activeScreen === 'orders'">
+        <section class="orders-screen">
+          <div class="orders-screen__header">
+            <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
+          </div>
+          <div class="orders-screen__list">
+            <article v-for="order in orders" :key="order.id" class="orders-screen__card">
+              <div class="orders-screen__top">
+                <div class="orders-screen__provider">
+                  <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
+                  <div>
+                    <span class="orders-screen__provider-label">Prestador:</span>
+                    <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
+                  </div>
+                </div>
+                <span class="orders-screen__date">{{ order.date }}</span>
+              </div>
+              <div class="orders-screen__route">
+                <div class="orders-screen__route-group">
+                  <span class="orders-screen__route-title">Origem</span>
+                  <span class="orders-screen__route-text">{{ order.origin }}</span>
+                </div>
+                <div class="orders-screen__route-arrow">→</div>
+                <div class="orders-screen__route-group">
+                  <span class="orders-screen__route-title">Destino</span>
+                  <span class="orders-screen__route-text">{{ order.destination }}</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </template>
+
+      <template v-else-if="activeScreen === 'profile'">
+        <PerfilCliente @back="activeScreen = 'home'" />
+      </template>
+
+      <div v-if="serviceModalOpen" class="service-modal-overlay" @click="closeAllPopups">
+        <div class="service-detail-modal" @click.stop>
+          <div class="service-detail-modal__back-row">
+            <button class="service-detail-modal__back" @click="closeAllPopups">←</button>
+          </div>
+          <div class="service-detail-modal__header">
+            <img :src="selectedService?.image" :alt="selectedService?.title" class="service-detail-modal__image">
+            <div class="service-detail-modal__header-content">
+              <h2 class="service-detail-modal__title">{{ selectedService?.title }}</h2>
+              <div class="service-detail-modal__rating">
+                <span v-for="i in 5" :key="i" class="service-detail-modal__star">
+                  {{ i <= (selectedService?.rating || 0) ? '★' : '☆' }}
+                </span>
+              </div>
+              <span class="service-detail-modal__category">{{ selectedService?.category || 'Guincho' }}</span>
+            </div>
+          </div>
+          <p class="service-detail-modal__text">
+            Especializada em serviços de {{ (selectedService?.category || 'Guincho').toLowerCase() }} e assistência veicular, a {{ selectedService?.title }} oferece suporte rápido e seguro para o seu veículo. Com foco na eficiência e no cuidado com o patrimônio do cliente, estamos prontos para atender emergências com profissionalismo e pontualidade.
+          </p>
+          <p class="service-detail-modal__text">{{ selectedService?.description }}</p>
+          <div class="service-detail-modal__footer">
+            <button class="service-detail-modal__button">Solicitar Serviço</button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
 
 <script>
+import servicesData from '../data/services.json';
+import ordersData from '../data/orders.json';
+import PerfilCliente from './PerfilCliente.vue';
+
 export default {
   name: 'HomeCliente',
+  components: {
+    PerfilCliente
+  },
   data() {
     return {
       sidebarOpen: false,
+      orderPopupOpen: false,
+      serviceModalOpen: false,
+      selectedService: null,
+      activeScreen: 'home',
       searchQuery: '',
-      services: [
-      {
-      id: 1,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 2,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 3,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 4,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 5,
-     title: "Claudio - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 6,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 7,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 4,
-     location: "Cotia - SP"
-     },
-     {
-      id: 8,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 1,
-     location: "Cotia - SP"
-     },
-     {
-      id: 9,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 1,
-     location: "Cotia - SP"
-     },
-     {
-      id: 10,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 1,
-     location: "Cotia - SP"
-     },{
-      id: 11,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 1,
-     location: "Cotia - SP"
-     }
-     ,{
-      id: 12,
-     title: "RIMBERIO - GUINCHO",
-      description: "Eu ofereço um serviço de guincho rápido, seguro e disponível 24 horas.",
-      image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=200", 
-     rating: 1,
-     location: "Cotia - SP"
-     }
-    
-      ]
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      maxVisibleServices: 6,
+      orders: ordersData,
+      services: servicesData
     };
   },
   computed: {
@@ -238,6 +235,10 @@ export default {
         service.description.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         service.location.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
+    },
+    visibleServices() {
+      const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 4) : this.maxVisibleServices;
+      return this.filteredServices.slice(0, limit);
     }
   },
   methods: {
@@ -246,40 +247,67 @@ export default {
     },
     closeSidebar() {
       this.sidebarOpen = false;
+      this.orderPopupOpen = false;
     },
     openSidebar() {
       this.sidebarOpen = true;
     },
+    closeAllPopups() {
+      this.sidebarOpen = false;
+      this.orderPopupOpen = false;
+      this.serviceModalOpen = false;
+      this.selectedService = null;
+    },
     handleSidebarAction(action) {
+      if (action === 'settings') {
+        this.orderPopupOpen = !this.orderPopupOpen;
+        this.sidebarOpen = true;
+        return;
+      }
+
+      if (action === 'profile') {
+        this.activeScreen = 'profile';
+        this.sidebarOpen = false;
+        this.orderPopupOpen = false;
+        return;
+      }
+
       console.log('Action:', action);
       this.closeSidebar();
-      
-      
     },
     handleServiceClick(service) {
-      console.log('Service clicked:', service);
-     
-      this.$emit('service-selected', service);
+      this.selectedService = service;
+      this.serviceModalOpen = true;
+    },
+    goToOrderScreen() {
+      this.activeScreen = 'orders';
+      this.orderPopupOpen = false;
+      this.sidebarOpen = false;
     },
     handleCallButtonClick() {
-      console.log('Emergency button pressed');
-      
-      this.$emit('emergency-call');
+      this.$router.push({ name: 'pedido-c' });
     },
     filterServices() {
-      
     },
     refreshServices() {
       console.log('Services refreshed');
-     
+    },
+    updateWindowWidth() {
+      this.windowWidth = window.innerWidth;
+      this.windowHeight = window.innerHeight;
     }
   },
   mounted() {
+    window.addEventListener('resize', this.updateWindowWidth);
+    this.updateWindowWidth();
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.sidebarOpen) {
-        this.closeSidebar();
+      if (e.key === 'Escape' && (this.sidebarOpen || this.orderPopupOpen || this.serviceModalOpen)) {
+        this.closeAllPopups();
       }
     });
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.updateWindowWidth);
   }
 };
 </script>
@@ -291,10 +319,18 @@ export default {
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
 .app-container {
   display: flex;
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background-color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
@@ -477,12 +513,382 @@ export default {
   pointer-events: auto;
 }
 
+.sidebar-popup {
+  position: absolute;
+  right: 24px;
+  bottom: 110px;
+  width: 280px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+  padding: 18px;
+  z-index: 1001;
+}
+
+.sidebar-popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sidebar-popup__header h4 {
+  font-size: 18px;
+  color: #1f1f1f;
+}
+
+.sidebar-popup__close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #1f1f1f;
+}
+
+.sidebar-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-popup__option {
+  width: 100%;
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid #d8d8d8;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-popup__option:hover {
+  background: #f5f5f5;
+}
+
+.sidebar-popup__order {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f7f7f7;
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.sidebar-popup__order strong {
+  display: block;
+  font-size: 15px;
+  color: #262626;
+}
+
+.sidebar-popup__order span {
+  display: block;
+  font-size: 13px;
+  color: #6f6f6f;
+}
+
+.sidebar-popup__status {
+  color: #D62828;
+  font-weight: 700;
+}
+
+.orders-screen {
+  margin: 18px;
+  padding: 22px;
+  background: #f5f6f8;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.orders-screen__header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.orders-screen__back {
+  background: #D62828;
+  border: none;
+  color: white;
+  border-radius: 14px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.orders-screen__list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  padding-right: 6px;
+  flex: 1;
+}
+
+.orders-screen__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.orders-screen__list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 999px;
+}
+
+.orders-screen__order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #f7f7f7;
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.orders-screen__order strong {
+  display: block;
+  font-size: 15px;
+}
+
+.orders-screen__status {
+  color: #D62828;
+  font-weight: 700;
+}
+
+.orders-screen__card {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 24px;
+  padding: 22px 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.orders-screen__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.orders-screen__provider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.orders-screen__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.orders-screen__provider-label {
+  display: block;
+  font-size: 12px;
+  color: #7f7f7f;
+}
+
+.orders-screen__provider-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111111;
+}
+
+.orders-screen__date {
+  font-size: 13px;
+  color: #7f7f7f;
+}
+
+.orders-screen__route {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.orders-screen__route-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orders-screen__route-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333333;
+  text-transform: uppercase;
+}
+
+.orders-screen__route-text {
+  font-size: 14px;
+  color: #4a4a4a;
+  line-height: 1.5;
+}
+
+.orders-screen__route-arrow {
+  font-size: 20px;
+  color: #b3b3b3;
+  text-align: center;
+}
+
+.service-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1002;
+  padding: 24px;
+}
+
+.service-detail-modal {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 36px;
+  padding: 34px 34px 28px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.22);
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(214, 40, 40, 0.7) rgba(0, 0, 0, 0.08);
+}
+
+.service-detail-modal::-webkit-scrollbar {
+  width: 10px;
+}
+
+.service-detail-modal::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+}
+
+.service-detail-modal::-webkit-scrollbar-thumb {
+  background: rgba(214, 40, 40, 0.75);
+  border-radius: 999px;
+}
+
+.service-detail-modal__back-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 14px;
+}
+
+.service-detail-modal__back {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #222222;
+  cursor: pointer;
+  padding: 0;
+}
+
+.service-detail-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.service-detail-modal__header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.service-detail-modal__image {
+  width: 118px;
+  height: 118px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #e5e5e5;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.service-detail-modal__title {
+  font-size: 34px;
+  margin: 0;
+  color: #111111;
+  letter-spacing: -0.35px;
+}
+
+.service-detail-modal__rating {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.service-detail-modal__star {
+  color: #FFC107;
+  font-size: 26px;
+}
+
+.service-detail-modal__category {
+  display: inline-flex;
+  background: #102030;
+  color: white;
+  border-radius: 999px;
+  padding: 12px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+.service-detail-modal__text {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #4A4A4A;
+  margin-bottom: 20px;
+}
+
+.service-detail-modal__footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.service-detail-modal__button {
+  background: #D62828;
+  border: none;
+  border-radius: 16px;
+  color: white;
+  padding: 18px 40px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-detail-modal__button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px rgba(214, 40, 40, 0.25);
+}
 
 .main-content {
   flex: 1;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   width: 100%;
+  overflow: hidden;
 }
 
 
@@ -569,8 +975,9 @@ export default {
 
 
 .header__logo {
-  height: 170px;
-  width: 350px;
+  height: auto;
+  width: min(320px, 100%);
+  max-height: 140px;
 }
 
 .header__search {
@@ -590,6 +997,7 @@ export default {
 
 .header__search-input {
   flex: 1;
+  min-width: 0;
   background: none;
   border: none;
   font-size: 14px;
@@ -644,8 +1052,8 @@ export default {
 
 .services {
   flex: 1;
-  padding: 32px 24px 160px;
-  overflow-y: auto;
+  padding: 24px 18px 16px;
+  overflow: visible;
 }
 
 .services__container {
@@ -656,28 +1064,26 @@ export default {
 
 .services__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(460px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(200px, 0.5fr));
+  gap: 16px;
   justify-content: center;
 }
 
 @media (max-width: 1220px) {
   .services__grid {
-    grid-template-columns: repeat(2, minmax(360px, 1fr));
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 14px;
   }
 }
 
 .service-card {
   background: white;
-  border: 1px solid #6D6D6D;  
+  border: 1px solid #6D6D6D;
   border-radius: 20px;
-  padding: 18px 20px;
+  padding: 12px 14px;
   display: flex;
   align-items: flex-start;
-  gap: 24px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  
+  gap: 14px;
 }
 
 .service-card:hover {
@@ -687,8 +1093,8 @@ export default {
 }
 
 .service-card__image {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -705,44 +1111,48 @@ export default {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .service-card__title {
   font-size: 14px;
   font-weight: 700;
   color: #E63946;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: calc(100% - 72px);
+  max-width: calc(100% - 56px);
+  min-width: 0;
 }
 
 .service-card__description {
   font-size: 13px;
   color: #4F4F4F;
-  line-height: 1.5;
+  line-height: 1.4;
+  max-height: 48px;
+  overflow: hidden;
 }
 
 .service-card__rating {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .service-card__star {
   color: #FFC107;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .service-card__location {
   position: relative;
   padding-left: 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: #27AE60;
 }
 
@@ -758,20 +1168,18 @@ export default {
   background: #27AE60;
 }
 
-.call-button {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(520px, calc(100% - 180px));
-  min-height: 84px;
+  .call-button {
+  position: relative;
+  width: min(420px, calc(100% - 180px));
+  min-height: 91px;
   padding: 0 36px;
+  margin: 24px auto 32px;
   background: #D62828;
   color: white;
   border: none;
-  border-radius: 24px;
-  font-size: 24px;
-  font-weight: 800;
+  border-radius: 9px;
+  font-size: 28px;
+  font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   display: flex;
@@ -780,36 +1188,103 @@ export default {
   cursor: pointer;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  z-index: 100;
 }
 
 .call-button:hover {
-  transform: translateX(-50%) scale(1.02);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+    transform: scale(1.02);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
 }
 
 .call-button:active {
-  transform: translateX(-50%) scale(0.98);
+    transform: scale(0.98);
 }
 
 @media (max-width: 1024px) {
+  .main-content {
+    overflow: hidden;
+  }
+
+  .services {
+    overflow: hidden;
+  }
+
+  .services__container {
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .services__grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    justify-content: center;
+  }
+
+  .header__search-wrapper {
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .header__search {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .header__refresh {
+    position: static;
+    transform: none;
+    right: auto;
+    top: auto;
   }
 }
 
 @media (max-width: 768px) {
+  .services__container {
+    max-height: calc(100vh - 280px);
+  }
+}
+
+@media (max-width: 480px) {
+  .services__container {
+    max-height: calc(100vh - 260px);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 280px;
+    padding: 22px 18px;
+  }
+
   .header {
     gap: 12px;
     padding: 12px 16px;
   }
 
+  .header__top {
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  .header__search-wrapper {
+    width: 100%;
+    gap: 12px;
+  }
+
   .header__search {
-    max-width: 250px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 14px;
+  }
+
+  .header__logo {
+    max-height: 140px;
   }
 
   .services {
-    padding: 20px 16px;
+    padding: 20px 16px 200px;
   }
 
   .services__grid {
@@ -817,33 +1292,94 @@ export default {
     grid-template-columns: 1fr;
   }
 
+  .service-card {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 14px;
+  }
+
+  .service-card__image {
+    width: 58px;
+    height: 58px;
+  }
+
   .call-button {
-    width: 64px;
-    height: 64px;
-    bottom: 20px;
-    right: 20px;
+    width: calc(100% - 32px);
+    min-height: 72px;
+    padding: 0 26px;
+    margin: 0 auto 28px;
   }
 }
 
 @media (max-width: 480px) {
+  .header__top {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .header__search-wrapper {
+    width: 100%;
+    gap: 10px;
+    justify-content: center;
+  }
+
   .header__search {
-    display: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 22px;
+  }
+
+  .header__refresh {
+    position: static;
+    transform: none;
+    right: auto;
+    top: auto;
   }
 
   .header__logo {
-    height: 32px;
+    max-height: 120px;
   }
 
   .services {
-    padding: 16px;
+    padding: 16px 12px 180px;
+  }
+
+  .services__grid {
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .service-card {
+    padding: 12px 12px;
+  }
+
+  .service-card__image {
+    width: 54px;
+    height: 54px;
+  }
+
+  .service-card__title {
+    font-size: 14px;
+  }
+
+  .service-card__description {
+    font-size: 13px;
+  }
+
+  .service-card__star {
+    font-size: 13px;
   }
 
   .call-button {
-    width: 56px;
-    height: 56px;
-    padding: 0;
-    bottom: 12px;
-    right: 12px;
+    width: calc(100% - 24px);
+    min-height: 64px;
+    font-size: 22px;
+    padding: 0 20px;
+    margin: 0 auto 24px;
   }
 }
 </style>

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/Login.vue'
 import CadastroView from '../views/Cadastro.vue'
 import HomeCView from '../views/HomeCliente.vue'
+import PedidoCliente from '../views/ConfigurarPedidoCliente.vue'
 
 const routes = [
   {
@@ -18,6 +19,11 @@ const routes = [
     path: '/home-c',
     name: 'home-c',
     component: HomeCView
+  },
+  {
+    path: '/pedido-c',
+    name: 'pedido-c',
+    component: PedidoCliente
   }
 ]
 
