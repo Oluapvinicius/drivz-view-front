@@ -1,5 +1,9 @@
 <script setup>
+import { inserirUsuarios } from '@/requests/cliente'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const imagemRetangulo = new URL('../assets/Rectangle 31.svg', import.meta.url)
 const imagemVoltar = new URL('../assets/arrow.png', import.meta.url)
@@ -8,23 +12,104 @@ const nome = ref('')
 const email = ref('')
 const senha = ref('')
 const confirmaSenha = ref('')
+const emailErro = ref('')
+const senhaErro = ref('')
+const confirmaSenhaErro = ref('')
+const nomeErro = ref('')
 
 const selecionarTipoUsuario = (tipo) => {
   tipoUsuarioSelecionado.value = tipo
 }
 
+const irParaLogin = () => {
+  router.push('/');
+};
+
 const selecionarCliente = () => selecionarTipoUsuario('cliente')
 const selecionarPrestador = () => selecionarTipoUsuario('prestador')
 
-const enviarCadastro = () => {
-  console.log('Cadastro:', {
-    tipo: tipoUsuarioSelecionado.value,
+
+
+
+const enviarCadastro = async () => {
+  const usuario = {
     nome: nome.value,
     email: email.value,
     senha: senha.value,
-    confirmaSenha: confirmaSenha.value
-  })
+    confirmaSenha: confirmaSenha.value,
+    tipoUsuario: tipoUsuarioSelecionado.value,
+    telefone: null,
+    cpf: null,
+    cnpj: null,
+    img_perfil: null
+  }
+
+  if(validarCampos()) {
+
+    const resultado = await inserirUsuarios(usuario)
+    console.log(resultado)
+
+    if(resultado.status_code === 201){
+      irParaLogin()
+    }
+
+  } else {
+    console.log('Dados inválidos. Verifique as informações inseridas.')
+  }
 }
+
+
+const validarCampos = () => {
+  emailErro.value = '';
+  senhaErro.value = '';
+  confirmaSenhaErro.value = '';
+  nomeErro.value = '';
+
+  if(!nome.value) {
+    nomeErro.value = 'Por favor, preencha o campo de nome.';
+    return false;
+  }
+
+  if (!email.value) {
+    emailErro.value = 'Por favor, preencha o campo de email.';
+    return false;
+  }
+  const emailPattern =  /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$/;
+  if (!emailPattern.test(email.value)) {
+    emailErro.value = 'Campo de email deve conter um email válido.';
+    return false;
+  }
+
+  
+  if (!senha.value) {
+    senhaErro.value = 'Por favor, preencha o campo de senha.';
+    return false;
+  }
+
+  if(!confirmaSenha.value || confirmaSenha.value !== senha.value) {
+    confirmaSenhaErro.value = 'Por favor, preencha o campo de confirmação de senha.';
+    return false;
+  }
+
+  return true;
+}
+
+senha.onChange = () => {
+  if (confirmaSenha.value && confirmaSenha.value !== senha.value) {
+    confirmaSenhaErro.value = 'As senhas não coincidem.';
+  } else {
+    confirmaSenhaErro.value = '';
+  }
+}
+
+confirmaSenha.onChange = () => {
+  if (confirmaSenha.value && confirmaSenha.value !== senha.value) {
+    confirmaSenhaErro.value = 'As senhas não coincidem.';
+  } else {
+    confirmaSenhaErro.value = '';
+  }
+}
+
 </script>
 
 <template>
