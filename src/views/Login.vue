@@ -6,6 +6,8 @@ const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
 const email = ref('')
 const senha = ref('')
+const emailErro = ref('')
+const senhaErro = ref('')
 
 const button = ref()
 
@@ -14,6 +16,32 @@ const router = useRouter();
 const irParaHome = () => {
   router.push('/home-c');
 };
+
+
+const validarCampos = () => {
+  emailErro.value = '';
+  senhaErro.value = '';
+
+
+  if (!email.value) {
+    emailErro.value = 'Por favor, preencha o campo de email.';
+    return;
+  }
+  const emailPattern =  /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$/;
+  if (!emailPattern.test(email.value)) {
+    emailErro.value = 'Campo de email deve conter um email válido.';
+    return;
+  }
+
+  
+  if (!senha.value) {
+    senhaErro.value = 'Por favor, preencha o campo de senha.';
+    return;
+  }
+
+  irParaHome();
+}
+
 </script>
 
 <template>
@@ -35,14 +63,21 @@ const irParaHome = () => {
       <h1 class="titulo_login"> {{ tituloLogin }} </h1>
       </div>
       
+
       <div class="campos">
-        <input type="email" id="Email" v-model="email" placeholder="Email">
-        <input type="password" id="Senha" v-model="senha" placeholder="Senha">
+        <div class="campo-email">
+          <input type="email" id="Email" v-model="email" placeholder="Email">
+          <span v-if="emailErro" class="erro-campo erro-animada">{{ emailErro }}</span>
+        </div>
+        <div class="campo-senha">
+          <input type="password" id="Senha" v-model="senha" placeholder="Senha" minlength="8">
+          <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
+        </div>
       </div>
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
 
-      <button @click="irParaHome" class="button-entrar" >
+      <button @click="validarCampos" class="button-entrar" >
         Entrar
       </button>
 
@@ -52,10 +87,7 @@ const irParaHome = () => {
 
 
     </div>
-  </div>
-  
- 
-
+    </div>
   </div>
 </template>
 
@@ -272,6 +304,34 @@ const irParaHome = () => {
   color: #111111;
   font-size: 21px;
   
+}
+
+.erro-campo {
+  color: #d32f2f;
+  background: #ffeaea;
+  border: 1px solid #ffbdbd;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 1em;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  display: block;
+  font-weight: 500;
+  box-shadow: 0 2px 8px 0 rgba(211,47,47,0.08);
+  transition: all 0.3s;
+}
+
+.erro-animada {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
 }
 </style>
 
