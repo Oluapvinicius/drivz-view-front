@@ -1,13 +1,17 @@
+
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { loginApi } from '@/requests/login';
 
 const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
 const email = ref('')
 const senha = ref('')
+const senhaVisivel = ref(false)
 const emailErro = ref('')
 const senhaErro = ref('')
+const loginErro = ref('')
 
 const button = ref()
 
@@ -17,11 +21,10 @@ const irParaHome = () => {
   router.push('/home-c');
 };
 
-
-const validarCampos = () => {
+const validarCampos = async () => {
   emailErro.value = '';
   senhaErro.value = '';
-
+  loginErro.value = '';
 
   if (!email.value) {
     emailErro.value = 'Por favor, preencha o campo de email.';
@@ -33,13 +36,22 @@ const validarCampos = () => {
     return;
   }
 
-  
   if (!senha.value) {
     senhaErro.value = 'Por favor, preencha o campo de senha.';
     return;
   }
 
-  irParaHome();
+  
+  try {
+    const resposta = await loginApi(email.value, senha.value);
+    if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
+      irParaHome();
+    } else {
+      loginErro.value = resposta?.message || resposta?.mensagem || 'Usuário ou senha inválidos.';
+    }
+  } catch (e) {
+    loginErro.value = 'Erro ao conectar com o servidor.';
+  }
 }
 
 </script>
@@ -64,15 +76,21 @@ const validarCampos = () => {
       </div>
       
 
+
       <div class="campos">
         <div class="campo-email">
           <input type="email" id="Email" v-model="email" placeholder="Email">
           <span v-if="emailErro" class="erro-campo erro-animada">{{ emailErro }}</span>
         </div>
-        <div class="campo-senha">
-          <input type="password" id="Senha" v-model="senha" placeholder="Senha" minlength="8">
+        <div class="campo-senha" style="position: relative;">
+          <input :type="senhaVisivel ? 'text' : 'password'" id="Senha" v-model="senha" placeholder="Senha" minlength="8">
+          <button type="button" @click="senhaVisivel = !senhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
+            <span v-if="senhaVisivel"></span>
+            <span v-else></span>
+          </button>
           <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
         </div>
+        <span v-if="loginErro" class="erro-campo erro-animada">{{ loginErro }}</span>
       </div>
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>

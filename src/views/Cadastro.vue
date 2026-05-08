@@ -12,6 +12,8 @@ const nome = ref('')
 const email = ref('')
 const senha = ref('')
 const confirmaSenha = ref('')
+const senhaVisivel = ref(false)
+const confirmaSenhaVisivel = ref(false)
 const emailErro = ref('')
 const senhaErro = ref('')
 const confirmaSenhaErro = ref('')
@@ -143,11 +145,32 @@ confirmaSenha.onChange = () => {
             </button>
           </div>
 
+
           <div class="cadastro-fields">
-            <input type="text" placeholder="Digite seu nome completo" v-model="nome" />
-            <input type="email" placeholder="exemplo@gmail.com" v-model="email" />
-            <input type="password" placeholder="Senha" v-model="senha" />
-            <input type="password" placeholder="Confirme a Senha" v-model="confirmaSenha" />
+            <div>
+              <input type="text" placeholder="Digite seu nome completo" v-model="nome" />
+              <span v-if="nomeErro" class="erro-campo erro-animada">{{ nomeErro }}</span>
+            </div>
+            <div>
+              <input type="email" placeholder="exemplo@gmail.com" v-model="email" />
+              <span v-if="emailErro" class="erro-campo erro-animada">{{ emailErro }}</span>
+            </div>
+            <div style="position: relative;">
+              <input :type="senhaVisivel ? 'text' : 'password'" placeholder="Senha" v-model="senha" />
+              <button type="button" @click="senhaVisivel = !senhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
+                <span v-if="senhaVisivel"></span>
+                <span v-else></span>
+              </button>
+              <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
+            </div>
+            <div style="position: relative;">
+              <input :type="confirmaSenhaVisivel ? 'text' : 'password'" placeholder="Confirme a Senha" v-model="confirmaSenha" />
+              <button type="button" @click="confirmaSenhaVisivel = !confirmaSenhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
+                <span v-if="confirmaSenhaVisivel"></span>
+                <span v-else></span>
+              </button>
+              <span v-if="confirmaSenhaErro" class="erro-campo erro-animada">{{ confirmaSenhaErro }}</span>
+            </div>
           </div>
 
           <button class="cadastro-button" type="button" @click="enviarCadastro">
@@ -443,60 +466,32 @@ confirmaSenha.onChange = () => {
     height: 58px;
   }
 }
-</style>
 
-@media (min-width: 2560px) {
-  .cadastro-panel--form {
-    padding: 128px 96px 96px;
-  }
-
-  .cadastro-box {
-    max-width: 640px;
-  }
-
-  .cadastro-title {
-    font-size: 48px;
-    margin-bottom: 56px;
-  }
-
-  .back-button {
-    top: 36px;
-    left: 36px;
-    width: 64px;
-    height: 64px;
-  }
-
-  .cadastro-switch {
-    height: 128px;
-    margin-bottom: 56px;
-  }
-
-  .cadastro-switch__item {
-    min-height: 140px;
-  }
-
-  .cadastro-switch__label {
-    font-size: 22px;
-  }
-
-  .cadastro-switch__sublabel {
-    font-size: 16px;
-    margin-top: 8px;
-  }
-
-  .cadastro-fields {
-    gap: 32px;
-    margin-bottom: 56px;
-  }
-
-  .cadastro-fields input {
-    height: 96px;
-    padding: 0 28px;
-    font-size: 20px;
-  }
-
-  .cadastro-button {
-    height: 96px;
-    font-size: 24px;
-  }
+.erro-campo {
+  color: #d32f2f;
+  background: #ffeaea;
+  border: 1px solid #ffbdbd;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 1em;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  display: block;
+  font-weight: 500;
+  box-shadow: 0 2px 8px 0 rgba(211,47,47,0.08);
+  transition: all 0.3s;
 }
+
+.erro-animada {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+</style>
