@@ -98,9 +98,14 @@
 
      
       <template v-if="activeScreen === 'home'">
+
         <section class="services">
           <div class="services__container">
-            <div class="services__grid">
+            <div v-if="isLoading" class="services__loading">
+              <div class="spinner"></div>
+              <span>Carregando serviços...</span>
+            </div>
+            <div v-else class="services__grid">
               <div 
                 v-for="service in visibleServices" 
                 :key="service.id"
@@ -200,7 +205,7 @@
 </template>
 
 <script>
-import servicesData from '../data/services.json';
+import profileImg from '../assets/profile.svg';
 import ordersData from '../data/orders.json';
 import PerfilCliente from './PerfilCliente.vue';
 
@@ -219,9 +224,10 @@ export default {
       searchQuery: '',
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
-      maxVisibleServices: 6,
+      maxVisibleServices: 8,
       orders: ordersData,
-      services: servicesData
+      services: [],
+      isLoading: false,
     };
   },
   computed: {
@@ -230,11 +236,15 @@ export default {
         return this.services;
       }
       
-      return this.services.filter(service =>
-        service.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        service.location.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
+      return this.services.filter(service => {
+        const query = this.searchQuery.toLowerCase();
+        return (
+          service.title.toLowerCase().includes(query) ||
+          service.description.toLowerCase().includes(query) ||
+          service.location.toLowerCase().includes(query) ||
+          (service.category && service.category.toLowerCase().includes(query))
+        );
+      });
     },
     visibleServices() {
       const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 4) : this.maxVisibleServices;
@@ -242,6 +252,28 @@ export default {
     }
   },
   methods: {
+      async fetchServices() {
+        this.isLoading = true;
+        try {
+          const response = await fetch('http://localhost:8080/v1/drivez/prestador');
+          const data = await response.json();
+          if (data && data.response) {
+            this.services = data.response.map(item => ({
+              id: item.id_prestador || item.id || item.email,
+              title: item.nome,
+              description: item.email,
+              location: item.cidade || 'Local não informado',
+              category: item.categoria || '',
+              rating: 5,
+              image: profileImg
+            }));
+          }
+        } catch (error) {
+          console.error('Erro ao buscar serviços:', error);
+        } finally {
+          setTimeout(() => { this.isLoading = false; }, 600);
+        }
+      },
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
     },
@@ -297,7 +329,33 @@ export default {
     filterServices() {
     },
     refreshServices() {
-      console.log('Services refreshed');
+    
+      this.isLoading = true;
+      fetch('http://localhost:8080/v1/drivez/prestador')
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.response) {
+       
+            const shuffled = data.response
+              .map(value => ({ value, sort: Math.random() }))
+              .sort((a, b) => a.sort - b.sort)
+              .map(({ value }) => value);
+            this.services = shuffled.map(item => ({
+              id: item.id_prestador || item.id || item.email,
+              title: item.nome,
+              description: item.email,
+              location: item.cidade || 'Local não informado',
+              rating: 5,
+              image: profileImg
+            }));
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar serviços:', error);
+        })
+        .finally(() => {
+          setTimeout(() => { this.isLoading = false; }, 600);
+        });
     },
     updateWindowWidth() {
       this.windowWidth = window.innerWidth;
@@ -305,6 +363,7 @@ export default {
     }
   },
   mounted() {
+    this.fetchServices();
     window.addEventListener('resize', this.updateWindowWidth);
     this.updateWindowWidth();
     document.addEventListener('keydown', (e) => {
@@ -1392,5 +1451,28 @@ html, body {
     padding: 0 20px;
     margin: 0 auto 24px;
   }
+}
+
+.services__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #D62828;
+  font-size: 1.2rem;
+}
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #D62828;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>

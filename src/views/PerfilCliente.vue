@@ -37,16 +37,16 @@
 
         <div class="profile-screen__form">
           <div class="profile-screen__field profile-screen__field--full">
-            <input type="text" placeholder="Nome do usuario" readonly />
+            <input type="text" placeholder="Nome do usuario" />
           </div>
           <div class="profile-screen__field profile-screen__field--half">
-            <input type="text" placeholder="CPF/CNPJ" readonly />
+            <input type="text" placeholder="CPF/CNPJ" />
           </div>
           <div class="profile-screen__field profile-screen__field--half">
-            <input type="text" placeholder="Telefone" readonly />
+            <input type="text" placeholder="Telefone" />
           </div>
           <div class="profile-screen__field profile-screen__field--full">
-            <input type="email" placeholder="Email" readonly />
+            <input type="email" placeholder="Email" />
           </div>
         </div>
 
