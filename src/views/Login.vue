@@ -54,9 +54,15 @@ const validarCampos = async () => {
   }
 }
 
+
+
+ 
+
+
 </script>
 
 <template>
+  <transition name="slide-fade" mode="out-in">
   <div class="conteinerAll">
 
     <div class="containerLeft">
@@ -83,10 +89,10 @@ const validarCampos = async () => {
           <span v-if="emailErro" class="erro-campo erro-animada">{{ emailErro }}</span>
         </div>
         <div class="campo-senha" style="position: relative;">
-          <input :type="senhaVisivel ? 'text' : 'password'" id="Senha" v-model="senha" placeholder="Senha" minlength="8">
+          <input :type="senhaVisivel ? 'text' : 'password'" id="Senha" v-model="senha" placeholder="Senha" minlength="8" >
           <button type="button" @click="senhaVisivel = !senhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
-            <span v-if="senhaVisivel"></span>
-            <span v-else></span>
+            <span v-if="senhaVisivel"><img src="../assets/view.png" alt="" class="hide-icon"></span>
+            <span v-else><img src="../assets/hide.png" class="hide-icon" alt=""></span>
           </button>
           <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
         </div>
@@ -100,18 +106,35 @@ const validarCampos = async () => {
       </button>
 
       <h1 class="cadastroH1">Ainda não tem conta?
-        <router-link to="/cadastro" class="link-destaque">Cadastre-se</router-link>
+      
+          <router-link to="/cadastro" class="link-destaque">Cadastre-se</router-link>
+
       </h1>
 
 
     </div>
     </div>
   </div>
+ </transition>
 </template>
 
 
 
 <style scoped>
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+
 :root {
   font-family: 'Roboto', sans-serif;
 }
@@ -350,6 +373,11 @@ const validarCampos = async () => {
   60% { transform: translateX(-5px); }
   80% { transform: translateX(5px); }
   100% { transform: translateX(0); }
+}
+
+.hide-icon {
+  width: 24px;
+  height: 24px;
 }
 </style>
 

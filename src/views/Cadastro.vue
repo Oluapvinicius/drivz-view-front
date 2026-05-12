@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
-const imagemRetangulo = new URL('../assets/Rectangle 31.svg', import.meta.url)
+const imagemRetangulo = new URL('../assets/Rectangle 31.svg ', import.meta.url)
 const imagemVoltar = new URL('../assets/arrow.png', import.meta.url)
 const tipoUsuarioSelecionado = ref('cliente')
 const nome = ref('')
@@ -158,16 +158,15 @@ confirmaSenha.onChange = () => {
             <div style="position: relative;">
               <input :type="senhaVisivel ? 'text' : 'password'" placeholder="Senha" v-model="senha" />
               <button type="button" @click="senhaVisivel = !senhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
-                <span v-if="senhaVisivel"></span>
-                <span v-else></span>
+                <span v-if="senhaVisivel"><img src="../assets/view.png" alt=""class="hide-icon"></span>
+                <span v-else><img src="../assets/hide.png" alt=""class="hide-icon"></span>
               </button>
               <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
             </div>
             <div style="position: relative;">
               <input :type="confirmaSenhaVisivel ? 'text' : 'password'" placeholder="Confirme a Senha" v-model="confirmaSenha" />
               <button type="button" @click="confirmaSenhaVisivel = !confirmaSenhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
-                <span v-if="confirmaSenhaVisivel"></span>
-                <span v-else></span>
+              
               </button>
               <span v-if="confirmaSenhaErro" class="erro-campo erro-animada">{{ confirmaSenhaErro }}</span>
             </div>
@@ -216,7 +215,7 @@ confirmaSenha.onChange = () => {
   width: 100%;
   height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr;
   overflow: hidden;
   background: #ffffff;
 }
@@ -341,9 +340,9 @@ confirmaSenha.onChange = () => {
 
 .cadastro-button {
   width: 100%;
-  height: 72px;
+  height: 70px;
   border: none;
-  border-radius: 14px;
+
   background: #b5080d;
   color: #ffffff;
   font-size: 19px;
@@ -493,5 +492,10 @@ confirmaSenha.onChange = () => {
   60% { transform: translateX(-5px); }
   80% { transform: translateX(5px); }
   100% { transform: translateX(0); }
+}
+
+.hide-icon {
+  width: 24px;
+  height: 24px;
 }
 </style>
