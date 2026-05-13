@@ -9,25 +9,7 @@
 
     <div class="profile-screen__content">
       <div class="profile-screen__panel profile-screen__panel--left">
-        <div class="profile-screen__photo-card">
-          <div class="profile-screen__image-wrap">
-            <img 
-              src="../assets/download.jpeg" 
-              alt="Perfil" 
-              class="profile-screen__avatar" 
-            />
-          </div>
-          <div class="profile-screen__name-block">
-            <div class="profile-screen__rating-stars">
-              <span class="star-icon fill">★</span>
-              <span class="star-icon fill">★</span>
-              <span class="star-icon fill">★</span>
-              <span class="star-icon fill">★</span>
-              <span class="star-icon">☆</span>
-            </div>
-            <h3>Joao Belson</h3>
-          </div>
-        </div>
+        <SidebarCliente />
       </div>
 
       <div class="profile-screen__panel profile-screen__panel--right">
@@ -82,6 +64,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import SidebarCliente from '../components/SidebarCliente.vue';
 
 const emit = defineEmits(['back']);
 const goBack = () => emit('back');

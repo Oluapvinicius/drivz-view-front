@@ -24,7 +24,7 @@ const selecionarTipoUsuario = (tipo) => {
 }
 
 const irParaLogin = () => {
-  router.push('/');
+  router.push({ name: 'login' });
 };
 
 const selecionarCliente = () => selecionarTipoUsuario('cliente')

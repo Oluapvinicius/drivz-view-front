@@ -18,7 +18,7 @@ const button = ref()
 const router = useRouter();
 
 const irParaHome = () => {
-  router.push('/home-c');
+  router.push({ name: 'home-cliente' });
 };
 
 const validarCampos = async () => {

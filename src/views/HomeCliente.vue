@@ -1,5 +1,5 @@
 <template>
-  <PerfilCliente v-if="activeScreen === 'profile'" @back="activeScreen = 'home'" />
+  <PerfilCliente v-if="activeScreen === 'profile'" @back="activeScreen = 'home-cliente'" />
 
   <div v-else class="app-container">
     
@@ -33,6 +33,15 @@
           <span class="sidebar__label">Editar Perfil</span>
         </button>
       </nav>
+              <SidebarCliente
+                :sidebarOpen="sidebarOpen"
+                :user="sidebarUser"
+                :popupOpen="orderPopupOpen"
+                @toggleSidebar="toggleSidebar"
+                @sidebarAction="handleSidebarAction"
+                @togglePopup="toggleOrderPopup"
+                @goToOrderScreen="goToOrderScreen"
+              />
 
       <div class="sidebar__footer">
         <button class="sidebar__settings" @click="handleSidebarAction('settings')">
@@ -235,7 +244,6 @@ export default {
       if (!this.searchQuery.trim()) {
         return this.services;
       }
-      
       return this.services.filter(service => {
         const query = this.searchQuery.toLowerCase();
         return (
@@ -254,6 +262,7 @@ export default {
   methods: {
       async fetchServices() {
         this.isLoading = true;
+          
         try {
           const response = await fetch('http://localhost:8080/v1/drivez/prestador');
           const data = await response.json();
@@ -324,7 +333,7 @@ export default {
       this.sidebarOpen = false;
     },
     handleCallButtonClick() {
-      this.$router.push({ name: 'pedido-c' });
+      this.$router.push({ name: 'configurar-pedido-cliente' });
     },
     filterServices() {
     },

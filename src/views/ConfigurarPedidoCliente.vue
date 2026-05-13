@@ -111,6 +111,7 @@ export default {
     selectCategory(category) {
       this.selectedCategory = category;
       this.categoryPopupOpen = false;
+      this.$router.push({ name: 'pedido-cliente' });
     }
   }
 };

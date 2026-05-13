@@ -1,25 +1,46 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginView from '../views/Login.vue'
-import CadastroView from '../views/Cadastro.vue'
-import HomeCView from '../views/HomeCliente.vue'
-import PedidoCliente from '../views/ConfigurarPedidoCliente.vue'
-import MensagemCliente from '../views/MensagemCliente.vue'
+
+import Login from '../views/Login.vue';
+import Cadastro from '../views/Cadastro.vue';
+import HomeCliente from '../views/HomeCliente.vue';
+import HomePrestador from '../views/Home_Prestador.vue';
+import PedidoCliente from '../views/PedidoCliente.vue';
+import ConfigurarPedidoCliente from '../views/ConfigurarPedidoCliente.vue';
+import MensagemCliente from '../views/MensagemCliente.vue';
+import PerfilCliente from '../views/PerfilCliente.vue';
+import PerfilPrestador from '../views/PerfilPrestador.vue';
+
 
 const routes = [
   {
     path: '/',
     name: 'login',
-    component: LoginView
+    component: Login
   },
   {
     path: '/cadastro',
-    name: 'cadastro',   
-    component: CadastroView
+    name: 'cadastro',
+    component: Cadastro
   },
   {
-    path: '/home-c',
-    name: 'home-c',
-    component: HomeCView
+    path: '/home-cliente',
+    name: 'home-cliente',
+    component: HomeCliente
+  },
+  {
+    path: '/home-prestador',
+    name: 'home-prestador',
+    component: HomePrestador
+  },
+  {
+    path: '/pedido-cliente',
+    name: 'pedido-cliente',
+    component: PedidoCliente
+  },
+  {
+    path: '/configurar-pedido-cliente',
+    name: 'configurar-pedido-cliente',
+    component: ConfigurarPedidoCliente
   },
   {
     path: '/mensagem-cliente',
@@ -27,11 +48,16 @@ const routes = [
     component: MensagemCliente
   },
   {
-    path: '/pedido-c',
-    name: 'pedido-c',
-    component: PedidoCliente
+    path: '/perfil-cliente',
+    name: 'perfil-cliente',
+    component: PerfilCliente
+  },
+  {
+    path: '/perfil-prestador',
+    name: 'perfil-prestador',
+    component: PerfilPrestador
   }
-]
+];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
