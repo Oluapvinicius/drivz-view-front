@@ -36,18 +36,17 @@
       </button>
     </div>
 
-    <div v-if="popupOpen" class="sidebar-popup">
-      <div class="sidebar-popup__header">
-        <h4>Menu</h4>
-        <button class="sidebar-popup__close" @click="$emit('togglePopup')">×</button>
-      </div>
-      <div class="sidebar-popup__list">
-          <button class="sidebar-popup__option" @click="$emit('goToOrderScreen')">
-            <img src="../assets/historico.svg" alt="Histórico" style="width:18px;vertical-align:middle;margin-right:8px;">
-            Histórico de Pedidos
+     <div v-if="orderPopupOpen" class="sidebar-popup">
+        <div class="sidebar-popup__header">
+          <h4>Menu</h4>
+          <button class="sidebar-popup__close" @click="closeAllPopups">×</button>
+        </div>
+        <div class="sidebar-popup__list">
+          <button class="sidebar-popup__option" @click="goToOrderScreen">
+            Registro de Pedidos
           </button>
+        </div>
       </div>
-    </div>
   </aside>
 </template>
 

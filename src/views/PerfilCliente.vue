@@ -1,3 +1,4 @@
+
 <template>
   <section class="profile-screen">
     <div class="profile-screen__topbar">
@@ -9,7 +10,25 @@
 
     <div class="profile-screen__content">
       <div class="profile-screen__panel profile-screen__panel--left">
-        <SidebarCliente />
+        <div class="profile-screen__photo-card">
+          <div class="profile-screen__image-wrap">
+            <img 
+              src="../assets/profile.svg" 
+              alt="Perfil" 
+              class="profile-screen__avatar" 
+            />
+          </div>
+          <div class="profile-screen__name-block">
+            <div class="profile-screen__rating-stars">
+              <span class="star-icon fill">★</span>
+              <span class="star-icon fill">★</span>
+              <span class="star-icon fill">★</span>
+              <span class="star-icon fill">★</span>
+              <span class="star-icon">☆</span>
+            </div>
+            <h3>Nome do Usuário</h3>
+          </div>
+        </div>
       </div>
 
       <div class="profile-screen__panel profile-screen__panel--right">
@@ -65,9 +84,12 @@
 <script setup>
 import { ref } from 'vue';
 import SidebarCliente from '../components/SidebarCliente.vue';
+import { useRouter } from 'vue-router';
 
 const emit = defineEmits(['back']);
-const goBack = () => emit('back');
+const router = useRouter();
+
+const goBack = () => router.back();
 
 const showPassword = ref(true);
 const togglePassword = () => {
@@ -323,6 +345,100 @@ const togglePassword = () => {
   }
   .profile-screen__topbar {
     padding-left: 64px;
+  }
+}
+@media (min-width: 1800px) {
+  .profile-screen__content {
+    grid-template-columns: 420px 1fr;
+    gap: 80px;
+    padding: 80px 180px 48px;
+  }
+  .profile-screen__panel--left {
+    padding-right: 80px;
+  }
+  .profile-screen__image-wrap {
+    width: 300px;
+    height: 300px;
+  }
+  .profile-screen__avatar {
+    width: 100%;
+    height: 100%;
+  }
+  .profile-screen__name-block h3 {
+    font-size: 38px;
+  }
+  .profile-screen__rating-stars .star-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 32px;
+  }
+  .profile-screen__form {
+    max-width: 900px;
+    gap: 32px;
+  }
+  .profile-screen__field input,
+  .profile-screen__field select {
+    height: 60px;
+    font-size: 22px;
+    padding: 0 28px;
+  }
+  .profile-screen__button {
+    font-size: 22px;
+    padding: 16px 32px;
+  }
+  .profile-screen__section-header h4 {
+    font-size: 28px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .profile-screen__content {
+    grid-template-columns: 350px 1fr;
+    gap: 42px;
+    padding: 28px 168px 45px;
+  }
+  .profile-screen__panel--left {
+    padding-right: 84px;
+  }
+  .profile-screen__image-wrap {
+    width: 294px;
+    height: 294px;
+  }
+  .profile-screen__name-block h3 {
+    font-size: 38px;
+  }
+  .profile-screen__rating-stars .star-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 34px;
+  }
+  .profile-screen__form {
+    max-width: 980px;
+    gap: 34px;
+  }
+  .profile-screen__field input,
+  .profile-screen__field select {
+    height: 63px;
+    font-size: 22px;
+    padding: 0 34px;
+  }
+  .profile-screen__button {
+    font-size: 22px;
+    padding: 17px 34px;
+  }
+  .profile-screen__section-header h4 {
+    font-size: 27px;
+  }
+  .profile-screen__topbar {
+    padding: 28px 22px 22px 56px;
+  }
+  .profile-screen__title {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .profile-screen__back {
+    height: 22px;
+    width: 22px;
   }
 }
 </style>

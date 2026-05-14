@@ -4,52 +4,45 @@
   <div v-else class="app-container">
     
     <aside class="sidebar" :class="{ active: sidebarOpen }">
-      <div class="sidebar__top-row">
-        <button class="sidebar__menu-button" @click="toggleSidebar"></button>
-        <button class="sidebar__notification" @click="handleSidebarAction('notifications')">
-          <img src="../assets/notifica.svg" alt="Notificações" class="sidebar__notification-icon">
-        </button>
-      </div>
+      
+    <div class="sidebar__top-row">
+      <button class="sidebar__menu-button" @click="$emit('toggleSidebar')"></button>
+      <button class="sidebar__notification" @click="$emit('sidebarAction', 'notifications')">
+        <img src="../assets/notifica.svg" alt="Notificações" class="sidebar__notification-icon">
+      </button>
+    </div>
 
-      <div class="sidebar__profile-block">
-        <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
-      </div>
+    <div class="sidebar__profile-block">
+      <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+    </div>
 
-      <div class="sidebar__user-info">
-        <span class="sidebar__title">CLOTHILDE</span>
-        <p class="sidebar__phone">(11) 96663-7777</p>
-        <p class="sidebar__location">Jandira - SP</p>
-      </div>
+    <div class="sidebar__user-info">
+      <span class="sidebar__title">{{ user.nome || 'Usuário' }}</span>
+      <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
+      <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
+    </div>
 
-      <div class="sidebar__divider"></div>
+    <div class="sidebar__divider"></div>
 
-      <nav class="sidebar__menu">
-        <button class="sidebar__item" @click="handleSidebarAction('messages')">
-          <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
-          <span class="sidebar__label">Mensagens</span>
-        </button>
-        <button class="sidebar__item" @click="handleSidebarAction('profile')">
-          <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
-          <span class="sidebar__label">Editar Perfil</span>
-        </button>
-      </nav>
-              <SidebarCliente
-                :sidebarOpen="sidebarOpen"
-                :user="sidebarUser"
-                :popupOpen="orderPopupOpen"
-                @toggleSidebar="toggleSidebar"
-                @sidebarAction="handleSidebarAction"
-                @togglePopup="toggleOrderPopup"
-                @goToOrderScreen="goToOrderScreen"
-              />
+    <nav class="sidebar__menu">
+      <button class="sidebar__item" @click="irParaMensagem()">
+        <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
+        <span class="sidebar__label">Mensagens</span>
+      </button>
+      <button class="sidebar__item" @click="irParaPerfil()">
+        <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
+        <span class="sidebar__label">Editar Perfil</span>
+      </button>
+    </nav>
 
-      <div class="sidebar__footer">
-        <button class="sidebar__settings" @click="handleSidebarAction('settings')">
-          <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
-        </button>
-      </div>
+    <div class="sidebar__footer">
+      <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
+      
+        <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
+      </button>
+    </div>
 
-      <div v-if="orderPopupOpen" class="sidebar-popup">
+     <div v-if="orderPopupOpen" class="sidebar-popup">
         <div class="sidebar-popup__header">
           <h4>Menu</h4>
           <button class="sidebar-popup__close" @click="closeAllPopups">×</button>
@@ -60,6 +53,7 @@
           </button>
         </div>
       </div>
+  
     </aside>
 
     
@@ -218,6 +212,11 @@ import profileImg from '../assets/profile.svg';
 import ordersData from '../data/orders.json';
 import PerfilCliente from './PerfilCliente.vue';
 
+import { useRouter } from 'vue-router';
+import { buscarCliente } from '../requests/buscarCliente';
+
+const router = useRouter();
+
 export default {
   name: 'HomeCliente',
   components: {
@@ -225,6 +224,7 @@ export default {
   },
   data() {
     return {
+      user: { nome: '', telefone: '', localizacao: '' },
       sidebarOpen: false,
       orderPopupOpen: false,
       serviceModalOpen: false,
@@ -260,6 +260,14 @@ export default {
     }
   },
   methods: {
+  irParaMensagem () {
+    this.$router.push({ name: 'mensagem-cliente' });
+  //router.push({ name: 'mensagem-cliente' });
+},
+irParaPerfil () {
+  //router.push({ name: 'perfil-cliente' });
+  this.$router.push({ name: 'perfil-cliente' });
+},
       async fetchServices() {
         this.isLoading = true;
           
@@ -329,8 +337,8 @@ export default {
     },
     goToOrderScreen() {
       this.activeScreen = 'orders';
-      this.orderPopupOpen = false;
-      this.sidebarOpen = false;
+      this.orderPopupOpen = true;
+      this.sidebarOpen = true;
     },
     handleCallButtonClick() {
       this.$router.push({ name: 'configurar-pedido-cliente' });

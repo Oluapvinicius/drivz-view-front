@@ -1,3 +1,86 @@
+@media (min-width: 1800px) {
+  .profile-screen__content {
+    grid-template-columns: 420px 1fr;
+    gap: 80px;
+    padding: 80px 180px 48px;
+  }
+  .profile-screen__panel--left {
+    padding-right: 80px;
+  }
+  .profile-screen__image-wrap {
+    width: 300px;
+    height: 300px;
+  }
+  .profile-screen__avatar {
+    width: 100%;
+    height: 100%;
+  }
+  .profile-screen__name-block h3 {
+    font-size: 38px;
+  }
+  .profile-screen__rating-stars .star-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 32px;
+  }
+  .profile-screen__form {
+    max-width: 900px;
+    gap: 32px;
+  }
+  .profile-screen__field input,
+  .profile-screen__field select {
+    height: 60px;
+    font-size: 22px;
+    padding: 0 28px;
+  }
+  .profile-screen__button {
+    font-size: 22px;
+    padding: 16px 32px;
+  }
+  .profile-screen__section-header h4 {
+    font-size: 28px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .profile-screen__content {
+    grid-template-columns: 600px 1fr;
+    gap: 120px;
+    padding: 120px 320px 64px;
+  }
+  .profile-screen__panel--left {
+    padding-right: 120px;
+  }
+  .profile-screen__image-wrap {
+    width: 420px;
+    height: 420px;
+  }
+  .profile-screen__name-block h3 {
+    font-size: 54px;
+  }
+  .profile-screen__rating-stars .star-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 48px;
+  }
+  .profile-screen__form {
+    max-width: 1400px;
+    gap: 48px;
+  }
+  .profile-screen__field input,
+  .profile-screen__field select {
+    height: 90px;
+    font-size: 32px;
+    padding: 0 48px;
+  }
+  .profile-screen__button {
+    font-size: 32px;
+    padding: 24px 48px;
+  }
+  .profile-screen__section-header h4 {
+    font-size: 38px;
+  }
+}
 <template>
   <section class="profile-screen">
     <div class="profile-screen__topbar">
