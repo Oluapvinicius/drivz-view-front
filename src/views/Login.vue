@@ -21,38 +21,38 @@ const irParaHome = () => {
   router.push({ name: 'home-cliente' });
 };
 
-const validarCampos = async () => {
-  emailErro.value = '';
-  senhaErro.value = '';
-  loginErro.value = '';
+// const validarCampos = async () => {
+//   emailErro.value = '';
+//   senhaErro.value = '';
+//   loginErro.value = '';
 
-  if (!email.value) {
-    emailErro.value = 'Por favor, preencha o campo de email.';
-    return;
-  }
-  const emailPattern =  /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$/;
-  if (!emailPattern.test(email.value)) {
-    emailErro.value = 'Campo de email deve conter um email válido.';
-    return;
-  }
+//   if (!email.value) {
+//     emailErro.value = 'Por favor, preencha o campo de email.';
+//     return;
+//   }
+//   const emailPattern =  /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$/;
+//   if (!emailPattern.test(email.value)) {
+//     emailErro.value = 'Campo de email deve conter um email válido.';
+//     return;
+//   }
 
-  if (!senha.value) {
-    senhaErro.value = 'Por favor, preencha o campo de senha.';
-    return;
-  }
+//   if (!senha.value) {
+//     senhaErro.value = 'Por favor, preencha o campo de senha.';
+//     return;
+//   }
 
   
-  try {
-    const resposta = await loginApi(email.value, senha.value);
-    if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
-      irParaHome();
-    } else {
-      loginErro.value = resposta?.message || resposta?.mensagem || 'Usuário ou senha inválidos.';
-    }
-  } catch (e) {
-    loginErro.value = 'Erro ao conectar com o servidor.';
-  }
-}
+//   try {
+//     const resposta = await loginApi(email.value, senha.value);
+//     if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
+//       irParaHome();
+//     } else {
+//       loginErro.value = resposta?.message || resposta?.mensagem || 'Usuário ou senha inválidos.';
+//     }
+//   } catch (e) {
+//     loginErro.value = 'Erro ao conectar com o servidor.';
+//   }
+// }
 
 
 
@@ -101,7 +101,7 @@ const validarCampos = async () => {
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
 
-      <button @click="validarCampos" class="button-entrar" >
+      <button @click="irParaHome" class="button-entrar" >
         Entrar
       </button>
 
