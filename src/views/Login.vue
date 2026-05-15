@@ -101,7 +101,7 @@ const validarCampos = async () => {
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
 
-      <button @click="irParaHome" class="button-entrar" >
+      <button @click="" class="button-entrar" >
         Entrar
       </button>
 
