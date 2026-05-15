@@ -54,9 +54,7 @@ const validarCampos = async () => {
   }
 }
 
-//asdasd
 
- 
 
 
 </script>
@@ -101,7 +99,7 @@ const validarCampos = async () => {
 
       <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
 
-      <button @click="" class="button-entrar" >
+      <button @click="validarCampos" class="button-entrar" >
         Entrar
       </button>
 
