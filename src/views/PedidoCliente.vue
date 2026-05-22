@@ -360,5 +360,132 @@ body {
   line-height: 1.4;
   font-weight: 500;
 }
+
+@media (max-width: 640px) {
+  .conteinerAll {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .map {
+    position: relative;
+    width: 100%;
+    min-height: 300px;
+  }
+
+  .containerMid {
+    position: relative;
+    width: 100%;
+    height: auto;
+    top: auto;
+    right: auto;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 16px 20px 16px;
+    margin: 0;
+    box-shadow: 0 -8px 32px 0 rgba(0,0,0,0.1);
+  }
+
+  .stepsContainer {
+    margin-bottom: 20px;
+  }
+
+  .stepsWrapper {
+    gap: 0;
+  }
+
+  .stepIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .stepIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .stepLabel {
+    font-size: 12px;
+  }
+
+  .stepsLabels {
+    gap: 5%;
+    margin-top: 10px;
+  }
+
+  .stepLine {
+    flex: 0.5;
+    height: 2px;
+  }
+
+  .locationCard {
+    padding: 12px;
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+
+  .locationItem {
+    gap: 10px;
+  }
+
+  .locationIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .locationIcon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .locationLabel {
+    font-size: 10px;
+  }
+
+  .locationText {
+    font-size: 13px;
+  }
+
+  .searchProgress {
+    margin-bottom: 8px;
+  }
+
+  .searchText {
+    font-size: 14px;
+  }
+
+  .demandBadge {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  .progressBar {
+    height: 3px;
+    margin-bottom: 20px;
+  }
+
+  .cancelButton {
+    padding: 14px 16px;
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+
+  .tipSection {
+    gap: 8px;
+    padding: 6px;
+    margin-top: 10px;
+  }
+
+  .tipIcon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tipText {
+    font-size: 12px;
+  }
+}
+
+
 </style>
 
