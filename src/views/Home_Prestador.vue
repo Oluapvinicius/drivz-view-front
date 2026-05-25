@@ -1,7 +1,6 @@
 <template>
 	<div class="home-prestador-container">
 		<h1>Bem-vindo, Prestador!</h1>
-		<!-- Conteúdo da home do prestador -->
 	</div>
 </template>
 

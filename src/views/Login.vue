@@ -3,6 +3,14 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { loginApi } from '@/requests/login';
+import { userStorage } from '../utils/userStorage'; 
+
+
+
+
+const setClienteId = (clienteId) => {
+  userStorage.setClienteId(clienteId)
+}
 
 const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
@@ -18,6 +26,7 @@ const button = ref()
 const router = useRouter();
 
 const irParaHome = () => {
+  setClienteId(loginApi.clienteId);
   router.push({ name: 'home-cliente' });
 };
 
@@ -313,18 +322,6 @@ const validarCampos = async () => {
 }
 
 
-
-/* .box_place h1:nth-of-type(2) {
-  text-align: right;
-  color: #b5080d;
-  font-size: 14px;
-}
-
-.box_place h1:nth-of-type(3) {
-  text-align: center;
-  color: #111111;
-  font-size: 15px;
-} */
 
 .link-destaque {
   color: #b5080d;

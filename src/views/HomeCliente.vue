@@ -214,6 +214,11 @@ import PerfilCliente from './PerfilCliente.vue';
 
 import { useRouter } from 'vue-router';
 import { buscarCliente } from '../requests/buscarCliente';
+import { userStorage } from '../utils/userStorage';
+
+
+
+
 
 const router = useRouter();
 
@@ -262,10 +267,8 @@ export default {
   methods: {
   irParaMensagem () {
     this.$router.push({ name: 'mensagem-cliente' });
-  //router.push({ name: 'mensagem-cliente' });
 },
 irParaPerfil () {
-  //router.push({ name: 'perfil-cliente' });
   this.$router.push({ name: 'perfil-cliente' });
 },
       async fetchServices() {
@@ -381,6 +384,22 @@ irParaPerfil () {
   },
   mounted() {
     this.fetchServices();
+    
+    const clienteId = userStorage.getClienteId();
+    if (clienteId) {
+      buscarCliente(clienteId).then(response => {
+        if (response && response.response) {
+          this.user = response.response;
+          userStorage.setClienteData(response.response);
+        } else if (response && response.id) {
+          this.user = response;
+          userStorage.setClienteData(response);
+        }
+      }).catch(error => {
+        console.error('Erro ao buscar dados do cliente:', error);
+      });
+    }
+    
     window.addEventListener('resize', this.updateWindowWidth);
     this.updateWindowWidth();
     document.addEventListener('keydown', (e) => {
