@@ -11,14 +11,39 @@
 
     <main class="pedido-content">
       <div class="pedido-card">
-        <label class="pedido-label" for="origem">Origem</label>
-        <input
-          id="origem"
-          v-model="origem"
-          type="text"
-          class="pedido-input"
-          placeholder="Digite o local de origem"
-        />
+        <div class="autocomplete-container">
+  <label class="pedido-label" for="origem">Origem</label>
+  <input
+    id="origem"
+    v-model="origem"
+    class="pedido-input"
+    @input="aoDigitar('origem')"
+    @blur="setTimeout(() => { sugestoesOrigem = [] }, 200)"
+    autocomplete="off"
+  />
+  <ul v-if="sugestoesOrigem.length > 0" class="sugestoes-lista">
+    <li v-for="(s, i) in sugestoesOrigem" :key="i" @click="selecionarEndereco(s, 'origem')">
+      {{ s.display_name }}
+    </li>
+  </ul>
+</div>
+
+<div class="autocomplete-container">
+  <label class="pedido-label" for="destino">Destino</label>
+  <input
+    id="destino"
+    v-model="destino" 
+    class="pedido-input"
+    @input="aoDigitar('destino')"
+    @blur="setTimeout(() => { sugestoesDestino = [] }, 200)"
+    autocomplete="off"
+  />
+  <ul v-if="sugestoesDestino.length > 0" class="sugestoes-lista">
+    <li v-for="(s, i) in sugestoesDestino" :key="i" @click="selecionarEndereco(s, 'destino')">
+      {{ s.display_name }}
+    </li>
+  </ul>
+</div>
 
         <label class="pedido-label" for="descricao">
           Descrição <span>(Opcional)</span>
@@ -65,7 +90,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import guinchoIcon from '../assets/guincho.svg';
 import mecanicoIcon from '../assets/mecanico.svg';
@@ -78,6 +102,10 @@ export default {
   data() {
     return {
       origem: '',
+      destino: '',
+      sugestoesOrigem: [],
+      sugestoesDestino: [],
+      timeoutDebounce: null,
       descricao: '',
       categoryPopupOpen: false,
       searchQuery: '',
@@ -102,6 +130,43 @@ export default {
     goBack() {
       this.$router.back();
     },
+    aoDigitar(campo) {
+      clearTimeout(this.timeoutDebounce);
+      
+      const valor = this[campo];
+      const listaSugestoes = campo === 'origem' ? 'sugestoesOrigem' : 'sugestoesDestino';
+
+      if (valor.length < 4) {
+        this[listaSugestoes] = [];
+        return;
+      }
+
+      this.timeoutDebounce = setTimeout(() => {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(valor)}&format=json&countrycodes=br&addressdetails=1&limit=5`;
+
+        fetch(url, {
+          headers: {
+            'Accept-Language': 'pt-BR'
+          }
+        })
+          .then(response => response.json())
+          .then(dados => {
+            this[listaSugestoes] = dados;
+          })
+          .catch(erro => {
+            console.error('Erro ao buscar endereços:', erro);
+          });
+      }, 500);
+    },
+    selecionarEndereco(sugestao, campo) {
+      if (campo === 'origem') {
+        this.origem = sugestao.display_name;
+        this.sugestoesOrigem = [];
+      } else {
+        this.destino = sugestao.display_name;
+        this.sugestoesDestino = [];
+      }
+    },
     continuar() {
       this.categoryPopupOpen = true;
     },
@@ -116,6 +181,7 @@ export default {
   }
 };
 </script>
+
 
 <style scoped>
 * {
@@ -193,6 +259,7 @@ export default {
   font-size: 14px;
   font-weight: 700;
   color: #111827;
+  gap: 15px;
 }
 
 .pedido-label span {
@@ -339,5 +406,81 @@ export default {
   font-weight: 700;
   color: #111827;
   text-align: left;
+}
+.btn-logout {
+  background-color: #ef4444; 
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.btn-logout:hover {
+  background-color: #dc2626;
+}
+
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+
+.sugestoes-lista {
+  position: absolute;
+  top: 100%; 
+  left: 0;
+  right: 0;
+  z-index: 50;
+  
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-top: 8px;
+  padding: 0;
+  list-style: none;
+  
+  
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+
+.sugestoes-lista li {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+  
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.sugestoes-lista li:last-child {
+  border-bottom: none;
+}
+
+
+.sugestoes-lista li:hover {
+  background-color: #fef2f2; 
+  color: #dc2626; 
+}
+
+
+.sugestoes-lista::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sugestoes-lista::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 10px;
 }
 </style>

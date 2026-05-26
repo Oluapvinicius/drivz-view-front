@@ -25,9 +25,23 @@ const button = ref()
 
 const router = useRouter();
 
-const irParaHome = () => {
-  setClienteId(loginApi.clienteId);
-  router.push({ name: 'home-cliente' });
+const irParaHome = (respostaCompleta) => {
+ 
+  const identificador = respostaCompleta.user; 
+
+  if (identificador) {
+
+    userStorage.setClienteId(identificador); 
+
+    userStorage.setClienteData({ 
+      nome: 'Usuário', 
+      email: identificador 
+    });
+
+    router.push({ name: 'home-cliente' });
+  } else {
+    loginErro.value = 'Erro: Campo "user" não encontrado na resposta.';
+  }
 };
 
 const validarCampos = async () => {
@@ -52,15 +66,19 @@ const validarCampos = async () => {
 
   
   try {
-    const resposta = await loginApi(email.value, senha.value);
-    if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
-      irParaHome();
-    } else {
-      loginErro.value = resposta?.message || resposta?.mensagem || 'Usuário ou senha inválidos.';
-    }
-  } catch (e) {
-    loginErro.value = 'Erro ao conectar com o servidor.';
+  const resposta = await loginApi(email.value, senha.value);
+
+  console.log("Resposta recebida:", resposta);
+
+  if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
+
+    irParaHome(resposta); 
+  } else {
+    loginErro.value = resposta?.message || 'Erro ao realizar login.';
   }
+} catch (e) {
+  loginErro.value = 'Erro de conexão com o servidor.';
+}
 }
 
 

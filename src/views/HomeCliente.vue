@@ -17,7 +17,7 @@
     </div>
 
     <div class="sidebar__user-info">
-      <span class="sidebar__title">{{ user.nome || 'Usuário' }}</span>
+      <span class="sidebar__title">{{ user.nome || user.nome_cliente || 'Usuário' }}</span>
       <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
       <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
     </div>
@@ -51,6 +51,13 @@
           <button class="sidebar-popup__option" @click="goToOrderScreen">
             Registro de Pedidos
           </button>
+        <a 
+        href="#"
+        @click.prevent="" 
+        class="text-gray-500 hover:text-red-600 transition-colors text-sm underline"
+        >
+        Encerrar sessão
+        </a>
         </div>
       </div>
   
@@ -382,26 +389,48 @@ irParaPerfil () {
       this.windowHeight = window.innerHeight;
     }
   },
-  mounted() {
+  async mounted() {
+    // Esse log TEM que aparecer. Se não aparecer, o Vue nem carregou este arquivo.
+    console.log("=== CHECKPOINT 1: Mounted disparado ===");
+    
     this.fetchServices();
     
     const clienteId = userStorage.getClienteId();
-    if (clienteId) {
-      buscarCliente(clienteId).then(response => {
-        if (response && response.response) {
-          this.user = response.response;
-          userStorage.setClienteData(response.response);
-        } else if (response && response.id) {
-          this.user = response;
-          userStorage.setClienteData(response);
-        }
-      }).catch(error => {
-        console.error('Erro ao buscar dados do cliente:', error);
-      });
+    console.log("=== CHECKPOINT 2: clienteId lido ===", clienteId);
+
+    if (!clienteId) {
+      console.error("ERRO: O LocalStorage está vazio. O login não salvou o ID/Email.");
+      return;
     }
+
+    console.log("=== CHECKPOINT 3: Chamando buscarCliente para ===", clienteId);
+
+    buscarCliente(clienteId)
+      .then(response => {
+        console.log("=== CHECKPOINT 4: API Respondeu! ===", response);
+        
+        // Verifica se os dados estão dentro de 'response' ou no objeto raiz
+        const dadosFinais = response.response || response;
+        console.log("=== CHECKPOINT 5: Dados processados ===", dadosFinais);
+
+        if (dadosFinais) {
+          // Usamos o spread operator para garantir que o Vue sinta a mudança
+          this.user = { ...this.user, ...dadosFinais };
+          
+          // Log para conferir se o nome existe dentro do objeto
+          console.log("=== CHECKPOINT 6: Nome que será exibido ===", dadosFinais.nome);
+          
+          userStorage.setClienteData(dadosFinais);
+        }
+      })
+      .catch(error => {
+        console.error('=== ERRO NA REQUISIÇÃO ===', error);
+      });
     
+    // Configurações de interface
     window.addEventListener('resize', this.updateWindowWidth);
     this.updateWindowWidth();
+    
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && (this.sidebarOpen || this.orderPopupOpen || this.serviceModalOpen)) {
         this.closeAllPopups();
