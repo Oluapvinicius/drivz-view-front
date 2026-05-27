@@ -4,27 +4,34 @@
           <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button></div>
     <div class="tracking-card">
       <div class="timeline-section">
-        <div class="steps-timeline">
+        <div class="step-container">
           <div class="step-point" :class="{ active: currentStep >= 1 }">
             <img src="../assets/lupaIcon.svg" alt="Buscando" class="step-icon" />
           </div>
+          <span class="step-label" :class="{ active: currentStep >= 1 }">Buscando</span>
+        </div>
+        <div class="line-wrapper">
           <div class="step-line" :class="{ active: currentStep >= 2 }"></div>
+        </div>
+        <div class="step-container">
           <div class="step-point" :class="{ active: currentStep >= 2 }">
             <img src="../assets/carroicon.svg" alt="A caminho" class="step-icon" />
           </div>
+          <span class="step-label" :class="{ active: currentStep >= 2 }">A caminho</span>
+        </div>
+        <div class="line-wrapper">
           <div class="step-line" :class="{ active: currentStep >= 3 }"></div>
+        </div>
+        <div class="step-container">
           <div class="step-point" :class="{ active: currentStep >= 3 }">
             <img src="../assets/bandeira.svg" alt="Viagem" class="step-icon" />
           </div>
-        </div>
-        <div class="steps-labels">
-          <span class="step-label" :class="{ active: currentStep >= 1 }">Buscando</span>
-          <span class="step-label" :class="{ active: currentStep >= 2 }">A caminho</span>
-          <span class="step-label" :class="{ active: currentStep >= 3 }">Viagem</span>
+          <span class="step-label" :class="{ active: currentStep >= 3 }">Avaliação</span>
         </div>
       </div>
 
       <template v-if="currentStep === 1">
+        <div class="container-down">
         <div class="addresses-section">
           <div class="address-item">
             <div class="address-icon origin"></div>
@@ -46,16 +53,18 @@
           <span class="demand-badge">Alta demanda</span>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" style="width: 25%;"></div>
+          <div class="progress-fill" style="width: 70%;"></div>
         </div>
         <button class="action-button cancel">Cancelar Solicitação</button>
         <div class="tip-box">
           <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
           <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
         </div>
+        </div>
   
       </template>
       <template v-if="currentStep === 2">
+        <div class="step2-Container">
         <div class="driver-profile">
           <div class="driver-photo">
             <img src="/driver-default.svg" alt="Motorista" />
@@ -70,7 +79,7 @@
             <span class="rating-value">{{ driver.rating }}</span>
           </div>
 
-          <button class="chat-button" title="Enviar mensagem">
+          <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
             <img src="../assets/icon.svg" alt="Chat" />
           </button>
         </div>
@@ -102,8 +111,68 @@
           </div>
         </div>
         <button class="action-button cancel">Cancelar Solicitação</button>
-  
+        </div>
       </template>
+    </div>
+
+   
+    <div v-if="showChatModal" class="chat-modal-overlay" @click="toggleChatModal">
+      <div class="chat-modal" @click.stop>
+
+        <div class="chat-header">
+          <button class="back-button" @click="toggleChatModal"><img src="../assets/arrow.png" class="back-arrow" alt=""></button>
+          <div class="chat-driver-info">
+            <img src="/driver-default.svg" alt="Motorista" class="chat-driver-photo" />
+            <div class="chat-driver-details">
+              <h3 class="chat-driver-name">Rimberio Guincho</h3>
+              <span class="chat-driver-role">★ 4.0 • Prestador</span>
+            </div>
+          </div>
+        </div>
+
+   
+        <div class="chat-messages">
+        
+          <div class="message-group driver-message">
+            <div class="message-bubble">Olá! Sou o Rimberio. Já recebi seu pedido de guincho.</div>
+            <span class="message-time">14:31</span>
+          </div>
+
+
+          <div class="message-group client-message">
+            <div class="message-bubble">Estou a aproximadamente 15 minutos do seu local. Pode confirmar se está na Avenida Paulista?</div>
+            <span class="message-time">14:31</span>
+          </div>
+
+         
+          <div class="message-group driver-message">
+            <div class="message-bubble">Olá. Rimberio! Sim, estou exatamente em frente ao MASP.</div>
+            <span class="message-time">14:33</span>
+          </div>
+
+          <div class="message-group driver-message">
+            <div class="message-bubble">O carro está com o pneu furado e não tenho estepe.</div>
+            <span class="message-time">14:33</span>
+          </div>
+        </div>
+
+      
+        <div class="chat-input-area">
+          <button class="chat-icon-button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+          <input type="text" class="chat-input" placeholder="Mensagem" />
+          <button class="chat-send-button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16346272 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4325843 C0.994623095,2.10604706 0.837654326,3.0486314 1.15159189,3.99621575 L3.03521743,10.4371816 C3.03521743,10.5942791 3.19218622,10.7513764 3.50612381,10.7513764 L16.6915026,11.5368634 C16.6915026,11.5368634 17.1624089,11.5368634 17.1624089,12.0081556 C17.1624089,12.4744748 16.6915026,12.4744748 16.6915026,12.4744748 Z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -115,6 +184,7 @@ export default {
   data() {
     return {
       currentStep: 1,
+      showChatModal: false,
       driver: {
         name: 'Rimberio Guincho',
         rating: '4.0',
@@ -134,6 +204,9 @@ export default {
       if (this.currentStep > 1) {
         this.currentStep--;
       }
+    },
+    toggleChatModal() {
+      this.showChatModal = !this.showChatModal;
     }
   }
 }
@@ -173,7 +246,7 @@ export default {
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  width: 420px;
+  width: 460px;
   height: 580px;
   background: #ffffff;
   border-radius: 32px;
@@ -183,7 +256,7 @@ export default {
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 17px;
   overflow-y: auto;
   animation: cardSlideIn 0.4s cubic-bezier(0.23, 1, 0.320, 1);
 }
@@ -201,15 +274,25 @@ export default {
 
 .timeline-section {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 8px;
 }
 
-.steps-timeline {
+.step-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.line-wrapper {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  height: 52px;
 }
 
 .step-point {
@@ -252,14 +335,7 @@ export default {
   background: #c41e1e;
 }
 
-.steps-labels {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-}
-
 .step-label {
-  flex: 1;
   text-align: center;
   font-size: 12px;
   font-weight: 500;
@@ -602,7 +678,7 @@ export default {
     gap: 20px;
   }
 
-  .steps-timeline {
+  .step-container {
     gap: 8px;
   }
 
@@ -698,7 +774,7 @@ export default {
     gap: 16px;
   }
 
-  .steps-timeline {
+  .step-container {
     gap: 6px;
   }
 
@@ -766,5 +842,260 @@ export default {
     padding: 12px 14px;
     font-size: 13px;
   }
+}
+.container-down {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.step2-Container {
+  background: #ffffff;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+}
+
+
+.chat-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.chat-modal {
+  width: 90%;
+  max-width: 1000px;
+  height: 70vh;
+  background: #ffffff;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #1a1a1a;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-button:hover {
+  background: #f5f5f5;
+  border-radius: 50%;
+}
+
+.chat-driver-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.chat-driver-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e8e8e8;
+}
+
+.chat-driver-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-driver-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.chat-driver-role {
+  font-size: 12px;
+  color: #888;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.driver-message {
+  align-items: flex-start;
+}
+
+.client-message {
+  align-items: flex-end;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.driver-message .message-bubble {
+  background: #e8e8e8;
+  color: #1a1a1a;
+}
+
+.client-message .message-bubble {
+  background: #c41e1e;
+  color: #ffffff;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+  padding: 0 8px;
+}
+
+.chat-input-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: 50px;
+  border: 1px  solid #dba59e6e;
+
+  height: 70px;
+  width: 90%;
+  margin-bottom: 20px;
+}
+
+.chat-icon-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-icon-button:hover {
+  color: #1a1a1a;
+}
+
+.chat-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  border-radius: 20px;
+  padding: 0;
+  background: transparent;
+}
+
+.chat-input::placeholder {
+  color: #bbb;
+}
+
+.chat-send-button {
+  background: #c41e1e;
+  border: none;
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.chat-send-button:hover {
+  background: #a01818;
+  transform: scale(1.05);
+}
+
+.chat-send-button:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .chat-modal {
+    width: 95%;
+    height: 85vh;
+  }
+
+  .message-bubble {
+    max-width: 85%;
+  }
+
+  .chat-modal-overlay {
+    padding: 20px;
+  }
+}
+
+.back-arrow {
+  width: 20px;
+  height: 20px;
 }
 </style>
