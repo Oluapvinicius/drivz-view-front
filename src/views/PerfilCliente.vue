@@ -1,4 +1,3 @@
-
 <template>
   <section class="profile-screen">
     <div class="profile-screen__topbar">
@@ -12,11 +11,7 @@
       <div class="profile-screen__panel profile-screen__panel--left">
         <div class="profile-screen__photo-card">
           <div class="profile-screen__image-wrap">
-            <img 
-              src="../assets/profile.svg" 
-              alt="Perfil" 
-              class="profile-screen__avatar" 
-            />
+            <img src="../assets/profile.svg" alt="Perfil" class="profile-screen__avatar" />
           </div>
           <div class="profile-screen__name-block">
             <div class="profile-screen__rating-stars">
@@ -38,23 +33,20 @@
 
         <div class="profile-screen__form">
           <div class="profile-screen__field profile-screen__field--full">
-            <input type="text" placeholder="Nome do usuario" />
+            <input type="text" placeholder="Nome do usuario" v-model="form.nome" />
           </div>
           <div class="profile-screen__field profile-screen__field--half">
-            <input type="text" placeholder="CPF/CNPJ" />
+            <input type="text" placeholder="CPF/CNPJ" v-model="form.documento" />
           </div>
           <div class="profile-screen__field profile-screen__field--half">
-            <input type="text" placeholder="Telefone" />
+            <input type="text" placeholder="Telefone" v-model="form.telefone" />
           </div>
           <div class="profile-screen__field profile-screen__field--full">
-            <input type="email" placeholder="Email" />
+            <input type="email" placeholder="Email" v-model="form.email" />
           </div>
         </div>
 
-        <button 
-          class="profile-screen__button profile-screen__button--outline" 
-          @click="togglePassword"
-        >
+        <button class="profile-screen__button profile-screen__button--outline" @click="togglePassword">
           {{ showPassword ? 'Cancelar Alteração' : 'Alterar Senha' }}
         </button>
 
@@ -78,23 +70,116 @@
         </div>
       </div>
     </div>
+    <div v-if="temAlteracao" class="profile-screen__confirm-card"
+      :class="{ 'profile-screen__confirm-card--shaking': chamarAtencaoCard }">
+      <p>Você possui alterações não salvas.</p>
+      <div class="profile-screen__confirm-buttons">
+        <button class="profile-screen__button profile-screen__button--outline" @click="descartarAlteracoes">
+          Descartar
+        </button>
+        <button class="profile-screen__button profile-screen__button--primary" @click="salvarAlteracoes">
+          Salvar Alterações
+        </button>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import SidebarCliente from '../components/SidebarCliente.vue';
-import { useRouter } from 'vue-router';
+import { buscarClientePorId } from '@/requests/cliente';
+import { userStorage } from '@/utils/userStorage';
+import { computed, onBeforeUnmount, ref, onMounted } from 'vue';
+import { onBeforeRouteLeave, useRouter } from 'vue-router';
+
 
 const emit = defineEmits(['back']);
 const router = useRouter();
 
 const goBack = () => router.back();
 
-const showPassword = ref(true);
+const showPassword = ref(false);
 const togglePassword = () => {
   showPassword.value = !showPassword.value;
 };
+
+let dadosIniciais = {
+  nome: 'Nome do Usuário',
+  documento: '',
+  telefone: '',
+  email: ''
+};
+
+const form = ref({ ...dadosIniciais });
+const dadosCarregados = ref(false);
+
+onMounted(async () => {
+  try {
+    const usuario = await buscarClientePorId(userStorage.getClienteId())
+    console.log(usuario)
+
+    const dadosFormatados = {
+      nome: usuario.response[0].nome || '',
+      documento: usuario.response[0].cpf || usuario.response[0].cnpj || '',
+      telefone: usuario.response[0].telefone || '',
+      email: usuario.response[0].email || ''
+    };
+
+    dadosIniciais = { ...dadosFormatados };
+    form.value = { ...dadosFormatados };
+    dadosCarregados.value = true;
+    console.log('Dados do perfil carregados:', form.value);
+
+  } catch (error) {
+    console.error('Falha ao carregar dados do perfil:', error);
+  }
+});
+
+const temAlteracao = computed(() => {
+  if (!dadosCarregados.value) return false;
+  return JSON.stringify(form.value) !== JSON.stringify(dadosIniciais);
+});
+
+
+const salvarAlteracoes = () => {
+  console.log('Dados salvos:', form.value);
+  Object.assign(dadosIniciais, form.value);
+};
+
+const descartarAlteracoes = () => {
+  form.value = { ...dadosIniciais };
+};
+
+const chamarAtencaoCard = ref(false);
+
+onBeforeRouteLeave((to, from, next) => {
+  if (temAlteracao.value) {
+    chamarAtencaoCard.value = true;
+    
+    setTimeout(() => {
+      chamarAtencaoCard.value = false;
+    }, 500);
+
+    next(false); 
+  } else {
+    next();
+  }
+});
+
+const bolarFecharAba = (event) => {
+  if (temAlteracao.value) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+};
+
+window.addEventListener('beforeunload', bolarFecharAba);
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', bolarFecharAba);
+});
+
+
+
 </script>
 
 <style scoped>
@@ -122,6 +207,7 @@ const togglePassword = () => {
   background: #d62828;
   color: white;
   padding: 18px 32px 18px 80px;
+  gap: 16px;
 }
 
 .profile-screen__back {
@@ -182,7 +268,7 @@ const togglePassword = () => {
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background-color: #f0f0f0; 
+  background-color: #f0f0f0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,7 +313,7 @@ const togglePassword = () => {
 
 .profile-screen__form {
   display: grid;
-  grid-template-columns: 1fr 1fr; 
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   width: 100%;
   max-width: 580px;
@@ -283,7 +369,7 @@ const togglePassword = () => {
 .profile-screen__button--primary {
   background: #d62828;
   color: white;
-  align-self: flex-end; 
+  align-self: flex-end;
   padding: 10px 24px;
   font-size: 14px;
   border-radius: 8px;
@@ -322,11 +408,52 @@ const togglePassword = () => {
   margin-left: 4px;
 }
 
+.profile-screen__confirm-card {
+  background: #efefef;
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: flex-end;
+}
+
+.profile-screen__confirm-card p {
+  margin: 0;
+  font-size: 20px;
+  color: #1B2D45;
+  font-weight: 600;
+  align-self: center;
+}
+
+.profile-screen__confirm-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.profile-screen__confirm-card--shaking {
+  animation: shakeEffect 0.4s ease-in-out;
+  border-color: #d62828 !important;
+  background: #f8d7da !important;
+}
+
+@keyframes shakeEffect {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
 @media (max-width: 900px) {
   .profile-screen__content {
     grid-template-columns: 1fr;
     padding: 24px;
   }
+
   .profile-screen__panel--left {
     border-right: none;
     border-bottom: 2px solid #d62828;
@@ -339,53 +466,65 @@ const togglePassword = () => {
   .profile-screen__form {
     grid-template-columns: 1fr;
   }
+
   .profile-screen__field--full,
   .profile-screen__field--half {
     grid-column: span 1;
   }
+
   .profile-screen__topbar {
     padding-left: 64px;
   }
 }
+
 @media (min-width: 1800px) {
   .profile-screen__content {
     grid-template-columns: 420px 1fr;
     gap: 80px;
     padding: 80px 180px 48px;
   }
+
   .profile-screen__panel--left {
     padding-right: 80px;
   }
+
   .profile-screen__image-wrap {
     width: 300px;
     height: 300px;
   }
+
   .profile-screen__avatar {
     width: 100%;
     height: 100%;
   }
+
   .profile-screen__name-block h3 {
     font-size: 38px;
   }
+
   .profile-screen__rating-stars .star-icon {
     width: 32px;
     height: 32px;
     font-size: 32px;
   }
+
   .profile-screen__form {
     max-width: 900px;
     gap: 32px;
   }
+
   .profile-screen__field input,
   .profile-screen__field select {
     height: 60px;
     font-size: 22px;
     padding: 0 28px;
   }
+
   .profile-screen__button {
     font-size: 22px;
     padding: 16px 32px;
   }
+
   .profile-screen__section-header h4 {
     font-size: 28px;
   }
@@ -397,45 +536,56 @@ const togglePassword = () => {
     gap: 42px;
     padding: 28px 168px 45px;
   }
+
   .profile-screen__panel--left {
     padding-right: 84px;
   }
+
   .profile-screen__image-wrap {
     width: 294px;
     height: 294px;
   }
+
   .profile-screen__name-block h3 {
     font-size: 38px;
   }
+
   .profile-screen__rating-stars .star-icon {
     width: 34px;
     height: 34px;
     font-size: 34px;
   }
+
   .profile-screen__form {
     max-width: 980px;
     gap: 34px;
   }
+
   .profile-screen__field input,
   .profile-screen__field select {
     height: 63px;
     font-size: 22px;
     padding: 0 34px;
   }
+
   .profile-screen__button {
     font-size: 22px;
     padding: 17px 34px;
   }
+
   .profile-screen__section-header h4 {
     font-size: 27px;
   }
+
   .profile-screen__topbar {
     padding: 28px 22px 22px 56px;
   }
+
   .profile-screen__title {
     font-size: 22px;
     font-weight: 700;
   }
+
   .profile-screen__back {
     height: 22px;
     width: 22px;

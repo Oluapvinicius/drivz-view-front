@@ -1,5 +1,6 @@
 <script setup>
-import { inserirUsuarios } from '@/requests/cliente'
+import { inserirCliente } from '@/requests/cliente'
+import { inserirPrestador } from '@/requests/prestador'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router';
 
@@ -48,7 +49,13 @@ const enviarCadastro = async () => {
 
   if(validarCampos()) {
 
-    const resultado = await inserirUsuarios(usuario)
+    let resultado;
+
+    if(tipoUsuarioSelecionado.value === 'prestador') {
+      resultado = await inserirPrestador(usuario)
+    } else {
+      resultado = await inserirCliente(usuario)
+    }
     console.log(resultado)
 
     if(resultado.status_code === 201){
