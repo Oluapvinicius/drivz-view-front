@@ -1,6 +1,7 @@
 <template>
   <div class="order-tracking-container">
-    <div class="map-background"></div>
+    <div class="map-background">      <button class="test-button" @click="prevStep">← Voltar (Teste)</button>
+          <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button></div>
     <div class="tracking-card">
       <div class="timeline-section">
         <div class="steps-timeline">
@@ -52,7 +53,7 @@
           <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
           <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
         </div>
-        <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button>
+  
       </template>
       <template v-if="currentStep === 2">
         <div class="driver-profile">
@@ -101,7 +102,7 @@
           </div>
         </div>
         <button class="action-button cancel">Cancelar Solicitação</button>
-        <button class="test-button" @click="prevStep">← Voltar (Teste)</button>
+  
       </template>
     </div>
   </div>
@@ -437,8 +438,8 @@ export default {
 }
 
 .address-icon {
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
