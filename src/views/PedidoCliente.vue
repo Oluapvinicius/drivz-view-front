@@ -2,7 +2,7 @@
   <div class="order-tracking-container">
     <div class="map-background">      <button class="test-button" @click="prevStep">← Voltar (Teste)</button>
           <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button></div>
-    <div class="tracking-card">
+    <div class="tracking-card" :class="{ 'expanded': currentStep === 3 }">
       <div class="timeline-section">
         <div class="step-container">
           <div class="step-point" :class="{ active: currentStep >= 1 }">
@@ -113,6 +113,43 @@
         <button class="action-button cancel">Cancelar Solicitação</button>
         </div>
       </template>
+
+      <template v-if="currentStep === 3">
+        <div class="evaluation-container">
+          <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
+          
+          <div class="evaluation-profile">
+            <div class="eval-driver-photo">
+              <img src="/driver-default.svg" alt="Prestador" />
+            </div>
+            <h3 class="eval-driver-name">{{ driver.name }}</h3>
+            <span class="eval-driver-role">Prestador</span>
+          </div>
+
+          <div class="rating-stars">
+            <span 
+              v-for="star in 5" 
+              :key="star"
+              class="star"
+              :class="{ filled: star <= userRating }"
+              @click="userRating = star"
+            >
+              ★
+            </span>
+          </div>
+
+          <div class="comment-section">
+            <label class="comment-label">Fazer comentário (Opcional)</label>
+            <textarea 
+              v-model="userComment" 
+              class="comment-input" 
+              placeholder="Serviço de altissima qualidade!"
+            ></textarea>
+          </div>
+
+          <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
+        </div>
+      </template>
     </div>
 
    
@@ -185,6 +222,8 @@ export default {
     return {
       currentStep: 1,
       showChatModal: false,
+      userRating: 0,
+      userComment: '',
       driver: {
         name: 'Rimberio Guincho',
         rating: '4.0',
@@ -207,6 +246,14 @@ export default {
     },
     toggleChatModal() {
       this.showChatModal = !this.showChatModal;
+    },
+    submitEvaluation() {
+      console.log('Avaliação enviada:', {
+        rating: this.userRating,
+        comment: this.userComment
+      });
+      alert(`Avaliação enviada! Rating: ${this.userRating} estrelas`);
+     
     }
   }
 }
@@ -261,6 +308,18 @@ export default {
   animation: cardSlideIn 0.4s cubic-bezier(0.23, 1, 0.320, 1);
 }
 
+.tracking-card.expanded {
+  width: 90vw;
+  max-width: 480px;
+  height: auto;
+  bottom: 50%;
+  transform: translateX(-50%) translateY(50%);
+  max-height: 90vh;
+  animation: cardExpand 0.5s cubic-bezier(0.23, 1, 0.320, 1) forwards;
+  padding: 30px 30px;
+  gap: 24px;
+}
+
 @keyframes cardSlideIn {
   from {
     opacity: 0;
@@ -272,12 +331,31 @@ export default {
   }
 }
 
+@keyframes cardExpand {
+  from {
+    width: 460px;
+    height: 580px;
+    bottom: 32px;
+  }
+  to {
+    width: 90vw;
+    height: auto;
+    max-height: 90vh;
+    bottom: 50%;
+    transform: translateX(-50%) translateY(50%);
+  }
+}
+
 .timeline-section {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 15px;
   margin-bottom: 8px;
+}
+
+.tracking-card.expanded .timeline-section {
+  display: none;
 }
 
 .step-container {
@@ -678,6 +756,15 @@ export default {
     gap: 20px;
   }
 
+  .tracking-card.expanded {
+    width: calc(100% - 32px);
+    max-width: 600px;
+    bottom: 50%;
+    transform: translateX(-50%) translateY(50%);
+    padding: 32px 24px;
+    gap: 20px;
+  }
+
   .step-container {
     gap: 8px;
   }
@@ -772,6 +859,18 @@ export default {
     border-radius: 24px;
     padding: 20px 16px;
     gap: 16px;
+  }
+
+  .tracking-card.expanded {
+    position: fixed;
+    bottom: 50%;
+    left: 50%;
+    right: auto;
+    width: calc(100% - 32px);
+    transform: translateX(-50%) translateY(50%);
+    height: auto;
+    padding: 28px 20px;
+    gap: 18px;
   }
 
   .step-container {
@@ -1097,5 +1196,222 @@ export default {
 .back-arrow {
   width: 20px;
   height: 20px;
+}
+
+
+.evaluation-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.evaluation-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.4;
+  padding: 0 12px;
+}
+
+.evaluation-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.eval-driver-photo {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.eval-driver-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.eval-driver-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.eval-driver-role {
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.star {
+  font-size: 36px;
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.star:hover {
+  transform: scale(1.1);
+  color: #ffc107;
+}
+
+.star.filled {
+  color: #ffc107;
+  text-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+}
+
+.comment-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.comment-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-transform: capitalize;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  height: 100px;
+  background: #f9f9f9;
+  color: #1a1a1a;
+  transition: all 0.3s ease;
+}
+
+.comment-input::placeholder {
+  color: #bbb;
+  font-size: 12px;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #c41e1e;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(196, 30, 30, 0.1);
+}
+
+.submit-button {
+  width: 100%;
+  padding: 16px 24px;
+  background: #c41e1e;
+  color: #ffffff;
+  border: none;
+  border-radius: 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.submit-button:hover {
+  background: #a01818;
+  box-shadow: 0 6px 16px rgba(196, 30, 30, 0.3);
+  transform: translateY(-2px);
+}
+
+.submit-button:active {
+  background: #8b1414;
+  transform: translateY(0);
+}
+
+.submit-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .evaluation-title {
+    font-size: 16px;
+  }
+
+  .eval-driver-photo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .eval-driver-name {
+    font-size: 18px;
+  }
+
+  .star {
+    font-size: 32px;
+    gap: 8px;
+  }
+
+  .comment-input {
+    min-height: 90px;
+    font-size: 12px;
+  }
+
+  .submit-button {
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .evaluation-title {
+    font-size: 14px;
+  }
+
+  .eval-driver-photo {
+    width: 70px;
+    height: 70px;
+  }
+
+  .eval-driver-name {
+    font-size: 16px;
+  }
+
+  .star {
+    font-size: 28px;
+    gap: 6px;
+  }
+
+  .comment-input {
+    min-height: 80px;
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+
+  .comment-label {
+    font-size: 12px;
+  }
+
+  .submit-button {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
 }
 </style>
