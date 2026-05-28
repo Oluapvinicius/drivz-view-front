@@ -1,7 +1,7 @@
 import { userStorage } from '@/utils/userStorage';
 
 export async function loginApi(usuario, senha) {
-  const response = await fetch('http://localhost:8080/v1/drivez/cliente/login', {
+  const response = await fetch('http://localhost:8080/v1/drivez/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: usuario, senha })

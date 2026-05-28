@@ -7,10 +7,6 @@ import { userStorage } from '../utils/userStorage';
 
 
 
-const setClienteId = (clienteId) => {
-  userStorage.setClienteId(clienteId)
-}
-
 const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
 const email = ref('')
@@ -25,21 +21,31 @@ const button = ref()
 const router = useRouter();
 
 const irParaHome = (respostaCompleta) => {
+  const usuario = respostaCompleta.user || respostaCompleta;
+  const identificador = usuario.id || usuario.id_cliente || usuario.id_prestador || usuario.clienteId || usuario.prestadorId;
+  const tipoUsuario =
+    String(usuario.tipoUsuario || usuario.tipo_usuario || usuario.tipo || usuario.role || usuario.userType || usuario.user_type || '').toLowerCase();
 
-  const identificador = respostaCompleta.user.id;
+  if (!identificador) {
+    loginErro.value = 'Erro: não foi possível identificar o usuário na resposta.';
+    return;
+  }
 
-  if (identificador) {
+  userStorage.setClienteId(identificador);
+  userStorage.setClienteData(usuario);
+  if (tipoUsuario) {
+    userStorage.setUserType(tipoUsuario);
+  }
 
-    userStorage.setClienteId(identificador);
+  const isPrestador =
+    tipoUsuario === 'prestador' || tipoUsuario === 'provider' || tipoUsuario === 'professional' || usuario.id_prestador || usuario.prestadorId;
+  const isCliente =
+    tipoUsuario === 'cliente' || tipoUsuario === 'client' || usuario.id_cliente || usuario.clienteId;
 
-    userStorage.setClienteData({
-      nome: 'Usuário',
-      email: identificador
-    });
-
-    router.push({ name: 'home-cliente' });
+  if (isPrestador) {
+    router.push({ name: 'home-prestador' });
   } else {
-    loginErro.value = 'Erro: Campo "clienteId" não encontrado na resposta.';
+    router.push({ name: 'home-cliente' });
   }
 };
 

@@ -29,3 +29,11 @@ export async function atualizarCliente(id, cliente) {
     });
     return response.json();
 }
+
+export async function buscarAvaliacaoCliente(id) {
+    const url = `http://localhost:8080/v1/drivez/avaliacoes/mediaCliente/${id}`;
+    const response = await fetch(url, {
+        method: "GET",
+    });
+    return response.json();
+}
