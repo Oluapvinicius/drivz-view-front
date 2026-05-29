@@ -92,6 +92,9 @@
             <line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
+        <div class="header__logo">
+          <img src="../assets/Group 294.svg" alt="Logo">
+        </div>
       </header>
       <div class="map-container">
         <div class="map-placeholder"></div>
@@ -203,77 +206,77 @@ export default {
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 2,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 3,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 4,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 5,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 6,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 7,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 8,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 9,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 10,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         },
         {
           id: 11,
           name: 'Rogerio',
           distance: '423m de distância',
           rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
+          avatar: '../assets/profile.svg'
         }
       ]
     };
@@ -626,21 +629,29 @@ export default {
   flex-direction: column;
   overflow: hidden;
   margin-left: 0;
+  position: relative;
 }
 
 .header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
-  padding: 16px 24px;
+  justify-content: center;
 
-  z-index: 100;
+  background-color: transparent;
+  z-index: 101;
 }
 
 .header__menu-toggle {
+  position: absolute;
+  left: 24px;
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  
   display: flex;
   align-items: center;
   justify-content: center;
@@ -648,13 +659,24 @@ export default {
   transition: color 0.2s ease;
 }
 
-.header__menu-toggle:hover {
-  color: #D62828;
+
+.header__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.header__logo img {
+  max-height: 150px;
+  max-width: 320px;
+  object-fit: contain;
+}
+
+
+
 .header__menu-toggle svg {
-  width: 24px;
-  height: 24px;
+  width: 50px;
+  height: 50px;
   stroke: currentColor;
   stroke-width: 2;
 }
@@ -664,6 +686,8 @@ export default {
   display: flex;
   overflow: hidden;
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .map-placeholder {
@@ -672,7 +696,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f4f8 0%, #d5e8ed 100%);
+  background: gray;
   position: relative;
 }
 
@@ -698,8 +722,8 @@ export default {
 
 .right-sidebar__close {
   position: absolute;
-  left: -50px;
-  top: 20%;
+  left: -40px;
+  top: 10%;
   transform: translateY(-50%);
   width: 50px;
   height: 50px;
@@ -1045,7 +1069,7 @@ export default {
 
 .request-modal {
   background: white;
-  border-radius: 28px;
+  border-radius: 12px;
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
