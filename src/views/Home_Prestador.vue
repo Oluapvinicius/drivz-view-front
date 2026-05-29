@@ -122,7 +122,7 @@
       </div>
 
       <div class="right-sidebar__list">
-        <div v-for="request in nearbyRequests" :key="request.id" class="request-card">
+        <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openRequestModal(request)">
           <div class="request-card__top">
             <div class="request-card__avatar">
               <img :src="request.avatar" :alt="request.name" />
@@ -139,6 +139,43 @@
       </div>
     </aside>
 
+    <div v-if="selectedRequest" class="modal-overlay" @click="closeRequestModal">
+      <div class="request-modal" @click.stop>
+        <div class="request-modal__content">
+          <div class="request-modal__header">
+            <div class="request-modal__avatar">
+              <img src="../assets/profile.svg" alt="">
+            </div>
+            <h2 class="request-modal__name">{{ selectedRequest.name }}</h2>
+            <div class="request-modal__rating">
+              <span v-for="i in 5" :key="i" class="request-modal__star" :class="{ filled: i <= selectedRequest.rating }">★</span>
+              <span class="request-modal__rating-value">{{ selectedRequest.rating }}.0</span>
+            </div>
+          </div>
+
+          <div class="request-modal__location">
+            <div class="request-modal__location-icon"><img src="../assets/location.png" alt="" class="locationIcon"></div>
+            <span class="request-modal__location-label">LOCAL DE SOLICITAÇÃO</span>
+          </div>
+
+          <div class="request-modal__map">
+            <div class="request-modal__map-placeholder">
+         
+            </div>
+          </div>
+
+          <div class="request-modal__actions">
+            <button class="request-modal__accept-btn" @click="acceptRequest">
+              Aceitar Serviço 
+              <span class="request-modal__accept-arrow">→</span>
+            </button>
+            <button class="request-modal__ignore-btn" @click="closeRequestModal">
+              Ignorar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     </template>
   </div>
@@ -158,6 +195,7 @@ export default {
       orderPopupOpen: false,
       rightSidebarOpen: true,
       activeScreen: 'home',
+      selectedRequest: null,
       orders: ordersData,
       nearbyRequests: [
         {
@@ -256,7 +294,6 @@ export default {
       }
 
       if (action === 'garage') {
-        // Implementar navegação para garagem
         console.log('Ir para garagem');
         this.sidebarOpen = false;
         return;
@@ -270,11 +307,20 @@ export default {
       }
     },
     refreshRequests() {
-      // Simular atualização
       this.nearbyRequests = this.nearbyRequests.map(r => ({
         ...r,
         distance: `${Math.floor(Math.random() * 500) + 100}m de distância`
       }));
+    },
+    openRequestModal(request) {
+      this.selectedRequest = request;
+    },
+    closeRequestModal() {
+      this.selectedRequest = null;
+    },
+    acceptRequest() {
+      console.log('Solicitação aceita:', this.selectedRequest);
+      this.selectedRequest = null;
     }
   },
   async mounted() {
@@ -974,6 +1020,200 @@ export default {
   text-align: center;
 }
 
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.request-modal {
+  background: white;
+  border-radius: 28px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.request-modal__content {
+  display: flex;
+  flex-direction: column;
+  padding: 40px 24px;
+}
+
+.request-modal__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.request-modal__avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f0f0f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.request-modal__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.request-modal__name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f1f1f;
+  margin: 0;
+}
+
+.request-modal__rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.request-modal__star {
+  font-size: 20px;
+  color: #ddd;
+}
+
+.request-modal__star.filled {
+  color: #ffc107;
+}
+
+.request-modal__rating-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4a4a4a;
+  margin-left: 8px;
+}
+
+.request-modal__location {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.request-modal__location-icon {
+  font-size: 18px;
+}
+
+.request-modal__location-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.request-modal__map {
+  width: 100%;
+  height: 240px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  background: #f5f5f5;
+}
+
+.request-modal__map-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #e8f4f8 0%, #d5e8ed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.request-modal__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.request-modal__accept-btn {
+  width: 100%;
+  background: #D62828;
+  border: none;
+  color: white;
+  padding: 16px;
+  border-radius: 28px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.request-modal__accept-btn:hover {
+  background: #a01818;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(214, 40, 40, 0.3);
+}
+
+.request-modal__accept-arrow {
+  font-size: 20px;
+}
+
+.request-modal__ignore-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #666;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.request-modal__ignore-btn:hover {
+  color: #333;
+  text-decoration: underline;
+}
+
 @media (max-width: 1024px) {
   .right-sidebar {
     width: 320px;
@@ -1007,5 +1247,10 @@ export default {
   .right-sidebar {
     width: 100%;
   }
+}
+
+.locationIcon{
+  width: 18px;
+  height: 18px;
 }
 </style>
