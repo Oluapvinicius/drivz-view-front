@@ -1,7 +1,9 @@
 <template>
   <div class="order-tracking-container">
-    <div class="map-background">      <button class="test-button" @click="prevStep">← Voltar (Teste)</button>
-          <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button></div>
+    <div id="map" class="map-background">
+      <button class="test-button" @click="prevStep">← Voltar (Teste)</button>
+      <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button>
+    </div>
     <div class="tracking-card" :class="{ 'expanded': currentStep === 3 }">
       <div class="timeline-section">
         <div class="step-container">
@@ -32,92 +34,92 @@
 
       <template v-if="currentStep === 1">
         <div class="container-down">
-        <div class="addresses-section">
-          <div class="address-item">
-            <div class="address-icon origin"></div>
-            <div class="address-content">
-              <span class="address-label">Origem</span>
-              <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+          <div class="addresses-section">
+            <div class="address-item">
+              <div class="address-icon origin"></div>
+              <div class="address-content">
+                <span class="address-label">Origem</span>
+                <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+              </div>
+            </div>
+            <div class="address-item">
+              <div class="address-icon destination"></div>
+              <div class="address-content">
+                <span class="address-label">Destino</span>
+                <span class="address-text">Rua Augusta, 2200 - Jardins</span>
+              </div>
             </div>
           </div>
-          <div class="address-item">
-            <div class="address-icon destination"></div>
-            <div class="address-content">
-              <span class="address-label">Destino</span>
-              <span class="address-text">Rua Augusta, 2200 - Jardins</span>
-            </div>
+          <div class="search-status">
+            <span class="status-text">Procurando motorista...</span>
+            <span class="demand-badge">Alta demanda</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 70%;"></div>
+          </div>
+          <button class="action-button cancel">Cancelar Solicitação</button>
+          <div class="tip-box">
+            <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
+            <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
           </div>
         </div>
-        <div class="search-status">
-          <span class="status-text">Procurando motorista...</span>
-          <span class="demand-badge">Alta demanda</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: 70%;"></div>
-        </div>
-        <button class="action-button cancel">Cancelar Solicitação</button>
-        <div class="tip-box">
-          <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
-          <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
-        </div>
-        </div>
-  
+
       </template>
       <template v-if="currentStep === 2">
         <div class="step2-Container">
-        <div class="driver-profile">
-          <div class="driver-photo">
-            <img src="/driver-default.svg" alt="Motorista" />
-          </div>
-          <div class="driver-center-content">
-            <h3 class="driver-name">{{ driver.name }}</h3>
-            <div class="plate-badge">{{ driver.plate }}</div>
-          </div>
+          <div class="driver-profile">
+            <div class="driver-photo">
+              <img src="/driver-default.svg" alt="Motorista" />
+            </div>
+            <div class="driver-center-content">
+              <h3 class="driver-name">{{ driver.name }}</h3>
+              <div class="plate-badge">{{ driver.plate }}</div>
+            </div>
 
-          <div class="driver-rating-badge">
-            <span class="rating-star">★</span>
-            <span class="rating-value">{{ driver.rating }}</span>
-          </div>
+            <div class="driver-rating-badge">
+              <span class="rating-star">★</span>
+              <span class="rating-value">{{ driver.rating }}</span>
+            </div>
 
-          <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
-            <img src="../assets/icon.svg" alt="Chat" />
-          </button>
-        </div>
-        <div class="metrics-section">
-          <div class="metric-item">
-            <span class="metric-label">DISTÂNCIA</span>
-            <span class="metric-value">{{ driver.distance }}</span>
+            <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
+              <img src="../assets/icon.svg" alt="Chat" />
+            </button>
           </div>
-          <div class="metric-divider"></div>
-          <div class="metric-item">
-            <span class="metric-label">CHEGADA EM</span>
-            <span class="metric-value">{{ driver.eta }}</span>
-          </div>
-        </div>
-        <div class="addresses-section">
-          <div class="address-item">
-            <div class="address-icon origin"></div>
-            <div class="address-content">
-              <span class="address-label">Origem</span>
-              <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+          <div class="metrics-section">
+            <div class="metric-item">
+              <span class="metric-label">DISTÂNCIA</span>
+              <span class="metric-value">{{ driver.distance }}</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+              <span class="metric-label">CHEGADA EM</span>
+              <span class="metric-value">{{ driver.eta }}</span>
             </div>
           </div>
-          <div class="address-item">
-            <div class="address-icon destination"></div>
-            <div class="address-content">
-              <span class="address-label">Destino</span>
-              <span class="address-text">Rua Augusta, 2200 - Jardins</span>
+          <div class="addresses-section">
+            <div class="address-item">
+              <div class="address-icon origin"></div>
+              <div class="address-content">
+                <span class="address-label">Origem</span>
+                <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+              </div>
+            </div>
+            <div class="address-item">
+              <div class="address-icon destination"></div>
+              <div class="address-content">
+                <span class="address-label">Destino</span>
+                <span class="address-text">Rua Augusta, 2200 - Jardins</span>
+              </div>
             </div>
           </div>
-        </div>
-        <button class="action-button cancel">Cancelar Solicitação</button>
+          <button class="action-button cancel">Cancelar Solicitação</button>
         </div>
       </template>
 
       <template v-if="currentStep === 3">
         <div class="evaluation-container">
           <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
-          
+
           <div class="evaluation-profile">
             <div class="eval-driver-photo">
               <img src="/driver-default.svg" alt="Prestador" />
@@ -127,24 +129,16 @@
           </div>
 
           <div class="rating-stars">
-            <span 
-              v-for="star in 5" 
-              :key="star"
-              class="star"
-              :class="{ filled: star <= userRating }"
-              @click="userRating = star"
-            >
+            <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= userRating }"
+              @click="userRating = star">
               ★
             </span>
           </div>
 
           <div class="comment-section">
             <label class="comment-label">Fazer comentário (Opcional)</label>
-            <textarea 
-              v-model="userComment" 
-              class="comment-input" 
-              placeholder="Serviço de altissima qualidade!"
-            ></textarea>
+            <textarea v-model="userComment" class="comment-input"
+              placeholder="Serviço de altissima qualidade!"></textarea>
           </div>
 
           <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
@@ -152,12 +146,13 @@
       </template>
     </div>
 
-   
+
     <div v-if="showChatModal" class="chat-modal-overlay" @click="toggleChatModal">
       <div class="chat-modal" @click.stop>
 
         <div class="chat-header">
-          <button class="back-button" @click="toggleChatModal"><img src="../assets/arrow.png" class="back-arrow" alt=""></button>
+          <button class="back-button" @click="toggleChatModal"><img src="../assets/arrow.png" class="back-arrow"
+              alt=""></button>
           <div class="chat-driver-info">
             <img src="/driver-default.svg" alt="Motorista" class="chat-driver-photo" />
             <div class="chat-driver-details">
@@ -167,9 +162,9 @@
           </div>
         </div>
 
-   
+
         <div class="chat-messages">
-        
+
           <div class="message-group driver-message">
             <div class="message-bubble">Olá! Sou o Rimberio. Já recebi seu pedido de guincho.</div>
             <span class="message-time">14:31</span>
@@ -177,11 +172,13 @@
 
 
           <div class="message-group client-message">
-            <div class="message-bubble">Estou a aproximadamente 15 minutos do seu local. Pode confirmar se está na Avenida Paulista?</div>
+            <div class="message-bubble">Estou a aproximadamente 15 minutos do seu local. Pode confirmar se está na
+              Avenida
+              Paulista?</div>
             <span class="message-time">14:31</span>
           </div>
 
-         
+
           <div class="message-group driver-message">
             <div class="message-bubble">Olá. Rimberio! Sim, estou exatamente em frente ao MASP.</div>
             <span class="message-time">14:33</span>
@@ -193,7 +190,7 @@
           </div>
         </div>
 
-      
+
         <div class="chat-input-area">
           <button class="chat-icon-button">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -205,7 +202,9 @@
           <input type="text" class="chat-input" placeholder="Mensagem" />
           <button class="chat-send-button">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16346272 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4325843 C0.994623095,2.10604706 0.837654326,3.0486314 1.15159189,3.99621575 L3.03521743,10.4371816 C3.03521743,10.5942791 3.19218622,10.7513764 3.50612381,10.7513764 L16.6915026,11.5368634 C16.6915026,11.5368634 17.1624089,11.5368634 17.1624089,12.0081556 C17.1624089,12.4744748 16.6915026,12.4744748 16.6915026,12.4744748 Z"></path>
+              <path
+                d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16346272 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4325843 C0.994623095,2.10604706 0.837654326,3.0486314 1.15159189,3.99621575 L3.03521743,10.4371816 C3.03521743,10.5942791 3.19218622,10.7513764 3.50612381,10.7513764 L16.6915026,11.5368634 C16.6915026,11.5368634 17.1624089,11.5368634 17.1624089,12.0081556 C17.1624089,12.4744748 16.6915026,12.4744748 16.6915026,12.4744748 Z">
+              </path>
             </svg>
           </button>
         </div>
@@ -216,6 +215,8 @@
 
 
 <script>
+import { MapboxService } from '../requests/mapboxService';
+
 export default {
   name: 'PedidoCliente',
   data() {
@@ -224,6 +225,12 @@ export default {
       showChatModal: false,
       userRating: 0,
       userComment: '',
+
+      mapboxService: null,
+
+      originCoords: [-46.6559, -23.5615],
+      destinationCoords: [-46.6642, -23.5583],
+
       driver: {
         name: 'Rimberio Guincho',
         rating: '4.0',
@@ -233,27 +240,39 @@ export default {
       }
     }
   },
+  mounted() {
+    const { origemLng, origemLat, destinoLng, destinoLat } = this.$route.query;
+
+    const origin = origemLng && origemLat ? [parseFloat(origemLng), parseFloat(origemLat)] : [-46.6559, -23.5615];
+    const destination = destinoLng && destinoLat ? [parseFloat(destinoLng), parseFloat(destinoLat)] : [-46.6642, -23.5583];
+
+    this.mapboxService = new MapboxService();
+
+    this.mapboxService.initMap('map', origin, destination, (dadosDaRota) => {
+      this.driver.distance = dadosDaRota.distancia;
+      this.driver.eta = dadosDaRota.tempo;
+
+      console.log(`Tempo estimado calculado: ${dadosDaRota.tempo} | Distância: ${dadosDaRota.distancia}`);
+    });
+  },
+  beforeDestroy() {
+    if (this.mapboxService) {
+      this.mapboxService.destroyMap();
+    }
+  },
   methods: {
     nextStep() {
-      if (this.currentStep < 3) {
-        this.currentStep++;
-      }
+      if (this.currentStep < 3) this.currentStep++;
     },
     prevStep() {
-      if (this.currentStep > 1) {
-        this.currentStep--;
-      }
+      if (this.currentStep > 1) this.currentStep--;
     },
     toggleChatModal() {
       this.showChatModal = !this.showChatModal;
     },
     submitEvaluation() {
-      console.log('Avaliação enviada:', {
-        rating: this.userRating,
-        comment: this.userComment
-      });
+      console.log('Avaliação enviada:', { rating: this.userRating, comment: this.userComment });
       alert(`Avaliação enviada! Rating: ${this.userRating} estrelas`);
-     
     }
   }
 }
@@ -298,7 +317,7 @@ export default {
   background: #ffffff;
   border-radius: 32px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15),
-              0 4px 12px rgba(0, 0, 0, 0.08);
+    0 4px 12px rgba(0, 0, 0, 0.08);
   z-index: 10;
   padding: 32px 28px;
   display: flex;
@@ -325,6 +344,7 @@ export default {
     opacity: 0;
     transform: translateX(-50%);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%);
@@ -337,6 +357,7 @@ export default {
     height: 580px;
     bottom: 32px;
   }
+
   to {
     width: 90vw;
     height: auto;
@@ -746,6 +767,37 @@ export default {
   transform: translateY(0);
 }
 
+.custom-marker {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.origin-marker {
+  background-color: #000000;
+  border: 3px solid #ffffff;
+  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+}
+
+.destination-marker {
+  background-color: #ffffff;
+  border: 4px solid #1a1a1a;
+  width: 18px;
+  height: 18px;
+}
+
+.map-background .test-button {
+  position: relative;
+  z-index: 50;
+  width: auto;
+  margin: 10px;
+  display: inline-block;
+}
+
 @media (max-width: 768px) {
   .tracking-card {
     width: calc(100% - 32px);
@@ -942,11 +994,13 @@ export default {
     font-size: 13px;
   }
 }
+
 .container-down {
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
+
 .step2-Container {
   background: #ffffff;
 
@@ -975,6 +1029,7 @@ export default {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -997,6 +1052,7 @@ export default {
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -1119,7 +1175,7 @@ export default {
   gap: 12px;
   padding: 10px 10px;
   border-radius: 50px;
-  border: 1px  solid #dba59e6e;
+  border: 1px solid #dba59e6e;
 
   height: 70px;
   width: 90%;
