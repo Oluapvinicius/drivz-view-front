@@ -309,6 +309,8 @@ export default {
           origemLat: this.origemCoords[1],
           destinoLng: this.destinoCoords[0],
           destinoLat: this.destinoCoords[1],
+          txtOrigem: this.origem,
+          txtDestino: this.destino,
         }
       });
     }

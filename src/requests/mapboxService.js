@@ -21,24 +21,13 @@ export class MapboxService {
     });
 
     this.map.on('load', () => {
-      this.addCustomMarker(originCoords, 'origin');
-      this.addCustomMarker(destinationCoords, 'destination');
       this.fitMapToPoints(originCoords, destinationCoords);
-      
+
       // Passa o callback para a função que calcula a rota
       this.drawRoute(originCoords, destinationCoords, onRouteCalculated);
     });
 
     return this.map;
-  }
-
-  addCustomMarker(coords, type) {
-    const el = document.createElement('div');
-    el.className = `custom-marker ${type}-marker`;
-
-    new mapboxgl.Marker(el)
-      .setLngLat(coords)
-      .addTo(this.map);
   }
 
   fitMapToPoints(originCoords, destinationCoords) {
@@ -55,10 +44,10 @@ export class MapboxService {
   async drawRoute(origin, destination, onRouteCalculated) {
     try {
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin[0]},${origin[1]};${destination[0]},${destination[1]}?geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`;
-      
+
       const response = await fetch(url);
       const data = await response.json();
-      
+
       if (!data.routes || data.routes.length === 0) {
         console.warn("Nenhuma rota encontrada.");
         return;

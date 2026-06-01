@@ -1,9 +1,7 @@
 <template>
   <div class="order-tracking-container">
-    <div id="map" class="map-background">
-      <button class="test-button" @click="prevStep">← Voltar (Teste)</button>
-      <button class="test-button" @click="nextStep">➜ Próximo Step (Teste)</button>
-    </div>
+    <div id="map" class="map-background"></div>
+
     <div class="tracking-card" :class="{ 'expanded': currentStep === 3 }">
       <div class="timeline-section">
         <div class="step-container">
@@ -39,14 +37,14 @@
               <div class="address-icon origin"></div>
               <div class="address-content">
                 <span class="address-label">Origem</span>
-                <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+                <span class="address-text">{{ endereçoOrigem }}</span>
               </div>
             </div>
             <div class="address-item">
               <div class="address-icon destination"></div>
               <div class="address-content">
                 <span class="address-label">Destino</span>
-                <span class="address-text">Rua Augusta, 2200 - Jardins</span>
+                <span class="address-text">{{ endereçoDestino }}</span>
               </div>
             </div>
           </div>
@@ -54,17 +52,19 @@
             <span class="status-text">Procurando motorista...</span>
             <span class="demand-badge">Alta demanda</span>
           </div>
+
           <div class="progress-bar">
-            <div class="progress-fill" style="width: 70%;"></div>
+            <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
           </div>
+
           <button class="action-button cancel">Cancelar Solicitação</button>
           <div class="tip-box">
             <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
             <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
           </div>
         </div>
-
       </template>
+
       <template v-if="currentStep === 2">
         <div class="step2-Container">
           <div class="driver-profile">
@@ -75,16 +75,15 @@
               <h3 class="driver-name">{{ driver.name }}</h3>
               <div class="plate-badge">{{ driver.plate }}</div>
             </div>
-
             <div class="driver-rating-badge">
               <span class="rating-star">★</span>
               <span class="rating-value">{{ driver.rating }}</span>
             </div>
-
             <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
               <img src="../assets/icon.svg" alt="Chat" />
             </button>
           </div>
+
           <div class="metrics-section">
             <div class="metric-item">
               <span class="metric-label">DISTÂNCIA</span>
@@ -96,19 +95,20 @@
               <span class="metric-value">{{ driver.eta }}</span>
             </div>
           </div>
+
           <div class="addresses-section">
             <div class="address-item">
               <div class="address-icon origin"></div>
               <div class="address-content">
                 <span class="address-label">Origem</span>
-                <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+                <span class="address-text">{{ endereçoOrigem }}</span>
               </div>
             </div>
             <div class="address-item">
               <div class="address-icon destination"></div>
               <div class="address-content">
                 <span class="address-label">Destino</span>
-                <span class="address-text">Rua Augusta, 2200 - Jardins</span>
+                <span class="address-text">{{ endereçoDestino }}</span>
               </div>
             </div>
           </div>
@@ -119,7 +119,6 @@
       <template v-if="currentStep === 3">
         <div class="evaluation-container">
           <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
-
           <div class="evaluation-profile">
             <div class="eval-driver-photo">
               <img src="/driver-default.svg" alt="Prestador" />
@@ -127,32 +126,28 @@
             <h3 class="eval-driver-name">{{ driver.name }}</h3>
             <span class="eval-driver-role">Prestador</span>
           </div>
-
           <div class="rating-stars">
             <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= userRating }"
               @click="userRating = star">
               ★
             </span>
           </div>
-
           <div class="comment-section">
             <label class="comment-label">Fazer comentário (Opcional)</label>
             <textarea v-model="userComment" class="comment-input"
               placeholder="Serviço de altissima qualidade!"></textarea>
           </div>
-
           <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
         </div>
       </template>
     </div>
 
-
     <div v-if="showChatModal" class="chat-modal-overlay" @click="toggleChatModal">
       <div class="chat-modal" @click.stop>
-
         <div class="chat-header">
-          <button class="back-button" @click="toggleChatModal"><img src="../assets/arrow.png" class="back-arrow"
-              alt=""></button>
+          <button class="back-button" @click="toggleChatModal">
+            <img src="../assets/arrow.png" class="back-arrow" alt="">
+          </button>
           <div class="chat-driver-info">
             <img src="/driver-default.svg" alt="Motorista" class="chat-driver-photo" />
             <div class="chat-driver-details">
@@ -162,34 +157,26 @@
           </div>
         </div>
 
-
         <div class="chat-messages">
-
           <div class="message-group driver-message">
             <div class="message-bubble">Olá! Sou o Rimberio. Já recebi seu pedido de guincho.</div>
             <span class="message-time">14:31</span>
           </div>
-
-
           <div class="message-group client-message">
             <div class="message-bubble">Estou a aproximadamente 15 minutos do seu local. Pode confirmar se está na
               Avenida
               Paulista?</div>
             <span class="message-time">14:31</span>
           </div>
-
-
           <div class="message-group driver-message">
             <div class="message-bubble">Olá. Rimberio! Sim, estou exatamente em frente ao MASP.</div>
             <span class="message-time">14:33</span>
           </div>
-
           <div class="message-group driver-message">
             <div class="message-bubble">O carro está com o pneu furado e não tenho estepe.</div>
             <span class="message-time">14:33</span>
           </div>
         </div>
-
 
         <div class="chat-input-area">
           <button class="chat-icon-button">
@@ -213,69 +200,168 @@
   </div>
 </template>
 
-
 <script>
-import { MapboxService } from '../requests/mapboxService';
+import { MapboxService } from '@/requests/mapboxService';
+
+// export default {
+//   name: 'PedidoCliente',
+//   data() {
+//     return {
+//       currentStep: 1,
+//       endereçoOrigem: 'Buscando endereço...',
+//       endereçoDestino: 'Buscando endereço...',
+//       mapboxService: null,
+//       showChatModal: false,
+//       userRating: 0,
+//       userComment: '',
+//       driver: {
+//         name: 'Rimberio Guincho',
+//         rating: '4.9',
+//         plate: 'ABC-1234',
+//         distance: '-- km',
+//         eta: '-- min'
+//       }
+//     };
+//   },
+//   mounted() {
+//     const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino } = this.$route.query;
+
+//     this.endereçoOrigem = txtOrigem || 'Av. Paulista, 1578 - Bela Vista';
+//     this.endereçoDestino = txtDestino || 'Rua Augusta, 2200 - Jardins';
+
+//     const origin = [parseFloat(origemLng) || -46.6558, parseFloat(origemLat) || -23.5615];
+//     const destination = [parseFloat(destinoLng) || -46.6624, parseFloat(destinoLat) || -23.5575];
+
+//     this.mapboxService = new MapboxService();
+
+//     this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
+//       this.driver.distance = dadosCalculados.distancia;
+//       this.driver.eta = dadosCalculados.tempo;
+//     });
+//   },
+//   beforeDestroy() {
+//     if (this.mapboxService) this.mapboxService.destroyMap();
+//   },
+//   methods: {
+//     toggleChatModal() {
+//       this.showChatModal = !this.showChatModal;
+//     },
+//     submitEvaluation() {
+//       console.log('Avaliação enviada:', { rating: this.userRating, comment: this.userComment });
+//       alert(`Avaliação enviada com sucesso!`);
+//       this.$router.push({ name: 'Home' });
+//     }
+//   }
+// };
 
 export default {
   name: 'PedidoCliente',
   data() {
     return {
       currentStep: 1,
+      endereçoOrigem: 'Buscando endereço...',
+      endereçoDestino: 'Buscando endereço...',
+      mapboxService: null,
       showChatModal: false,
       userRating: 0,
       userComment: '',
-
-      mapboxService: null,
-
-      originCoords: [-46.6559, -23.5615],
-      destinationCoords: [-46.6642, -23.5583],
-
+      searchProgress: 0,
+      searchInterval: null,
+      simulationInterval: null,
       driver: {
         name: 'Rimberio Guincho',
-        rating: '4.0',
+        rating: '4.9',
         plate: 'ABC-1234',
-        distance: '423 m',
-        eta: '5 min'
+        distance: '-- km',
+        eta: '-- min'
       }
-    }
+    };
   },
   mounted() {
-    const { origemLng, origemLat, destinoLng, destinoLat } = this.$route.query;
+    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino } = this.$route.query;
 
-    const origin = origemLng && origemLat ? [parseFloat(origemLng), parseFloat(origemLat)] : [-46.6559, -23.5615];
-    const destination = destinoLng && destinoLat ? [parseFloat(destinoLng), parseFloat(destinoLat)] : [-46.6642, -23.5583];
+    this.endereçoOrigem = txtOrigem || 'Av. Paulista, 1578 - Bela Vista';
+    this.endereçoDestino = txtDestino || 'Rua Augusta, 2200 - Jardins';
+
+    const origin = [parseFloat(origemLng) || -46.6558, parseFloat(origemLat) || -23.5615];
+    const destination = [parseFloat(destinoLng) || -46.6624, parseFloat(destinoLat) || -23.5575];
 
     this.mapboxService = new MapboxService();
 
-    this.mapboxService.initMap('map', origin, destination, (dadosDaRota) => {
-      this.driver.distance = dadosDaRota.distancia;
-      this.driver.eta = dadosDaRota.tempo;
+    this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
+      this.driver.distance = dadosCalculados.distancia;
 
-      console.log(`Tempo estimado calculado: ${dadosDaRota.tempo} | Distância: ${dadosDaRota.distancia}`);
+      const minutosIniciais = parseInt(dadosCalculados.tempo);
+      this.driver.eta = this.formatarTempo(minutosIniciais);
+
+      this.iniciarLoadingBusca();
     });
   },
   beforeDestroy() {
-    if (this.mapboxService) {
-      this.mapboxService.destroyMap();
-    }
+    if (this.mapboxService) this.mapboxService.destroyMap();
+    clearInterval(this.searchInterval);
+    clearInterval(this.simulationInterval);
   },
   methods: {
-    nextStep() {
-      if (this.currentStep < 3) this.currentStep++;
+    iniciarLoadingBusca() {
+      this.searchProgress = 0;
+
+      this.searchInterval = setInterval(() => {
+        if (this.searchProgress >= 100) {
+          clearInterval(this.searchInterval);
+
+          this.currentStep = 2;
+          this.iniciarDeslocamentoLento();
+          return;
+        }
+
+        this.searchProgress += 2;
+      }, 140);
     },
-    prevStep() {
-      if (this.currentStep > 1) this.currentStep--;
+
+    iniciarDeslocamentoLento() {
+      let distanciaAtual = parseFloat(this.driver.distance) || 6.2;
+      let tempoAtual = parseInt(this.driver.eta.includes('h') ? (parseInt(this.driver.eta.split('h')[0]) * 60 + parseInt(this.driver.eta.split('h')[1])) : this.driver.eta) || 15;
+
+      this.simulationInterval = setInterval(() => {
+        if (distanciaAtual <= 0.2 || tempoAtual <= 1) {
+          clearInterval(this.simulationInterval);
+          this.driver.distance = '0 km';
+          this.driver.eta = 'Chegou';
+
+          setTimeout(() => {
+            this.currentStep = 3;
+          }, 1500);
+          return;
+        }
+
+        distanciaAtual = (distanciaAtual - 0.4).toFixed(1);
+        tempoAtual = tempoAtual - 1;
+
+        this.driver.distance = `${Math.max(0, distanciaAtual)} km`;
+
+        this.driver.eta = this.formatarTempo(Math.max(1, tempoAtual));
+      }, 4000);
     },
     toggleChatModal() {
       this.showChatModal = !this.showChatModal;
     },
     submitEvaluation() {
       console.log('Avaliação enviada:', { rating: this.userRating, comment: this.userComment });
-      alert(`Avaliação enviada! Rating: ${this.userRating} estrelas`);
-    }
+      alert(`Avaliação enviada com sucesso!`);
+      this.$router.push({ name: 'Home' });
+    },
+    formatarTempo(minutosTotais) {
+      if (minutosTotais >= 60) {
+        const horas = Math.floor(minutosTotais / 60);
+        const minutosRestantes = minutosTotais % 60;
+        const minFormatado = minutosRestantes < 10 ? `0${minutosRestantes}` : minutosRestantes;
+        return `${horas}h ${minFormatado}min`;
+      }
+      return `${minutosTotais} min`;
+    },
   }
-}
+};
 </script>
 
 <style scoped>
@@ -688,7 +774,7 @@ export default {
   height: 100%;
   background: #c41e1e;
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width 0.3s linear;
 }
 
 .tip-box {
