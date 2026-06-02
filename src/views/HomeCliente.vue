@@ -147,35 +147,45 @@
         </button>
       </template>
 
-      <template v-else-if="activeScreen === 'orders'">
-        <section class="orders-screen">
-          <div class="orders-screen__header">
-            <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
+       <template v-else-if="activeScreen === 'orders'">
+        
+        <section class="services-screen">
+          <div class="services-screen__header-actions">
+            <button class="services-screen__back-button" @click="activeScreen = 'home'">Voltar</button>
           </div>
-          <div class="orders-screen__list">
-            <article v-for="order in orders" :key="order.id" class="orders-screen__card">
-              <div class="orders-screen__top">
-                <div class="orders-screen__provider">
-                  <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
-                  <div>
-                    <span class="orders-screen__provider-label">Prestador:</span>
-                    <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
+          <div class="services-screen__container">
+            <div v-if="isLoading" class="services__loading">
+              <div class="spinner"></div>
+              <span>Carregando...</span>
+            </div>
+            <div v-else class="services-screen__grid">
+              <article 
+                v-for="service in visibleOrders" 
+                :key="service.id"
+                class="services-screen__card"
+              >
+                <div class="services-screen__top">
+                  <div class="services-screen__provider">
+                    <img :src="service.avatar" :alt="service.provider" class="services-screen__avatar" />
+                    <div class="services-screen__provider-info">
+                      <span class="services-screen__provider-label">Prestador:</span>
+                      <strong class="services-screen__provider-name">{{ service.provider }}</strong>
+                    </div>
+                  </div>
+                  <span class="services-screen__date">{{ service.date }}</span>
+                </div>
+                <div class="services-screen__route">
+                  <div class="services-screen__route-group">
+                    <span class="services-screen__route-title">Origem</span>
+                    <span class="services-screen__route-text">{{ service.origin }}</span>
+                  </div>
+                  <div class="services-screen__route-group">
+                    <span class="services-screen__route-title">Destino</span>
+                    <span class="services-screen__route-text">{{ service.destination }}</span>
                   </div>
                 </div>
-                <span class="orders-screen__date">{{ order.date }}</span>
-              </div>
-              <div class="orders-screen__route">
-                <div class="orders-screen__route-group">
-                  <span class="orders-screen__route-title">Origem</span>
-                  <span class="orders-screen__route-text">{{ order.origin }}</span>
-                </div>
-                <div class="orders-screen__route-arrow">→</div>
-                <div class="orders-screen__route-group">
-                  <span class="orders-screen__route-title">Destino</span>
-                  <span class="orders-screen__route-text">{{ order.destination }}</span>
-                </div>
-              </div>
-            </article>
+              </article>
+            </div>
           </div>
         </section>
       </template>
@@ -216,11 +226,11 @@
 
 <script>
 import profileImg from '../assets/profile.svg';
-import ordersData from '../data/orders.json';
 import PerfilCliente from './PerfilCliente.vue';
 
 import { useRouter } from 'vue-router';
 import { buscarCliente } from '../requests/buscarCliente';
+import { buscarPedidosComFallback } from '../requests/pedidos';
 import { userStorage } from '../utils/userStorage';
 
 
@@ -246,7 +256,7 @@ export default {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       maxVisibleServices: 8,
-      orders: ordersData,
+      orders: [],
       services: [],
       isLoading: false,
     };
@@ -269,6 +279,18 @@ export default {
     visibleServices() {
       const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 4) : this.maxVisibleServices;
       return this.filteredServices.slice(0, limit);
+    },
+    visibleOrders() {
+      return this.orders;
+    }
+  },
+  watch: {
+    services(newVal) {
+      console.log('[HomeCliente] WATCH: services mudou! Novo valor:', newVal.length, 'items');
+      console.log('[HomeCliente] WATCH: Primeiro serviço:', newVal[0]);
+    },
+    orders(newVal) {
+      console.log('[HomeCliente] WATCH: orders mudou! Novo valor:', newVal.length, 'items');
     }
   },
   methods: {
@@ -280,23 +302,48 @@ irParaPerfil () {
 },
       async fetchServices() {
         this.isLoading = true;
+        console.log('[HomeCliente] Iniciando fetchServices...');
           
         try {
-          const response = await fetch('http://localhost:8080/v1/drivez/prestador');
+          const url = 'http://localhost:8080/v1/drivez/prestador';
+          console.log('[HomeCliente] Buscando prestadores de:', url);
+          
+          const response = await fetch(url);
           const data = await response.json();
-          if (data && data.response) {
-            this.services = data.response.map(item => ({
+          
+          console.log('[HomeCliente] Resposta da API de prestadores:', data);
+          
+          // Trata diferentes formatos de resposta
+          let prestadores = [];
+          
+          if (Array.isArray(data)) {
+            prestadores = data;
+          } else if (data && data.response && Array.isArray(data.response)) {
+            prestadores = data.response;
+          } else if (data && Array.isArray(data)) {
+            prestadores = data;
+          }
+          
+          console.log('[HomeCliente] Total de prestadores:', prestadores.length);
+          
+          if (prestadores.length > 0) {
+            this.services = prestadores.map(item => ({
               id: item.id_prestador || item.id || item.email,
-              title: item.nome,
-              description: item.email,
-              location: item.cidade || 'Local não informado',
-              category: item.categoria || '',
+              title: item.nome || item.name || 'Serviço',
+              description: item.email || 'Email não informado',
+              location: item.cidade || item.city || 'Local não informado',
+              category: item.categoria || item.category || '',
               rating: 5,
               image: profileImg
             }));
+            console.log('[HomeCliente] Serviços carregados:', this.services.length);
+          } else {
+            console.warn('[HomeCliente] Nenhum prestador encontrado');
+            this.services = [];
           }
         } catch (error) {
-          console.error('Erro ao buscar serviços:', error);
+          console.error('[HomeCliente] Erro ao buscar serviços:', error);
+          this.services = [];
         } finally {
           setTimeout(() => { this.isLoading = false; }, 600);
         }
@@ -356,29 +403,45 @@ irParaPerfil () {
     filterServices() {
     },
     refreshServices() {
-    
       this.isLoading = true;
+      console.log('[HomeCliente] Atualizando serviços (refresh)...');
+      
       fetch('http://localhost:8080/v1/drivez/prestador')
         .then(response => response.json())
         .then(data => {
-          if (data && data.response) {
-       
-            const shuffled = data.response
+          console.log('[HomeCliente] Resposta do refresh:', data);
+          
+          // Trata diferentes formatos de resposta
+          let prestadores = [];
+          
+          if (Array.isArray(data)) {
+            prestadores = data;
+          } else if (data && data.response && Array.isArray(data.response)) {
+            prestadores = data.response;
+          } else if (data && Array.isArray(data)) {
+            prestadores = data;
+          }
+          
+          if (prestadores.length > 0) {
+            // Embaralha os prestadores
+            const shuffled = prestadores
               .map(value => ({ value, sort: Math.random() }))
               .sort((a, b) => a.sort - b.sort)
               .map(({ value }) => value);
+              
             this.services = shuffled.map(item => ({
               id: item.id_prestador || item.id || item.email,
-              title: item.nome,
-              description: item.email,
-              location: item.cidade || 'Local não informado',
+              title: item.nome || item.name || 'Serviço',
+              description: item.email || 'Email não informado',
+              location: item.cidade || item.city || 'Local não informado',
               rating: 5,
               image: profileImg
             }));
+            console.log('[HomeCliente] Serviços atualizados:', this.services.length);
           }
         })
         .catch(error => {
-          console.error('Erro ao buscar serviços:', error);
+          console.error('[HomeCliente] Erro ao buscar serviços no refresh:', error);
         })
         .finally(() => {
           setTimeout(() => { this.isLoading = false; }, 600);
@@ -387,6 +450,24 @@ irParaPerfil () {
     updateWindowWidth() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
+    },
+    async fetchPedidos() {
+      try {
+        console.log('[HomeCliente] Iniciando fetchPedidos...');
+        const pedidos = await buscarPedidosComFallback();
+        console.log('[HomeCliente] Resposta de fetchPedidos:', pedidos);
+        
+        if (Array.isArray(pedidos) && pedidos.length > 0) {
+          this.orders = pedidos;
+          console.log('[HomeCliente] Pedidos carregados com sucesso:', this.orders);
+        } else {
+          console.log('[HomeCliente] Nenhum pedido encontrado - retorno vazio');
+          this.orders = [];
+        }
+      } catch (error) {
+        console.error('[HomeCliente] Erro ao buscar pedidos da API:', error);
+        this.orders = [];
+      }
     }
   },
   async mounted() {
@@ -394,6 +475,7 @@ irParaPerfil () {
     console.log("=== CHECKPOINT 1: Mounted disparado ===");
     
     this.fetchServices();
+    this.fetchPedidos();
     
     const clienteId = userStorage.getClienteId();
     console.log("=== CHECKPOINT 2: clienteId lido ===", clienteId);
@@ -463,7 +545,6 @@ html, body {
   max-height: 100vh;
   overflow: hidden;
   background-color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 
@@ -1334,6 +1415,162 @@ html, body {
     transform: scale(0.98);
 }
 
+.services-screen {
+  margin: 50px;
+  padding: 32px;
+  background: #f5f6f8;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.services-screen__container {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.services-screen__header-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.services-screen__back-button {
+  background: #D62828;
+  border: none;
+  color: white;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.services-screen__back-button:hover {
+  background: #b81f1f;
+  transform: translateY(-1px);
+}
+
+.services-screen__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  overflow-y: auto;
+  padding-right: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.services-screen__card {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 28px;
+  padding: 28px 32px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  transition: border-color 0.2s ease;
+}
+
+.services-screen__card:hover {
+  border-color: #D62828;
+}
+
+.services-screen__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.services-screen__provider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.services-screen__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.services-screen__provider-label {
+  display: block;
+  font-size: 20px;
+  color: #7f7f7f;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.services-screen__provider-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.services-screen__provider-name {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111111;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.services-screen__date {
+  font-size: 16px;
+  color: #333333;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.services-screen__route {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.services-screen__route-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.services-screen__route-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.services-screen__route-text {
+  font-size: 15px;
+  color: #4a4a4a;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
 @media (max-width: 1024px) {
   .main-content {
     overflow: hidden;
@@ -1444,6 +1681,38 @@ html, body {
     min-height: 72px;
     padding: 0 26px;
     margin: 0 auto 28px;
+  }
+
+  .services-screen {
+    margin: 18px;
+    padding: 25px;
+  }
+
+  .services-screen__grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .services-screen__card {
+    padding: 20px 24px;
+    gap: 20px;
+  }
+
+  .services-screen__avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .services-screen__provider-name {
+    font-size: 14px;
+  }
+
+  .services-screen__date {
+    font-size: 14px;
+  }
+
+  .services-screen__route-text {
+    font-size: 14px;
   }
 }
 
