@@ -10,6 +10,7 @@ import ConfigurarPedidoCliente from '../views/ConfigurarPedidoCliente.vue';
 import MensagemCliente from '../views/MensagemCliente.vue';
 import PerfilCliente from '../views/PerfilCliente.vue';
 import PerfilPrestador from '../views/PerfilPrestador.vue';
+import MeusVeiculos from '../views/MeusVeiculos.vue';
 
 
 const routes = [
@@ -62,6 +63,11 @@ const routes = [
     path: '/perfil-prestador',
     name: 'perfil-prestador',
     component: PerfilPrestador
+  },
+  {
+    path: '/meus-veiculos',
+    name: 'meus-veiculos',
+    component: MeusVeiculos
   }
 ];
 

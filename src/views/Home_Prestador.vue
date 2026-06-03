@@ -296,7 +296,7 @@ export default {
       }
 
       if (action === 'garage') {
-        console.log('Ir para garagem');
+        this.$router.push({ name: 'meus-veiculos' });
         this.sidebarOpen = false;
         return;
       }
