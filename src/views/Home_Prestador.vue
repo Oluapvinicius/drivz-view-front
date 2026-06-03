@@ -57,7 +57,7 @@
           <span class="sidebar__label">Mensagens</span>
         </button>
         <button class="sidebar__item" @click="handleSidebarAction('garage')">
-          <img src="../assets/profile.svg" alt="Garagem" class="sidebar__icon">
+          <img src="../assets/Warehouse.svg" alt="Garagem" class="sidebar__icon">
           <span class="sidebar__label">Minha Garagem</span>
         </button>
       </nav>
@@ -170,7 +170,6 @@
           <div class="request-modal__actions">
             <button class="request-modal__accept-btn" @click="acceptRequest">
               Aceitar Serviço 
-              <span class="request-modal__accept-arrow">→</span>
             </button>
             <button class="request-modal__ignore-btn" @click="closeRequestModal">
               Ignorar
@@ -323,6 +322,7 @@ export default {
     },
     acceptRequest() {
       console.log('Solicitação aceita:', this.selectedRequest);
+      this.$router.push({ name: 'pedido-prestador' });
       this.selectedRequest = null;
     }
   },

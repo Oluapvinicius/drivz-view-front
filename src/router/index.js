@@ -5,6 +5,7 @@ import Cadastro from '../views/Cadastro.vue';
 import HomeCliente from '../views/HomeCliente.vue';
 import HomePrestador from '../views/Home_Prestador.vue';
 import PedidoCliente from '../views/PedidoCliente.vue';
+import PedidoPrestador from '../views/PedidoPrestador.vue';
 import ConfigurarPedidoCliente from '../views/ConfigurarPedidoCliente.vue';
 import MensagemCliente from '../views/MensagemCliente.vue';
 import PerfilCliente from '../views/PerfilCliente.vue';
@@ -36,6 +37,11 @@ const routes = [
     path: '/pedido-cliente',
     name: 'pedido-cliente',
     component: PedidoCliente
+  },
+  {
+    path: '/pedido-prestador',
+    name: 'pedido-prestador',
+    component: PedidoPrestador
   },
   {
     path: '/configurar-pedido-cliente',
