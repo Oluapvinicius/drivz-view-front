@@ -390,37 +390,26 @@ irParaPerfil () {
     }
   },
   async mounted() {
-    // Esse log TEM que aparecer. Se não aparecer, o Vue nem carregou este arquivo.
-    console.log("=== CHECKPOINT 1: Mounted disparado ===");
     
     this.fetchServices();
     
-    const clienteId = userStorage.getClienteId();
-    console.log("=== CHECKPOINT 2: clienteId lido ===", clienteId);
+    const clienteId = userStorage.getUserId();
 
     if (!clienteId) {
       console.error("ERRO: O LocalStorage está vazio. O login não salvou o ID/Email.");
       return;
     }
 
-    console.log("=== CHECKPOINT 3: Chamando buscarCliente para ===", clienteId);
-
     buscarCliente(clienteId)
       .then(response => {
-        console.log("=== CHECKPOINT 4: API Respondeu! ===", response);
         
-        // Verifica se os dados estão dentro de 'response' ou no objeto raiz
         const dadosFinais = response.response || response;
-        console.log("=== CHECKPOINT 5: Dados processados ===", dadosFinais);
 
         if (dadosFinais) {
-          // Usamos o spread operator para garantir que o Vue sinta a mudança
           this.user = { ...this.user, ...dadosFinais };
+
           
-          // Log para conferir se o nome existe dentro do objeto
-          console.log("=== CHECKPOINT 6: Nome que será exibido ===", dadosFinais.nome);
-          
-          userStorage.setClienteData(dadosFinais);
+          userStorage.setSession(clienteId, dadosFinais, 'cliente');
         }
       })
       .catch(error => {

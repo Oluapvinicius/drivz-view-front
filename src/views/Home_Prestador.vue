@@ -2,142 +2,143 @@
   <div class="app-container">
     <template v-if="activeScreen === 'history'">
       <section class="orders-screen">
-          <div class="orders-screen__header">
-            <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
-          </div>
-          <div class="orders-screen__list">
-            <article v-for="order in orders" :key="order.id" class="orders-screen__card">
-              <div class="orders-screen__top">
-                <div class="orders-screen__provider">
-                  <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
-                  <div>
-                    <span class="orders-screen__provider-label">Prestador:</span>
-                    <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
-                  </div>
-                </div>
-                <span class="orders-screen__date">{{ order.date }}</span>
-              </div>
-              <div class="orders-screen__route">
-                <div class="orders-screen__route-group">
-                  <span class="orders-screen__route-title">Origem</span>
-                  <span class="orders-screen__route-text">{{ order.origin }}</span>
-                </div>
-                <div class="orders-screen__route-arrow">→</div>
-                <div class="orders-screen__route-group">
-                  <span class="orders-screen__route-title">Destino</span>
-                  <span class="orders-screen__route-text">{{ order.destination }}</span>
+        <div class="orders-screen__header">
+          <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
+        </div>
+        <div class="orders-screen__list">
+          <article v-for="order in orders" :key="order.id" class="orders-screen__card">
+            <div class="orders-screen__top">
+              <div class="orders-screen__provider">
+                <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
+                <div>
+                  <span class="orders-screen__provider-label">Prestador:</span>
+                  <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
                 </div>
               </div>
-            </article>
-          </div>
-        </section>
+              <span class="orders-screen__date">{{ order.date }}</span>
+            </div>
+            <div class="orders-screen__route">
+              <div class="orders-screen__route-group">
+                <span class="orders-screen__route-title">Origem</span>
+                <span class="orders-screen__route-text">{{ order.origin }}</span>
+              </div>
+              <div class="orders-screen__route-arrow">→</div>
+              <div class="orders-screen__route-group">
+                <span class="orders-screen__route-title">Destino</span>
+                <span class="orders-screen__route-text">{{ order.destination }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
     </template>
 
     <template v-else>
-    <aside class="sidebar" :class="{ active: sidebarOpen }">
-      <div class="sidebar__top-row">
-       
-      </div>
+      <aside class="sidebar" :class="{ active: sidebarOpen }">
+        <div class="sidebar__top-row">
 
-      <div class="sidebar__profile-block">
-        <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
-      </div>
-
-      <div class="sidebar__user-info">
-        <span class="sidebar__title">{{ user.nome || 'Prestador' }}</span>
-        <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
-        <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
-      </div>
-
-      <div class="sidebar__divider"></div>
-
-      <nav class="sidebar__menu">
-        <button class="sidebar__item" @click="handleSidebarAction('messages')">
-          <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
-          <span class="sidebar__label">Mensagens</span>
-        </button>
-        <button class="sidebar__item" @click="handleSidebarAction('garage')">
-          <img src="../assets/profile.svg" alt="Garagem" class="sidebar__icon">
-          <span class="sidebar__label">Minha Garagem</span>
-        </button>
-      </nav>
-
-      <div class="sidebar__footer">
-        <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
-          <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
-        </button>
-      </div>
-
-      <div v-if="orderPopupOpen" class="sidebar-popup">
-        <div class="sidebar-popup__header">
-          <h4>Menu</h4>
-          <button class="sidebar-popup__close" @click="orderPopupOpen = false">×</button>
         </div>
-        <div class="sidebar-popup__list">
-          <button class="sidebar-popup__option" @click="handleSidebarAction('orders')">
-            Registro de Pedido
+
+        <div class="sidebar__profile-block">
+          <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+        </div>
+
+        <div class="sidebar__user-info">
+          <span class="sidebar__title">{{ user.nome || 'Prestador' }}</span>
+          <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
+          <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
+        </div>
+
+        <div class="sidebar__divider"></div>
+
+        <nav class="sidebar__menu">
+          <button class="sidebar__item" @click="handleSidebarAction('messages')">
+            <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
+            <span class="sidebar__label">Mensagens</span>
+          </button>
+          <button class="sidebar__item" @click="handleSidebarAction('garage')">
+            <img src="../assets/profile.svg" alt="Garagem" class="sidebar__icon">
+            <span class="sidebar__label">Minha Garagem</span>
+          </button>
+        </nav>
+
+        <div class="sidebar__footer">
+          <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
+            <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
           </button>
         </div>
-      </div>
-    </aside>
 
-    <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen }" @click="closeAllPopups"></div>
+        <div v-if="orderPopupOpen" class="sidebar-popup">
+          <div class="sidebar-popup__header">
+            <h4>Menu</h4>
+            <button class="sidebar-popup__close" @click="orderPopupOpen = false">×</button>
+          </div>
+          <div class="sidebar-popup__list">
+            <button class="sidebar-popup__option" @click="handleSidebarAction('orders')">
+              Registro de Pedido
+            </button>
+          </div>
+        </div>
+      </aside>
 
-    <main class="main-content">
-      <header class="header">
-        <button class="header__menu-toggle" @click="toggleSidebar">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-      </header>
-      <div class="map-container">
-        <div class="map-placeholder"></div>
-      </div>
-    </main>
+      <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen }" @click="closeAllPopups"></div>
 
-    <aside class="right-sidebar" :class="{ active: rightSidebarOpen }">
-      <button class="right-sidebar__close" @click="rightSidebarOpen = !rightSidebarOpen">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path :d="rightSidebarOpen ? 'M15 18l-6-6 6-6' : 'M9 6l6 6-6 6'"/>
-        </svg>
-      </button>
-      <div class="right-sidebar__header">
-        <div class="right-sidebar__title-group">
-          <div class="right-sidebar__badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="right-sidebar__icon">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-              <circle cx="12" cy="10" r="3"/>
+      <main class="main-content">
+        <header class="header">
+          <button class="header__menu-toggle" @click="toggleSidebar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
-          </div>
-          <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
+          </button>
+        </header>
+        <div class="map-container">
+          <div id="map-prestador" class="map-placeholder"></div>
         </div>
-        <button class="right-sidebar__refresh" @click="refreshRequests">
+      </main>
+
+      <aside class="right-sidebar" :class="{ active: rightSidebarOpen }">
+        <button class="right-sidebar__close" @click="rightSidebarOpen = !rightSidebarOpen">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36"/>
+            <path :d="rightSidebarOpen ? 'M15 18l-6-6 6-6' : 'M9 6l6 6-6 6'" />
           </svg>
         </button>
-      </div>
-
-      <div class="right-sidebar__list">
-        <div v-for="request in nearbyRequests" :key="request.id" class="request-card">
-          <div class="request-card__top">
-            <div class="request-card__avatar">
-              <img :src="request.avatar" :alt="request.name" />
+        <div class="right-sidebar__header">
+          <div class="right-sidebar__title-group">
+            <div class="right-sidebar__badge">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                class="right-sidebar__icon">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
             </div>
-            <div class="request-card__header">
-              <h3 class="request-card__name">{{ request.name }}</h3>
-              <p class="request-card__distance">{{ request.distance }}</p>
-            </div>
+            <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
           </div>
-          <div class="request-card__rating">
-            <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= request.rating }">★</span>
+          <button class="right-sidebar__refresh" @click="refreshRequests">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="right-sidebar__list">
+          <div v-for="request in nearbyRequests" :key="request.id" class="request-card">
+            <div class="request-card__top">
+              <div class="request-card__avatar">
+                <img :src="request.avatar" :alt="request.name" />
+              </div>
+              <div class="request-card__header">
+                <h3 class="request-card__name">{{ request.name }}</h3>
+                <p class="request-card__distance">{{ request.distance }}</p>
+              </div>
+            </div>
+            <div class="request-card__rating">
+              <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= request.rating }">★</span>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
 
 
     </template>
@@ -148,6 +149,7 @@
 import { buscarCliente } from '../requests/buscarCliente';
 import { userStorage } from '../utils/userStorage';
 import ordersData from '../data/orders.json';
+import { MapboxService } from '../requests/mapboxService';
 
 export default {
   name: 'HomePrestador',
@@ -159,136 +161,123 @@ export default {
       rightSidebarOpen: true,
       activeScreen: 'home',
       orders: ordersData,
+      mapService: null,
+      requestMarkerIds: [],
+      presenterLocation: [-46.9015, -23.5255],
       nearbyRequests: [
-        {
-          id: 1,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 2,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 3,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 4,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 5,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 6,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 7,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 8,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 9,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 10,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        },
-        {
-          id: 11,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: 'https://via.placeholder.com/48/D62828/FFFFFF?text=RG'
-        }
+        { id: 1, name: 'Rogério Silva', address: 'Centro, Jandira - SP', rating: 4.8, distance: 'Calculando...' },
+        { id: 2, name: 'Ana Costa', address: 'Vila Santo Antônio, Jandira - SP', rating: 4.5, distance: 'Calculando...' },
+        { id: 3, name: 'Carlos Souza', address: 'Jardim Belval, Barueri - SP', rating: 4.9, distance: 'Calculando...' }
       ]
     };
   },
   methods: {
-    toggleSidebar() {
-      this.sidebarOpen = !this.sidebarOpen;
-    },
-    closeAllPopups() {
-      this.sidebarOpen = false;
-      this.orderPopupOpen = false;
-    },
-    handleSidebarAction(action) {
-      if (action === 'messages') {
-        this.$router.push({ name: 'mensagem-cliente' });
-        this.sidebarOpen = false;
-        return;
+    async initMap() {
+      this.mapService = new MapboxService();
+
+      // 1. Se o usuário tiver um endereço cadastrado em texto, transforma em Lat/Lng primeiro
+      if (this.user.localizacao) {
+        const coords = await this.mapService.forwardGeocode(this.user.localizacao);
+        if (coords) {
+          this.presenterLocation = coords;
+        }
       }
 
-      if (action === 'garage') {
-        // Implementar navegação para garagem
-        console.log('Ir para garagem');
-        this.sidebarOpen = false;
-        return;
-      }
+      // 2. Inicializa o mapa focado na localização real do prestador
+      const map = this.mapService.initPresenterMap('map-prestador', this.presenterLocation);
+      if (!map) return;
 
-      if (action === 'orders') {
-        this.activeScreen = 'history';
-        this.orderPopupOpen = false;
-        this.sidebarOpen = false;
-        return;
+      const setupContent = async () => {
+        // Adiciona o marcador do prestador (Guincho)
+        this.mapService.addMarker('prestador', this.presenterLocation[0], this.presenterLocation[1], {
+          color: '#D62828',
+          popupHTML: `<div style="padding: 8px;"><strong>Você está aqui</strong></div>`
+        });
+
+        // 3. Busca e transforma os endereços dos clientes em marcadores no mapa
+        await this.updateRequestMarkersFromAPI();
+      };
+
+      if (map.isStyleLoaded()) {
+        setupContent();
+      } else {
+        map.on('load', setupContent);
       }
     },
-    refreshRequests() {
-      // Simular atualização
-      this.nearbyRequests = this.nearbyRequests.map(r => ({
-        ...r,
-        distance: `${Math.floor(Math.random() * 500) + 100}m de distância`
-      }));
-    }
+
+    async updateRequestMarkersFromAPI() {
+      this.clearRequestMarkers();
+      const coordinatesToFit = [this.presenterLocation];
+
+      // Percorre os clientes da "API", transforma o endereço de cada um em Lat/Lng e plota no mapa
+      for (const request of this.nearbyRequests) {
+        const coords = await this.mapService.forwardGeocode(request.address);
+
+        if (coords) {
+          // Salva as coordenadas temporariamente no objeto para uso do fitToBounds
+          request.lng = coords[0];
+          request.lat = coords[1];
+          coordinatesToFit.push(coords);
+
+          const markerId = `request-${request.id}`;
+          const popupHTML = `
+            <div style="font-family: sans-serif; padding: 5px;">
+              <strong>${request.name}</strong><br/>
+              <span style="font-size: 12px; color: #666;">${request.address}</span><br/>
+              <span style="color: #ffc107;">★ ${request.rating}</span>
+            </div>
+          `;
+
+          // Adiciona o marcador azul do cliente próximo
+          this.mapService.addMarker(markerId, request.lng, request.lat, {
+            color: '#0066CC',
+            popupHTML
+          });
+
+          this.requestMarkerIds.push(markerId);
+        }
+      }
+
+      // Reajusta o zoom do mapa para abraçar o prestador e TODOS os clientes encontrados
+      if (coordinatesToFit.length > 1) {
+        this.mapService.fitToBounds(coordinatesToFit, {
+          padding: { top: 80, bottom: 80, left: 80, right: 80 },
+          duration: 1200
+        });
+      }
+    },
+
+    clearRequestMarkers() {
+      this.requestMarkerIds.forEach((markerId) => {
+        this.mapService.removeMarker(markerId);
+      });
+      this.requestMarkerIds = [];
+    },
+
   },
   async mounted() {
-    const clienteId = userStorage.getClienteId();
-    if (clienteId) {
+    const userId = userStorage.getUserId();
+
+    if (userId) {
       try {
-        const response = await buscarCliente(clienteId);
+        let response;
+        if (userStorage.isPrestador()) {
+          response = await buscarCliente(userId);
+        } else {
+          response = await buscarCliente(userId);
+        }
+
         const dadosFinais = response.response || response;
+
         if (dadosFinais) {
           this.user = { ...this.user, ...dadosFinais };
-          userStorage.setClienteData(dadosFinais);
+          const tipoAtual = userStorage.getUserType();
+          const tipoNovo = dadosFinais.tipoUsuario || dadosFinais.tipo || tipoAtual;
+
+          userStorage.setSession(userId, dadosFinais, tipoNovo);
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do prestador:', error);
+        console.error('Erro ao atualizar dados do usuário do banco:', error);
       }
     }
 
@@ -297,11 +286,23 @@ export default {
         this.closeAllPopups();
       }
     });
+
+    await this.initMap();
+  },
+
+  beforeDestroy() {
+    this.clearRequestMarkers();
+    if (this.mapService) {
+      this.mapService.destroyMap();
+      this.mapService = null;
+    }
   }
 };
 </script>
 
 <style scoped>
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -827,6 +828,7 @@ export default {
 .star.filled {
   color: #ffc107;
 }
+
 .orders-screen {
   margin: 18px;
   padding: 22px;

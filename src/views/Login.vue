@@ -23,26 +23,16 @@ const router = useRouter();
 const irParaHome = (respostaCompleta) => {
   const usuario = respostaCompleta.user || respostaCompleta;
   const identificador = usuario.id || usuario.id_cliente || usuario.id_prestador || usuario.clienteId || usuario.prestadorId;
-  const tipoUsuario =
-    String(usuario.tipoUsuario || usuario.tipo_usuario || usuario.tipo || usuario.role || usuario.userType || usuario.user_type || '').toLowerCase();
+  const tipoUsuario = String(usuario.tipoUsuario || usuario.tipo_usuario || usuario.tipo || usuario.role || '');
 
   if (!identificador) {
     loginErro.value = 'Erro: não foi possível identificar o usuário na resposta.';
     return;
   }
 
-  userStorage.setClienteId(identificador);
-  userStorage.setClienteData(usuario);
-  if (tipoUsuario) {
-    userStorage.setUserType(tipoUsuario);
-  }
+  userStorage.setSession(identificador, usuario, tipoUsuario);
 
-  const isPrestador =
-    tipoUsuario === 'prestador' || tipoUsuario === 'provider' || tipoUsuario === 'professional' || usuario.id_prestador || usuario.prestadorId;
-  const isCliente =
-    tipoUsuario === 'cliente' || tipoUsuario === 'client' || usuario.id_cliente || usuario.clienteId;
-
-  if (isPrestador) {
+  if (userStorage.getUserData().type === 'prestador') {
     router.push({ name: 'home-prestador' });
   } else {
     router.push({ name: 'home-cliente' });
@@ -72,17 +62,12 @@ const validarCampos = async () => {
 
   try {
     const resposta = await loginApi(email.value, senha.value);
+    console.log(resposta)
 
-    console.log("Resposta recebida:", resposta);
+    irParaHome(resposta);
 
-    if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
-
-      irParaHome(resposta);
-    } else {
-      loginErro.value = resposta?.message || 'Erro ao realizar login.';
-    }
   } catch (e) {
-    loginErro.value = 'Erro de conexão com o servidor.';
+    loginErro.value = e.message || 'Erro de conexão com o servidor.';
   }
 }
 
