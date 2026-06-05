@@ -1,27 +1,55 @@
 export const userStorage = {
-  setClienteId(id) {
-    localStorage.setItem('clienteId', id);
+  setSession(id, data, type) {
+    localStorage.setItem('userId', id);
+    localStorage.setItem('userData', JSON.stringify(data));
+    localStorage.setItem('userType', type);
   },
 
-  getClienteId() {
-    return localStorage.getItem('clienteId');
+  getUserId() {
+    return localStorage.getItem('userId');
   },
 
-  setClienteData(data) {
-    localStorage.setItem('clienteData', JSON.stringify(data));
-  },
-
-  getClienteData() {
-    const data = localStorage.getItem('clienteData');
+  getUserData() {
+    const data = localStorage.getItem('userData');
     return data ? JSON.parse(data) : null;
   },
 
-  clearClienteData() {
-    localStorage.removeItem('clienteId');
-    localStorage.removeItem('clienteData');
+  getUserType() {
+    return localStorage.getItem('userType') || '';
   },
 
   isAuthenticated() {
-    return !!localStorage.getItem('clienteId');
+    return !!localStorage.getItem('userId');
+  },
+
+  isPrestador() {
+    const type = this.getUserType().toLowerCase();
+    const data = this.getUserData() || {};
+    
+    return (
+      type === 'prestador' || 
+      type === 'provider' || 
+      type === 'professional' || 
+      !!data.id_prestador || 
+      !!data.prestadorId
+    );
+  },
+
+  isCliente() {
+    const type = this.getUserType().toLowerCase();
+    const data = this.getUserData() || {};
+    
+    return (
+      type === 'cliente' || 
+      type === 'client' || 
+      !!data.id_cliente || 
+      !!data.clienteId
+    );
+  },
+
+  clear() {
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userType');
   }
 };

@@ -1,4 +1,3 @@
-
 <template>
   <div class="pedido-page">
     <header class="pedido-header">
@@ -12,49 +11,32 @@
     <main class="pedido-content">
       <div class="pedido-card">
         <div class="autocomplete-container">
-  <label class="pedido-label" for="origem">Origem</label>
-  <input
-    id="origem"
-    v-model="origem"
-    class="pedido-input"
-    @input="aoDigitar('origem')"
-    @blur="setTimeout(() => { sugestoesOrigem = [] }, 200)"
-    autocomplete="off"
-  />
-  <ul v-if="sugestoesOrigem.length > 0" class="sugestoes-lista">
-    <li v-for="(s, i) in sugestoesOrigem" :key="i" @click="selecionarEndereco(s, 'origem')">
-      {{ s.display_name }}
-    </li>
-  </ul>
-</div>
+          <label class="pedido-label" for="origem">Origem</label>
+          <input id="origem" v-model="origem" class="pedido-input" @input="aoDigitar('origem')"
+            @blur="setTimeout(() => { sugestoesOrigem = [] }, 200)" autocomplete="off" />
+          <ul v-if="sugestoesOrigem.length > 0" class="sugestoes-lista">
+            <li v-for="(s, i) in sugestoesOrigem" :key="i" @click="selecionarEndereco(s, 'origem')">
+              {{ s.place_name }}
+            </li>
+          </ul>
+        </div>
 
-<div class="autocomplete-container">
-  <label class="pedido-label" for="destino">Destino</label>
-  <input
-    id="destino"
-    v-model="destino" 
-    class="pedido-input"
-    @input="aoDigitar('destino')"
-    @blur="setTimeout(() => { sugestoesDestino = [] }, 200)"
-    autocomplete="off"
-  />
-  <ul v-if="sugestoesDestino.length > 0" class="sugestoes-lista">
-    <li v-for="(s, i) in sugestoesDestino" :key="i" @click="selecionarEndereco(s, 'destino')">
-      {{ s.display_name }}
-    </li>
-  </ul>
-</div>
+        <div class="autocomplete-container">
+          <label class="pedido-label" for="destino">Destino</label>
+          <input id="destino" v-model="destino" class="pedido-input" @input="aoDigitar('destino')"
+            @blur="setTimeout(() => { sugestoesDestino = [] }, 200)" autocomplete="off" />
+          <ul v-if="sugestoesDestino.length > 0" class="sugestoes-lista">
+            <li v-for="(s, i) in sugestoesDestino" :key="i" @click="selecionarEndereco(s, 'destino')">
+              {{ s.place_name }}
+            </li>
+          </ul>
+        </div>
 
         <label class="pedido-label" for="descricao">
           Descrição <span>(Opcional)</span>
         </label>
-        <textarea
-          id="descricao"
-          v-model="descricao"
-          class="pedido-textarea"
-          rows="6"
-          placeholder="Descreva o pedido com mais detalhes"
-        ></textarea>
+        <textarea id="descricao" v-model="descricao" class="pedido-textarea" rows="6"
+          placeholder="Descreva o pedido com mais detalhes"></textarea>
 
         <button class="pedido-button" @click="continuar">Continuar</button>
       </div>
@@ -67,21 +49,12 @@
 
         <div class="search-field">
           <img src="../assets/lupa.svg" alt="Buscar" />
-          <input
-            type="text"
-            v-model="searchQuery"
-            class="search-input"
-            placeholder="Buscar categoria"
-          />
+          <input type="text" v-model="searchQuery" class="search-input" placeholder="Buscar categoria" />
         </div>
 
         <div class="category-list">
-          <button
-            v-for="category in filteredCategories"
-            :key="category.name"
-            class="category-button"
-            @click="selectCategory(category)"
-          >
+          <button v-for="category in filteredCategories" :key="category.name" class="category-button"
+            @click="selectCategory(category)">
             <img :src="category.icon" :alt="category.name" class="category-icon" />
             <span class="category-label">{{ category.name }}</span>
           </button>
@@ -97,12 +70,158 @@ import eletricistaIcon from '../assets/eletricista.svg';
 import borracheiroIcon from '../assets/borracheiro.svg';
 import pneuIcon from '../assets/pneu.svg';
 
+// export default {
+//   name: 'ConfigurarPedidoCliente',
+  // data() {
+  //   return {
+  //     origem: '',
+  //     destino: '',
+  //     sugestoesOrigem: [],
+  //     sugestoesDestino: [],
+  //     timeoutDebounce: null,
+  //     descricao: '',
+  //     categoryPopupOpen: false,
+  //     searchQuery: '',
+  //     selectedCategory: null,
+  //     categories: [
+  //       { name: 'Guincho', icon: guinchoIcon },
+  //       { name: 'Mecânico', icon: mecanicoIcon },
+  //       { name: 'Eletricista', icon: eletricistaIcon },
+  //       { name: 'Borracheiro', icon: borracheiroIcon },
+  //       { name: 'Troca de Pneu', icon: pneuIcon }
+  //     ]
+  //   };
+  // },
+  // computed: {
+  //   filteredCategories() {
+  //     const query = this.searchQuery.trim().toLowerCase();
+  //     if (!query) return this.categories;
+  //     return this.categories.filter(item => item.name.toLowerCase().includes(query));
+  //   }
+  // },
+  // methods: {
+  //   goBack() {
+  //     this.$router.back();
+  //   },
+  //   aoDigitar(campo) {
+  //     clearTimeout(this.timeoutDebounce);
+
+  //     const valor = this[campo];
+  //     const listaSugestoes = campo === 'origem' ? 'sugestoesOrigem' : 'sugestoesDestino';
+
+  //     if (valor.length < 4) {
+  //       this[listaSugestoes] = [];
+  //       return;
+  //     }
+
+  //     this.timeoutDebounce = setTimeout(() => {
+  //       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(valor)}&format=json&countrycodes=br&addressdetails=1&limit=5`;
+
+  //       fetch(url, {
+  //         headers: {
+  //           'Accept-Language': 'pt-BR'
+  //         }
+  //       })
+  //         .then(response => response.json())
+  //         .then(dados => {
+  //           this[listaSugestoes] = dados;
+  //         })
+  //         .catch(erro => {
+  //           console.error('Erro ao buscar endereços:', erro);
+  //         });
+  //     }, 500);
+  //   },
+  //   selecionarEndereco(sugestao, campo) {
+  //     if (campo === 'origem') {
+  //       this.origem = sugestao.display_name;
+  //       this.sugestoesOrigem = [];
+  //     } else {
+  //       this.destino = sugestao.display_name;
+  //       this.sugestoesDestino = [];
+  //     }
+  //   },
+  //   continuar() {
+  //     this.categoryPopupOpen = true;
+  //   },
+  //   closePopup() {
+  //     this.categoryPopupOpen = false;
+  //   },
+  //   selectCategory(category) {
+  //     this.selectedCategory = category;
+  //     this.categoryPopupOpen = false;
+  //     this.$router.push({ name: 'pedido-cliente' });
+  //   }
+  // }
+
+//   data() {
+//     return {
+//       origem: '',
+//       destino: '',
+//       origemCoords: null,
+//       destinoCoords: null,
+//       sugestoesOrigem: [],
+//       sugestoesDestino: [],
+//       timeoutDebounce: null,
+//       descricao: '',
+//       categoryPopupOpen: false,
+//       searchQuery: '',
+//       selectedCategory: null,
+//       categories: [
+//         { name: 'Guincho', icon: guinchoIcon },
+//         { name: 'Mecânico', icon: mecanicoIcon },
+//         { name: 'Eletricista', icon: eletricistaIcon },
+//         { name: 'Borracheiro', icon: borracheiroIcon },
+//         { name: 'Troca de Pneu', icon: pneuIcon }
+//       ]
+//     };
+//   },
+//   methods: {
+//     goBack() {
+//       this.$router.back();
+//     },
+//     aoDigitar(campo) {
+//       clearTimeout(this.timeoutDebounce);
+//     },
+
+//     selecionarEndereco(sugestao, campo) {
+//       const coords = [parseFloat(sugestao.lon), parseFloat(sugestao.lat)];
+
+//       if (campo === 'origem') {
+//         this.origem = sugestao.display_name;
+//         this.origemCoords = coords;
+//         this.sugestoesOrigem = [];
+//       } else {
+//         this.destino = sugestao.display_name;
+//         this.destinoCoords = coords;
+//         this.sugestoesDestino = [];
+//       }
+//     },
+
+//     selectCategory(category) {
+//       this.selectedCategory = category;
+//       this.categoryPopupOpen = false;
+
+//       this.$router.push({
+//         name: 'pedido-cliente',
+//         query: {
+//           origemLng: this.origemCoords ? this.origemCoords[0] : null,
+//           origemLat: this.origemCoords ? this.origemCoords[1] : null,
+//           destinoLng: this.destinoCoords ? this.destinoCoords[0] : null,
+//           destinoLat: this.destinoCoords ? this.destinoCoords[1] : null,
+//         }
+//       });
+//     }
+//   }
+// };
+
 export default {
   name: 'ConfigurarPedidoCliente',
   data() {
     return {
       origem: '',
       destino: '',
+      origemCoords: null,
+      destinoCoords: null,
       sugestoesOrigem: [],
       sugestoesDestino: [],
       timeoutDebounce: null,
@@ -136,38 +255,44 @@ export default {
       const valor = this[campo];
       const listaSugestoes = campo === 'origem' ? 'sugestoesOrigem' : 'sugestoesDestino';
 
-      if (valor.length < 4) {
+      if (valor.length < 3) {
         this[listaSugestoes] = [];
         return;
       }
 
       this.timeoutDebounce = setTimeout(() => {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(valor)}&format=json&countrycodes=br&addressdetails=1&limit=5`;
+        const token = import.meta.env.VITE_MAPBOX_TOKEN
+        
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(valor)}.json?access_token=${token}&country=br&autocomplete=true&limit=5&language=pt`;
 
-        fetch(url, {
-          headers: {
-            'Accept-Language': 'pt-BR'
-          }
-        })
+        fetch(url)
           .then(response => response.json())
-          .then(dados => {
-            this[listaSugestoes] = dados;
+          .then(data => {
+            this[listaSugestoes] = data.features || [];
           })
           .catch(erro => {
-            console.error('Erro ao buscar endereços:', erro);
+            console.error('Erro ao buscar endereços no Mapbox:', erro);
           });
-      }, 500);
+      }, 400);
     },
     selecionarEndereco(sugestao, campo) {
+      const coords = sugestao.geometry.coordinates;
+
       if (campo === 'origem') {
-        this.origem = sugestao.display_name;
+        this.origem = sugestao.place_name;
+        this.origemCoords = coords;
         this.sugestoesOrigem = [];
       } else {
-        this.destino = sugestao.display_name;
+        this.destino = sugestao.place_name;
+        this.destinoCoords = coords;
         this.sugestoesDestino = [];
       }
     },
     continuar() {
+      if (!this.origemCoords || !this.destinoCoords) {
+        alert('Por favor, selecione os endereços de origem e destino utilizando as sugestões da lista!');
+        return;
+      }
       this.categoryPopupOpen = true;
     },
     closePopup() {
@@ -176,7 +301,18 @@ export default {
     selectCategory(category) {
       this.selectedCategory = category;
       this.categoryPopupOpen = false;
-      this.$router.push({ name: 'pedido-cliente' });
+      
+      this.$router.push({ 
+        name: 'pedido-cliente', 
+        query: {
+          origemLng: this.origemCoords[0],
+          origemLat: this.origemCoords[1],
+          destinoLng: this.destinoCoords[0],
+          destinoLat: this.destinoCoords[1],
+          txtOrigem: this.origem,
+          txtDestino: this.destino,
+        }
+      });
     }
   }
 };
@@ -407,8 +543,9 @@ export default {
   color: #111827;
   text-align: left;
 }
+
 .btn-logout {
-  background-color: #ef4444; 
+  background-color: #ef4444;
   color: white;
   padding: 10px 20px;
   border: none;
@@ -430,19 +567,19 @@ export default {
 
 .sugestoes-lista {
   position: absolute;
-  top: 100%; 
+  top: 100%;
   left: 0;
   right: 0;
   z-index: 50;
-  
+
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   margin-top: 8px;
   padding: 0;
   list-style: none;
-  
-  
+
+
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   max-height: 250px;
   overflow-y: auto;
@@ -456,7 +593,7 @@ export default {
   color: #374151;
   border-bottom: 1px solid #f3f4f6;
   transition: background-color 0.2s ease;
-  
+
 
   white-space: nowrap;
   overflow: hidden;
@@ -470,8 +607,8 @@ export default {
 
 
 .sugestoes-lista li:hover {
-  background-color: #fef2f2; 
-  color: #dc2626; 
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 

@@ -2,54 +2,52 @@
   <div class="app-container">
     <template v-if="activeScreen === 'history'">
       <section class="orders-screen">
-          <div class="orders-screen__header">
-            <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
-          </div>
-          <div class="orders-screen__list">
-            <article v-for="order in orders" :key="order.id" class="orders-screen__card">
-              <div class="orders-screen__top">
-                <div class="orders-screen__provider">
-                  <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
-                  <div>
-                    <span class="orders-screen__provider-label">Prestador:</span>
-                    <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
-                  </div>
-                </div>
-                <span class="orders-screen__date">{{ order.date }}</span>
-              </div>
-              <div class="orders-screen__route">
-                <div class="orders-screen__route-group">
-                  <span class="orders-screen__route-title">Origem</span>
-                  <span class="orders-screen__route-text">{{ order.origin }}</span>
-                </div>
-                <div class="orders-screen__route-arrow">→</div>
-                <div class="orders-screen__route-group">
-                  <span class="orders-screen__route-title">Destino</span>
-                  <span class="orders-screen__route-text">{{ order.destination }}</span>
+        <div class="orders-screen__header">
+          <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
+        </div>
+        <div class="orders-screen__list">
+          <article v-for="order in orders" :key="order.id" class="orders-screen__card">
+            <div class="orders-screen__top">
+              <div class="orders-screen__provider">
+                <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
+                <div>
+                  <span class="orders-screen__provider-label">Prestador:</span>
+                  <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
                 </div>
               </div>
-            </article>
-          </div>
-        </section>
+              <span class="orders-screen__date">{{ order.date }}</span>
+            </div>
+            <div class="orders-screen__route">
+              <div class="orders-screen__route-group">
+                <span class="orders-screen__route-title">Origem</span>
+                <span class="orders-screen__route-text">{{ order.origin }}</span>
+              </div>
+              <div class="orders-screen__route-arrow">→</div>
+              <div class="orders-screen__route-group">
+                <span class="orders-screen__route-title">Destino</span>
+                <span class="orders-screen__route-text">{{ order.destination }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
     </template>
 
     <template v-else>
-    <aside class="sidebar" :class="{ active: sidebarOpen }">
-      <div class="sidebar__top-row">
-       
-      </div>
+      <aside class="sidebar" :class="{ active: sidebarOpen }">
+        <div class="sidebar__top-row"></div>
 
-      <div class="sidebar__profile-block">
-        <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
-      </div>
+        <div class="sidebar__profile-block">
+          <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+        </div>
 
-      <div class="sidebar__user-info">
-        <span class="sidebar__title">{{ user.nome || 'Prestador' }}</span>
-        <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
-        <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
-      </div>
+        <div class="sidebar__user-info">
+          <span class="sidebar__title">{{ user.nome || 'Prestador' }}</span>
+          <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
+          <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
+        </div>
 
-      <div class="sidebar__divider"></div>
+        <div class="sidebar__divider"></div>
 
       <nav class="sidebar__menu">
         <button class="sidebar__item" @click="handleSidebarAction('messages')">
@@ -62,86 +60,87 @@
         </button>
       </nav>
 
-      <div class="sidebar__footer">
-        <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
-          <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
-        </button>
-      </div>
-
-      <div v-if="orderPopupOpen" class="sidebar-popup">
-        <div class="sidebar-popup__header">
-          <h4>Menu</h4>
-          <button class="sidebar-popup__close" @click="orderPopupOpen = false">×</button>
-        </div>
-        <div class="sidebar-popup__list">
-          <button class="sidebar-popup__option" @click="handleSidebarAction('orders')">
-            Registro de Pedido
+        <div class="sidebar__footer">
+          <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
+            <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
           </button>
         </div>
-      </div>
-    </aside>
 
-    <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen }" @click="closeAllPopups"></div>
+        <div v-if="orderPopupOpen" class="sidebar-popup">
+          <div class="sidebar-popup__header">
+            <h4>Menu</h4>
+            <button class="sidebar-popup__close" @click="orderPopupOpen = false">×</button>
+          </div>
+          <div class="sidebar-popup__list">
+            <button class="sidebar-popup__option" @click="handleSidebarAction('orders')">
+              Registro de Pedido
+            </button>
+          </div>
+        </div>
+      </aside>
 
-    <main class="main-content">
-      <header class="header">
-        <button class="header__menu-toggle" @click="toggleSidebar">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
+      <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen }" @click="closeAllPopups"></div>
+
+      <main class="main-content">
+        <header class="header">
+          <button class="header__menu-toggle" @click="toggleSidebar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
         <div class="header__logo">
           <img src="../assets/Group 294.svg" alt="Logo">
         </div>
-      </header>
-      <div class="map-container">
-        <div class="map-placeholder"></div>
+        </header>
+        <div class="map-container">
+          <div id="map-prestador" class="map-placeholder"></div>
         <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
-      </div>
-    </main>
-
-    <aside class="right-sidebar" :class="{ active: rightSidebarOpen }">
-      <button class="right-sidebar__close" @click="rightSidebarOpen = !rightSidebarOpen">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path :d="rightSidebarOpen ? 'M15 18l-6-6 6-6' : 'M9 6l6 6-6 6'"/>
-        </svg>
-      </button>
-      <div class="right-sidebar__header">
-        <div class="right-sidebar__title-group">
-          <div class="right-sidebar__badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="right-sidebar__icon">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
-          </div>
-          <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
         </div>
-        <button class="right-sidebar__refresh" @click="refreshRequests">
+      </main>
+
+      <aside class="right-sidebar" :class="{ active: rightSidebarOpen }">
+        <button class="right-sidebar__close" @click="rightSidebarOpen = !rightSidebarOpen">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36"/>
+            <path :d="rightSidebarOpen ? 'M15 18l-6-6 6-6' : 'M9 6l6 6-6 6'" />
           </svg>
         </button>
-      </div>
-
-      <div class="right-sidebar__list">
-        <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openRequestModal(request)">
-          <div class="request-card__top">
-            <div class="request-card__avatar">
-              <img :src="request.avatar" :alt="request.name" />
+        <div class="right-sidebar__header">
+          <div class="right-sidebar__title-group">
+            <div class="right-sidebar__badge">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                class="right-sidebar__icon">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
             </div>
-            <div class="request-card__header">
-              <h3 class="request-card__name">{{ request.name }}</h3>
-              <p class="request-card__distance">{{ request.distance }}</p>
-            </div>
+            <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
           </div>
-          <div class="request-card__rating">
-            <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= request.rating }">★</span>
+          <button class="right-sidebar__refresh" @click="refreshRequests">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="right-sidebar__list">
+          <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openRequestModal(request)">
+            <div class="request-card__top">
+              <div class="request-card__avatar">
+                <img :src="request.avatar" :alt="request.name" />
+              </div>
+              <div class="request-card__header">
+                <h3 class="request-card__name">{{ request.name }}</h3>
+                <p class="request-card__distance">{{ request.distance }}</p>
+              </div>
+            </div>
+            <div class="request-card__rating">
+              <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= request.rating }">★</span>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
 
     <div v-if="selectedRequest" class="modal-overlay" @click="closeRequestModal">
       <div class="request-modal" @click.stop>
@@ -225,9 +224,13 @@
 </template>
 
 <script>
-import { buscarCliente } from '../requests/buscarCliente';
+import { buscarCliente } from '../requests/buscarUsuarios';
+import { buscarPrestador } from '../requests/buscarUsuarios';
+import { buscarClientePorId } from '../requests/cliente';
 import { userStorage } from '../utils/userStorage';
-import ordersData from '../data/orders.json';
+import { MapboxService } from '../requests/mapboxService';
+import { listarPedidos } from '../requests/pedido';
+import { prestadoresGuincho } from '../requests/prestador';
 
 export default {
   name: 'HomePrestador',
@@ -327,6 +330,16 @@ export default {
           avatar: '../assets/profile.svg'
         }
       ]
+      orders: [],
+      mapService: null,
+      requestMarkerIds: [],
+      presenterLocation: [-46.9015, -23.5255],
+
+      nearbyRequests: [],
+
+      timerConvites: null,
+      popupConfirmacaoOpen: false,
+      pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' }
     };
   },
   methods: {
@@ -337,80 +350,268 @@ export default {
       this.sidebarOpen = false;
       this.orderPopupOpen = false;
     },
+
     handleSidebarAction(action) {
-      if (action === 'messages') {
-        this.$router.push({ name: 'mensagem-cliente' });
-        this.sidebarOpen = false;
-        return;
-      }
-
-      if (action === 'garage') {
-        this.$router.push({ name: 'meus-veiculos' });
-        this.sidebarOpen = false;
-        return;
-      }
-
+      this.closeAllPopups();
       if (action === 'orders') {
         this.activeScreen = 'history';
-        this.orderPopupOpen = false;
-        this.sidebarOpen = false;
-        return;
+        this.carregarHistoricoDePedidos();
+      } else {
+        console.log(`Navegando para a tela: ${action}`);
       }
     },
-    refreshRequests() {
-      this.nearbyRequests = this.nearbyRequests.map(r => ({
-        ...r,
-        distance: `${Math.floor(Math.random() * 500) + 100}m de distância`
-      }));
+
+    async refreshRequests() {
+      try {
+        const dadosPedidos = await listarPedidos();
+
+        let listaReal = [];
+        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
+        else if (dadosPedidos && Array.isArray(dadosPedidos.pedidos)) listaReal = dadosPedidos.pedidos;
+        else if (dadosPedidos && Array.isArray(dadosPedidos.response)) listaReal = dadosPedidos.response;
+        else return;
+
+        const promessasDePedidos = listaReal.map(async (pedido) => {
+          const clienteId = pedido.id_cliente || pedido.clienteId;
+          let dadosCliente = null;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente.response || resCliente;
+            } catch (err) {
+              console.error(`Erro ao buscar dados do cliente ${clienteId}:`, err);
+            }
+          }
+
+          return {
+            id: pedido.id || pedido.id_pedido,
+            name: dadosCliente?.nome || pedido.clienteNome || 'Cliente',
+            address: pedido.endereco_origem || pedido.endereco || 'Endereço não informado',
+            rating: Number(dadosCliente?.avaliacao || 5),
+            avatar: dadosCliente?.avatar || 'https://via.placeholder.com/150',
+            distance: pedido.distancia_km ? `${pedido.distancia_km} km` : 'Calculando...',
+            detalhesPedido: pedido
+          };
+        });
+
+        this.nearbyRequests = await Promise.all(promessasDePedidos);
+
+        if (this.mapService) {
+          await this.updateRequestMarkersFromAPI();
+        }
+      } catch (error) {
+        console.error('Erro na requisição manual de pedidos:', error);
+      }
     },
-    openRequestModal(request) {
-      this.selectedRequest = request;
+
+    async verificarNovosConvitesDePedido() {
+      if (this.popupConfirmacaoOpen) return;
+
+      try {
+        const prestadorLogadoId = userStorage.getUserId();
+        if (!prestadorLogadoId) return;
+
+        const dadosGuinchoRaw = await prestadoresGuincho();
+
+        const listaGuinchos = dadosGuinchoRaw?.response || [];
+        if (listaGuinchos.length === 0) return;
+
+        const perfilPrestadorApi = listaGuinchos[0];
+
+        const dadosGerais = await listarPedidos();
+        let todosPedidos = [];
+        if (Array.isArray(dadosGerais)) todosPedidos = dadosGerais;
+        else if (dadosGerais?.response) todosPedidos = dadosGerais.response;
+        else if (dadosGerais?.pedidos) todosPedidos = dadosGerais.pedidos;
+
+        if (todosPedidos.length === 0) return;
+
+        const pedidoEmergencia = todosPedidos.find(pedido => {
+          const ehParaEstePrestador = String(pedido.id_prestador) === String(perfilPrestadorApi.id_prestador);
+          const ehDesteUsuarioLogado = String(pedido.id_prestador) === String(prestadorLogadoId);
+
+          return ehParaEstePrestador && ehDesteUsuarioLogado;
+        });
+
+        if (pedidoEmergencia) {
+          let dadosCliente = null;
+          const clienteId = pedidoEmergencia.id_cliente;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente.response || resCliente;
+            } catch (err) {
+              console.error(`Erro ao buscar cliente da emergência:`, err);
+            }
+          }
+
+          this.pedidoPendente = {
+            id: pedidoEmergencia.id || pedidoEmergencia.id_pedido,
+            name: dadosCliente?.nome || pedidoEmergencia.clienteNome,
+            origin: pedidoEmergencia.endereco_origem,
+            destination: pedidoEmergencia.endereco_destino,
+            description: pedidoEmergencia.descricao
+          };
+
+          this.popupConfirmacaoOpen = true;
+        }
+
+      } catch (error) {
+        console.error("Erro na validação do loop de emergência:", error);
+      }
     },
-    closeRequestModal() {
-      this.selectedRequest = null;
+
+    async aceitarPedido() {
+      try {
+        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
+        await fetch(url, { method: 'POST' });
+
+        this.popupConfirmacaoOpen = false;
+        alert('Você aceitou a solicitação! Ela será incluída na sua rota.');
+        await this.refreshRequests();
+      } catch (error) {
+        console.error("Erro ao aceitar a solicitação direta:", error);
+      }
     },
-    acceptRequest() {
-      console.log('Solicitação aceita:', this.selectedRequest);
-      this.$router.push({ name: 'pedido-prestador' });
-      this.selectedRequest = null;
+
+    recusarPedido() {
+      this.popupConfirmacaoOpen = false;
+      this.pedidoPendente = { id: null, name: '', origin: '', destination: '', description: '' };
     },
-    showEmergencyPopup() {
-      this.emergencyPopupOpen = true;
+
+    async carregarHistoricoDePedidos() {
+      try {
+        const prestadorId = userStorage.getUserId();
+        const url = `http://localhost:8080/v1/drivez/pedidos/historico/${prestadorId}`;
+        const response = await fetch(url);
+        const dados = await response.json();
+
+        const listaHistorico = dados.response || dados || [];
+        this.orders = listaHistorico.map(o => ({
+          id: o.id,
+          provider: o.clienteNome || 'Cliente',
+          avatar: o.avatar || 'https://via.placeholder.com/150',
+          date: o.data_solicitacao ? new Date(o.data_solicitacao).toLocaleDateString('pt-BR') : 'Recentemente',
+          origin: o.endereco_origem || 'Origem não gravada',
+          destination: o.endereco_destino || 'Destino não gravado'
+        }));
+      } catch (error) {
+        console.error("Erro ao carregar histórico:", error);
+      }
     },
-    closeEmergencyPopup() {
-      this.emergencyPopupOpen = false;
+
+    async initMap() {
+      this.mapService = new MapboxService();
+
+      if (this.user.localizacao) {
+        const coords = await this.mapService.forwardGeocode(this.user.localizacao);
+        if (coords) this.presenterLocation = coords;
+      }
+
+      this.mapService.initPresenterMap('map-prestador', this.presenterLocation);
+
+      if (this.mapService.map) {
+        this.mapService.map.on('load', () => {
+          this.mapService.addMarker('prestador', this.presenterLocation[0], this.presenterLocation[1], {
+            color: '#D62828',
+            popupHTML: `<div style="padding: 8px;"><strong>Você está aqui</strong></div>`
+          });
+        });
+      }
     },
-    acceptEmergencyService() {
-      console.log('Emergência aceita:', this.emergencyRequest);
-      this.closeEmergencyPopup();
-      this.$router.push({ name: 'pedido-prestador' });
+
+    async updateRequestMarkersFromAPI() {
+      this.clearRequestMarkers();
+      const coordinatesToFit = [this.presenterLocation];
+
+      for (const request of this.nearbyRequests) {
+        let enderecoLimpo = String(request.address)
+          .replace(/\d{5}-\d{3}/g, '')
+          .replace(/,\s*,/g, ',')
+          .trim();
+
+        if (!enderecoLimpo.toLowerCase().includes('são paulo')) {
+          enderecoLimpo = `${enderecoLimpo}, São Paulo, Brasil`;
+        }
+
+        const coords = await this.mapService.forwardGeocode(enderecoLimpo, this.presenterLocation);
+
+        if (coords) {
+          request.lng = coords[0];
+          request.lat = coords[1];
+          coordinatesToFit.push(coords);
+
+          const markerId = `request-${request.id}`;
+          const popupHTML = `<div style="padding: 5px;"><strong>${request.name}</strong></div>`;
+
+          this.mapService.addMarker(markerId, request.lng, request.lat, {
+            color: '#0066CC',
+            popupHTML
+          });
+
+          this.requestMarkerIds.push(markerId);
+        }
+      }
+
+      if (coordinatesToFit.length > 1) {
+        this.mapService.fitToBounds(coordinatesToFit, { padding: 80, duration: 1200 });
+      }
+    },
+
+    clearRequestMarkers() {
+      this.requestMarkerIds.forEach(id => this.mapService.removeMarker(id));
+      this.requestMarkerIds = [];
     }
   },
+
   async mounted() {
-    const clienteId = userStorage.getClienteId();
-    if (clienteId) {
+
+    this.timerConvites = setInterval(async () => {
+      await this.verificarNovosConvitesDePedido();
+    }, 5000);
+
+    const userId = userStorage.getUserId();
+    if (userId) {
       try {
-        const response = await buscarCliente(clienteId);
+        let response = await buscarPrestador(userId);
         const dadosFinais = response.response || response;
         if (dadosFinais) {
           this.user = { ...this.user, ...dadosFinais };
-          userStorage.setClienteData(dadosFinais);
+          userStorage.setSession(userId, dadosFinais, 'prestador');
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do prestador:', error);
+        console.error('Erro ao carregar perfil inicial:', error);
       }
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && (this.sidebarOpen || this.orderPopupOpen)) {
-        this.closeAllPopups();
-      }
-    });
+    try {
+      await this.initMap();
+    } catch (error) {
+      console.error('Erro ao inicializar o mapa:', error);
+    }
+
+    try {
+      await this.refreshRequests();
+    } catch (error) {
+      console.error('Erro na primeira carga de pedidos:', error);
+    }
+  },
+
+  beforeDestroy() {
+    if (this.timerConvites) {
+      clearInterval(this.timerConvites);
+    }
+    this.clearRequestMarkers();
+    if (this.mapService) this.mapService.destroyMap();
   }
 };
 </script>
 
 <style scoped>
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -957,6 +1158,7 @@ export default {
 .star.filled {
   color: #ffc107;
 }
+
 .orders-screen {
   margin: 18px;
   padding: 22px;
@@ -1475,6 +1677,119 @@ export default {
 
 .emergency-modal__accept-btn:hover {
   background: #a01818;
+}
+
+.popup-confirmacao-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999 !important;
+}
+
+.popup-confirmacao-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.popup-confirmacao-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.popup-confirmacao-card__header h3 {
+  font-size: 1.25rem;
+  color: #0f172a;
+  font-weight: 700;
+  margin: 0;
+}
+
+.pulse-dot {
+  color: #ef4444;
+  font-size: 22px;
+  line-height: 1;
+  animation: pulseAnimation 1.2s infinite alternate;
+}
+
+.popup-confirmacao-card__body p {
+  font-size: 0.95rem;
+  color: #334155;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.popup-confirmacao-card__body .description-text {
+  background: #f8fafc;
+  padding: 12px;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px;
+  margin-top: 14px;
+  color: #475569;
+}
+
+.popup-confirmacao-card__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-action-aceitar {
+  flex: 2;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-action-aceitar:hover {
+  background: #059669;
+}
+
+.btn-action-recusar {
+  flex: 1;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-action-recusar:hover {
+  background: #dc2626;
+}
+
+@keyframes pulseAnimation {
+  from {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+
+  to {
+    transform: scale(1.1);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1024px) {

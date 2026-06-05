@@ -1,16 +1,11 @@
-
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { loginApi } from '@/requests/login';
-import { userStorage } from '../utils/userStorage'; 
+import { userStorage } from '../utils/userStorage';
 
 
 
-
-const setClienteId = (clienteId) => {
-  userStorage.setClienteId(clienteId)
-}
 
 const tituloLogin = ref('Entrar')
 const esqueceu = ref('Esqueceu a senha?')
@@ -26,21 +21,21 @@ const button = ref()
 const router = useRouter();
 
 const irParaHome = (respostaCompleta) => {
- 
-  const identificador = respostaCompleta.user; 
+  const usuario = respostaCompleta.user || respostaCompleta;
+  const identificador = usuario.id || usuario.id_cliente || usuario.id_prestador || usuario.clienteId || usuario.prestadorId;
+  const tipoUsuario = String(usuario.tipoUsuario || usuario.tipo_usuario || usuario.tipo || usuario.role || '');
 
-  if (identificador) {
+  if (!identificador) {
+    loginErro.value = 'Erro: não foi possível identificar o usuário na resposta.';
+    return;
+  }
 
-    userStorage.setClienteId(identificador); 
+  userStorage.setSession(identificador, usuario, tipoUsuario);
 
-    userStorage.setClienteData({ 
-      nome: 'Usuário', 
-      email: identificador 
-    });
-
-    router.push({ name: 'home-cliente' });
+  if (userStorage.getUserData().type === 'prestador') {
+    router.push({ name: 'home-prestador' });
   } else {
-    loginErro.value = 'Erro: Campo "user" não encontrado na resposta.';
+    router.push({ name: 'home-cliente' });
   }
 };
 
@@ -53,7 +48,7 @@ const validarCampos = async () => {
     emailErro.value = 'Por favor, preencha o campo de email.';
     return;
   }
-  const emailPattern =  /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$/;
+  const emailPattern = /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$/;
   if (!emailPattern.test(email.value)) {
     emailErro.value = 'Campo de email deve conter um email válido.';
     return;
@@ -64,21 +59,16 @@ const validarCampos = async () => {
     return;
   }
 
-  
+
   try {
-  const resposta = await loginApi(email.value, senha.value);
+    const resposta = await loginApi(email.value, senha.value);
+    console.log(resposta)
 
-  console.log("Resposta recebida:", resposta);
+    irParaHome(resposta);
 
-  if (resposta && (resposta.status === 200 || resposta.status_code === 200)) {
-
-    irParaHome(resposta); 
-  } else {
-    loginErro.value = resposta?.message || 'Erro ao realizar login.';
+  } catch (e) {
+    loginErro.value = e.message || 'Erro de conexão com o servidor.';
   }
-} catch (e) {
-  loginErro.value = 'Erro de conexão com o servidor.';
-}
 }
 
 
@@ -88,59 +78,61 @@ const validarCampos = async () => {
 
 <template>
   <transition name="slide-fade" mode="out-in">
-  <div class="conteinerAll">
+    <div class="conteinerAll">
 
-    <div class="containerLeft">
-      <div class="left-overlay"></div>
-      <div class="left-text">
-        <span class="subtitle">A EXCELÊNCIA EM MOVIMENTO</span>
-        <h1 class="headline">DriveZ: A sua<br>jornada começa<br>aqui</h1>
-      </div>
-    </div>
-
-    <div class="containerRight">
-
-    <div class="box_place">
-     
-      <div class="logo">
-      <h1 class="titulo_login"> {{ tituloLogin }} </h1>
-      </div>
-      
-
-
-      <div class="campos">
-        <div class="campo-email">
-          <input type="email" id="Email" v-model="email" placeholder="Email">
-          <span v-if="emailErro" class="erro-campo erro-animada">{{ emailErro }}</span>
+      <div class="containerLeft">
+        <div class="left-overlay"></div>
+        <div class="left-text">
+          <span class="subtitle">A EXCELÊNCIA EM MOVIMENTO</span>
+          <h1 class="headline">DriveZ: A sua<br>jornada começa<br>aqui</h1>
         </div>
-        <div class="campo-senha" style="position: relative;">
-          <input :type="senhaVisivel ? 'text' : 'password'" id="Senha" v-model="senha" placeholder="Senha" minlength="8" >
-          <button type="button" @click="senhaVisivel = !senhaVisivel" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
-            <span v-if="senhaVisivel"><img src="../assets/view.png" alt="" class="hide-icon"></span>
-            <span v-else><img src="../assets/hide.png" class="hide-icon" alt=""></span>
+      </div>
+
+      <div class="containerRight">
+
+        <div class="box_place">
+
+          <div class="logo">
+            <h1 class="titulo_login"> {{ tituloLogin }} </h1>
+          </div>
+
+
+
+          <div class="campos">
+            <div class="campo-email">
+              <input type="email" id="Email" v-model="email" placeholder="Email">
+              <span v-if="emailErro" class="erro-campo erro-animada">{{ emailErro }}</span>
+            </div>
+            <div class="campo-senha" style="position: relative;">
+              <input :type="senhaVisivel ? 'text' : 'password'" id="Senha" v-model="senha" placeholder="Senha"
+                minlength="8">
+              <button type="button" @click="senhaVisivel = !senhaVisivel"
+                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">
+                <span v-if="senhaVisivel"><img src="../assets/view.png" alt="" class="hide-icon"></span>
+                <span v-else><img src="../assets/hide.png" class="hide-icon" alt=""></span>
+              </button>
+              <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
+            </div>
+            <span v-if="loginErro" class="erro-campo erro-animada">{{ loginErro }}</span>
+          </div>
+
+          <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
+
+          <button @click="validarCampos" class="button-entrar">
+            Entrar
           </button>
-          <span v-if="senhaErro" class="erro-campo erro-animada">{{ senhaErro }}</span>
+
+          <h1 class="cadastroH1">Ainda não tem conta?
+
+            <router-link to="/cadastro" class="link-destaque">Cadastre-se</router-link>
+
+          </h1>
+
+
         </div>
-        <span v-if="loginErro" class="erro-campo erro-animada">{{ loginErro }}</span>
       </div>
-
-      <h1 class="esqueceu-senha">{{ esqueceu }}</h1>
-
-      <button @click="validarCampos" class="button-entrar" >
-        Entrar
-      </button>
-
-      <h1 class="cadastroH1">Ainda não tem conta?
-      
-          <router-link to="/cadastro" class="link-destaque">Cadastre-se</router-link>
-
-      </h1>
-
-
     </div>
-    </div>
-  </div>
- </transition>
+  </transition>
 </template>
 
 
@@ -305,7 +297,7 @@ const validarCampos = async () => {
 }
 
 .titulo_login {
-  font-size: 40px;  
+  font-size: 40px;
   text-align: center;
   color: #111111;
 }
@@ -331,7 +323,7 @@ const validarCampos = async () => {
   width: 100%;
   height: 64px;
   border: none;
-  
+
   background: #b5080d;
   color: #ffffff;
   font-size: 20px;
@@ -348,16 +340,18 @@ const validarCampos = async () => {
   margin-left: 6px;
   cursor: pointer;
 }
+
 .esqueceu-senha {
   text-align: right;
   color: #b5080d;
   font-size: 20px;
   cursor: pointer;
 }
+
 .cadastroH1 {
   color: #111111;
   font-size: 21px;
-  
+
 }
 
 .erro-campo {
@@ -371,7 +365,7 @@ const validarCampos = async () => {
   margin-bottom: 2px;
   display: block;
   font-weight: 500;
-  box-shadow: 0 2px 8px 0 rgba(211,47,47,0.08);
+  box-shadow: 0 2px 8px 0 rgba(211, 47, 47, 0.08);
   transition: all 0.3s;
 }
 
@@ -380,12 +374,29 @@ const validarCampos = async () => {
 }
 
 @keyframes shake {
-  0% { transform: translateX(0); }
-  20% { transform: translateX(-5px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-5px); }
-  80% { transform: translateX(5px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-5px);
+  }
+
+  40% {
+    transform: translateX(5px);
+  }
+
+  60% {
+    transform: translateX(-5px);
+  }
+
+  80% {
+    transform: translateX(5px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .hide-icon {
@@ -395,49 +406,49 @@ const validarCampos = async () => {
 </style>
 
 @media (min-width: 2560px) {
-  .containerLeft {
-    padding-left: 80px;
-  }
+.containerLeft {
+padding-left: 80px;
+}
 
-  .subtitle {
-    font-size: 18px;
-    margin-bottom: 24px;
-  }
+.subtitle {
+font-size: 18px;
+margin-bottom: 24px;
+}
 
-  .headline {
-    font-size: 6rem;
-  }
+.headline {
+font-size: 6rem;
+}
 
-  .box_place {
-    max-width: 800px;
-    padding: 80px 64px;
-    gap: 36px;
-  }
+.box_place {
+max-width: 800px;
+padding: 80px 64px;
+gap: 36px;
+}
 
-  .titulo_login {
-    font-size: 52px;
-  }
+.titulo_login {
+font-size: 52px;
+}
 
-  .campos input {
-    height: 88px;
-    padding: 0 28px;
-    font-size: 20px;
-  }
+.campos input {
+height: 88px;
+padding: 0 28px;
+font-size: 20px;
+}
 
-  .button-entrar {
-    height: 80px;
-    font-size: 24px;
-  }
+.button-entrar {
+height: 80px;
+font-size: 24px;
+}
 
-  .esqueceu-senha {
-    font-size: 24px;
-  }
+.esqueceu-senha {
+font-size: 24px;
+}
 
-  .cadastroH1 {
-    font-size: 26px;
-  }
+.cadastroH1 {
+font-size: 26px;
+}
 
-  .link-destaque {
-    font-size: 26px;
-  }
+.link-destaque {
+font-size: 26px;
+}
 }
