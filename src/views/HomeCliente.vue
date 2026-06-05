@@ -220,7 +220,7 @@ import ordersData from '../data/orders.json';
 import PerfilCliente from './PerfilCliente.vue';
 
 import { useRouter } from 'vue-router';
-import { buscarCliente } from '../requests/buscarCliente';
+import { buscarCliente } from '../requests/buscarUsuarios';
 import { userStorage } from '../utils/userStorage';
 
 

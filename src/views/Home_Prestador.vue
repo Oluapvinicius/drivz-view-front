@@ -35,9 +35,7 @@
 
     <template v-else>
       <aside class="sidebar" :class="{ active: sidebarOpen }">
-        <div class="sidebar__top-row">
-
-        </div>
+        <div class="sidebar__top-row"></div>
 
         <div class="sidebar__profile-block">
           <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
@@ -140,16 +138,37 @@
         </div>
       </aside>
 
+      <div v-if="popupConfirmacaoOpen" class="popup-confirmacao-overlay">
+        <div class="popup-confirmacao-card">
+          <div class="popup-confirmacao-card__header">
+            <span class="pulse-dot">●</span>
+            <h3>🚨 Chamado de Emergência!</h3>
+          </div>
+          <div class="popup-confirmacao-card__body">
+            <p><strong>Cliente:</strong> {{ pedidoPendente.name }}</p>
+            <p><strong>Origem:</strong> {{ pedidoPendente.origin }}</p>
+            <p><strong>Destino:</strong> {{ pedidoPendente.destination }}</p>
+            <p class="description-text"><em>{{ pedidoPendente.description }}</em></p>
+          </div>
+          <div class="popup-confirmacao-card__actions">
+            <button class="btn-action-recusar" @click="recusarPedido">Recusar</button>
+            <button class="btn-action-aceitar" @click="aceitarPedido">Aceitar Chamado</button>
+          </div>
+        </div>
+      </div>
 
     </template>
   </div>
 </template>
 
 <script>
-import { buscarCliente } from '../requests/buscarCliente';
+import { buscarCliente } from '../requests/buscarUsuarios';
+import { buscarPrestador } from '../requests/buscarUsuarios';
+import { buscarClientePorId } from '../requests/cliente';
 import { userStorage } from '../utils/userStorage';
-import ordersData from '../data/orders.json';
 import { MapboxService } from '../requests/mapboxService';
+import { listarPedidos } from '../requests/pedido';
+import { prestadoresGuincho } from '../requests/prestador';
 
 export default {
   name: 'HomePrestador',
@@ -160,48 +179,195 @@ export default {
       orderPopupOpen: false,
       rightSidebarOpen: true,
       activeScreen: 'home',
-      orders: ordersData,
+      orders: [],
       mapService: null,
       requestMarkerIds: [],
       presenterLocation: [-46.9015, -23.5255],
-      nearbyRequests: [
-        { id: 1, name: 'Rogério Silva', address: 'Centro, Jandira - SP', rating: 4.8, distance: 'Calculando...' },
-        { id: 2, name: 'Ana Costa', address: 'Vila Santo Antônio, Jandira - SP', rating: 4.5, distance: 'Calculando...' },
-        { id: 3, name: 'Carlos Souza', address: 'Jardim Belval, Barueri - SP', rating: 4.9, distance: 'Calculando...' }
-      ]
+
+      nearbyRequests: [],
+
+      timerConvites: null,
+      popupConfirmacaoOpen: false,
+      pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' }
     };
   },
   methods: {
+    toggleSidebar() {
+      this.sidebarOpen = !this.sidebarOpen;
+    },
+    closeAllPopups() {
+      this.sidebarOpen = false;
+      this.orderPopupOpen = false;
+    },
+
+    handleSidebarAction(action) {
+      this.closeAllPopups();
+      if (action === 'orders') {
+        this.activeScreen = 'history';
+        this.carregarHistoricoDePedidos();
+      } else {
+        console.log(`Navegando para a tela: ${action}`);
+      }
+    },
+
+    async refreshRequests() {
+      try {
+        const dadosPedidos = await listarPedidos();
+
+        let listaReal = [];
+        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
+        else if (dadosPedidos && Array.isArray(dadosPedidos.pedidos)) listaReal = dadosPedidos.pedidos;
+        else if (dadosPedidos && Array.isArray(dadosPedidos.response)) listaReal = dadosPedidos.response;
+        else return;
+
+        const promessasDePedidos = listaReal.map(async (pedido) => {
+          const clienteId = pedido.id_cliente || pedido.clienteId;
+          let dadosCliente = null;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente.response || resCliente;
+            } catch (err) {
+              console.error(`Erro ao buscar dados do cliente ${clienteId}:`, err);
+            }
+          }
+
+          return {
+            id: pedido.id || pedido.id_pedido,
+            name: dadosCliente?.nome || pedido.clienteNome || 'Cliente',
+            address: pedido.endereco_origem || pedido.endereco || 'Endereço não informado',
+            rating: Number(dadosCliente?.avaliacao || 5),
+            avatar: dadosCliente?.avatar || 'https://via.placeholder.com/150',
+            distance: pedido.distancia_km ? `${pedido.distancia_km} km` : 'Calculando...',
+            detalhesPedido: pedido
+          };
+        });
+
+        this.nearbyRequests = await Promise.all(promessasDePedidos);
+
+        if (this.mapService) {
+          await this.updateRequestMarkersFromAPI();
+        }
+      } catch (error) {
+        console.error('Erro na requisição manual de pedidos:', error);
+      }
+    },
+
+    async verificarNovosConvitesDePedido() {
+      if (this.popupConfirmacaoOpen) return;
+
+      try {
+        const prestadorLogadoId = userStorage.getUserId();
+        if (!prestadorLogadoId) return;
+
+        const dadosGuinchoRaw = await prestadoresGuincho();
+
+        const listaGuinchos = dadosGuinchoRaw?.response || [];
+        if (listaGuinchos.length === 0) return;
+
+        const perfilPrestadorApi = listaGuinchos[0];
+
+        const dadosGerais = await listarPedidos();
+        let todosPedidos = [];
+        if (Array.isArray(dadosGerais)) todosPedidos = dadosGerais;
+        else if (dadosGerais?.response) todosPedidos = dadosGerais.response;
+        else if (dadosGerais?.pedidos) todosPedidos = dadosGerais.pedidos;
+
+        if (todosPedidos.length === 0) return;
+
+        const pedidoEmergencia = todosPedidos.find(pedido => {
+          const ehParaEstePrestador = String(pedido.id_prestador) === String(perfilPrestadorApi.id_prestador);
+          const ehDesteUsuarioLogado = String(pedido.id_prestador) === String(prestadorLogadoId);
+
+          return ehParaEstePrestador && ehDesteUsuarioLogado;
+        });
+
+        if (pedidoEmergencia) {
+          let dadosCliente = null;
+          const clienteId = pedidoEmergencia.id_cliente;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente.response || resCliente;
+            } catch (err) {
+              console.error(`Erro ao buscar cliente da emergência:`, err);
+            }
+          }
+
+          this.pedidoPendente = {
+            id: pedidoEmergencia.id || pedidoEmergencia.id_pedido,
+            name: dadosCliente?.nome || pedidoEmergencia.clienteNome,
+            origin: pedidoEmergencia.endereco_origem,
+            destination: pedidoEmergencia.endereco_destino,
+            description: pedidoEmergencia.descricao
+          };
+
+          this.popupConfirmacaoOpen = true;
+        }
+
+      } catch (error) {
+        console.error("Erro na validação do loop de emergência:", error);
+      }
+    },
+
+    async aceitarPedido() {
+      try {
+        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
+        await fetch(url, { method: 'POST' });
+
+        this.popupConfirmacaoOpen = false;
+        alert('Você aceitou a solicitação! Ela será incluída na sua rota.');
+        await this.refreshRequests();
+      } catch (error) {
+        console.error("Erro ao aceitar a solicitação direta:", error);
+      }
+    },
+
+    recusarPedido() {
+      this.popupConfirmacaoOpen = false;
+      this.pedidoPendente = { id: null, name: '', origin: '', destination: '', description: '' };
+    },
+
+    async carregarHistoricoDePedidos() {
+      try {
+        const prestadorId = userStorage.getUserId();
+        const url = `http://localhost:8080/v1/drivez/pedidos/historico/${prestadorId}`;
+        const response = await fetch(url);
+        const dados = await response.json();
+
+        const listaHistorico = dados.response || dados || [];
+        this.orders = listaHistorico.map(o => ({
+          id: o.id,
+          provider: o.clienteNome || 'Cliente',
+          avatar: o.avatar || 'https://via.placeholder.com/150',
+          date: o.data_solicitacao ? new Date(o.data_solicitacao).toLocaleDateString('pt-BR') : 'Recentemente',
+          origin: o.endereco_origem || 'Origem não gravada',
+          destination: o.endereco_destino || 'Destino não gravado'
+        }));
+      } catch (error) {
+        console.error("Erro ao carregar histórico:", error);
+      }
+    },
+
     async initMap() {
       this.mapService = new MapboxService();
 
-      // 1. Se o usuário tiver um endereço cadastrado em texto, transforma em Lat/Lng primeiro
       if (this.user.localizacao) {
         const coords = await this.mapService.forwardGeocode(this.user.localizacao);
-        if (coords) {
-          this.presenterLocation = coords;
-        }
+        if (coords) this.presenterLocation = coords;
       }
 
-      // 2. Inicializa o mapa focado na localização real do prestador
-      const map = this.mapService.initPresenterMap('map-prestador', this.presenterLocation);
-      if (!map) return;
+      this.mapService.initPresenterMap('map-prestador', this.presenterLocation);
 
-      const setupContent = async () => {
-        // Adiciona o marcador do prestador (Guincho)
-        this.mapService.addMarker('prestador', this.presenterLocation[0], this.presenterLocation[1], {
-          color: '#D62828',
-          popupHTML: `<div style="padding: 8px;"><strong>Você está aqui</strong></div>`
+      if (this.mapService.map) {
+        this.mapService.map.on('load', () => {
+          this.mapService.addMarker('prestador', this.presenterLocation[0], this.presenterLocation[1], {
+            color: '#D62828',
+            popupHTML: `<div style="padding: 8px;"><strong>Você está aqui</strong></div>`
+          });
         });
-
-        // 3. Busca e transforma os endereços dos clientes em marcadores no mapa
-        await this.updateRequestMarkersFromAPI();
-      };
-
-      if (map.isStyleLoaded()) {
-        setupContent();
-      } else {
-        map.on('load', setupContent);
       }
     },
 
@@ -209,26 +375,26 @@ export default {
       this.clearRequestMarkers();
       const coordinatesToFit = [this.presenterLocation];
 
-      // Percorre os clientes da "API", transforma o endereço de cada um em Lat/Lng e plota no mapa
       for (const request of this.nearbyRequests) {
-        const coords = await this.mapService.forwardGeocode(request.address);
+        let enderecoLimpo = String(request.address)
+          .replace(/\d{5}-\d{3}/g, '')
+          .replace(/,\s*,/g, ',')
+          .trim();
+
+        if (!enderecoLimpo.toLowerCase().includes('são paulo')) {
+          enderecoLimpo = `${enderecoLimpo}, São Paulo, Brasil`;
+        }
+
+        const coords = await this.mapService.forwardGeocode(enderecoLimpo, this.presenterLocation);
 
         if (coords) {
-          // Salva as coordenadas temporariamente no objeto para uso do fitToBounds
           request.lng = coords[0];
           request.lat = coords[1];
           coordinatesToFit.push(coords);
 
           const markerId = `request-${request.id}`;
-          const popupHTML = `
-            <div style="font-family: sans-serif; padding: 5px;">
-              <strong>${request.name}</strong><br/>
-              <span style="font-size: 12px; color: #666;">${request.address}</span><br/>
-              <span style="color: #ffc107;">★ ${request.rating}</span>
-            </div>
-          `;
+          const popupHTML = `<div style="padding: 5px;"><strong>${request.name}</strong></div>`;
 
-          // Adiciona o marcador azul do cliente próximo
           this.mapService.addMarker(markerId, request.lng, request.lat, {
             color: '#0066CC',
             popupHTML
@@ -238,64 +404,56 @@ export default {
         }
       }
 
-      // Reajusta o zoom do mapa para abraçar o prestador e TODOS os clientes encontrados
       if (coordinatesToFit.length > 1) {
-        this.mapService.fitToBounds(coordinatesToFit, {
-          padding: { top: 80, bottom: 80, left: 80, right: 80 },
-          duration: 1200
-        });
+        this.mapService.fitToBounds(coordinatesToFit, { padding: 80, duration: 1200 });
       }
     },
 
     clearRequestMarkers() {
-      this.requestMarkerIds.forEach((markerId) => {
-        this.mapService.removeMarker(markerId);
-      });
+      this.requestMarkerIds.forEach(id => this.mapService.removeMarker(id));
       this.requestMarkerIds = [];
-    },
-
+    }
   },
-  async mounted() {
-    const userId = userStorage.getUserId();
 
+  async mounted() {
+
+    this.timerConvites = setInterval(async () => {
+      await this.verificarNovosConvitesDePedido();
+    }, 5000);
+
+    const userId = userStorage.getUserId();
     if (userId) {
       try {
-        let response;
-        if (userStorage.isPrestador()) {
-          response = await buscarCliente(userId);
-        } else {
-          response = await buscarCliente(userId);
-        }
-
+        let response = await buscarPrestador(userId);
         const dadosFinais = response.response || response;
-
         if (dadosFinais) {
           this.user = { ...this.user, ...dadosFinais };
-          const tipoAtual = userStorage.getUserType();
-          const tipoNovo = dadosFinais.tipoUsuario || dadosFinais.tipo || tipoAtual;
-
-          userStorage.setSession(userId, dadosFinais, tipoNovo);
+          userStorage.setSession(userId, dadosFinais, 'prestador');
         }
       } catch (error) {
-        console.error('Erro ao atualizar dados do usuário do banco:', error);
+        console.error('Erro ao carregar perfil inicial:', error);
       }
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && (this.sidebarOpen || this.orderPopupOpen)) {
-        this.closeAllPopups();
-      }
-    });
+    try {
+      await this.initMap();
+    } catch (error) {
+      console.error('Erro ao inicializar o mapa:', error);
+    }
 
-    await this.initMap();
+    try {
+      await this.refreshRequests();
+    } catch (error) {
+      console.error('Erro na primeira carga de pedidos:', error);
+    }
   },
 
   beforeDestroy() {
-    this.clearRequestMarkers();
-    if (this.mapService) {
-      this.mapService.destroyMap();
-      this.mapService = null;
+    if (this.timerConvites) {
+      clearInterval(this.timerConvites);
     }
+    this.clearRequestMarkers();
+    if (this.mapService) this.mapService.destroyMap();
   }
 };
 </script>
@@ -974,6 +1132,119 @@ export default {
   font-size: 20px;
   color: #b3b3b3;
   text-align: center;
+}
+
+.popup-confirmacao-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999 !important;
+}
+
+.popup-confirmacao-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.popup-confirmacao-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.popup-confirmacao-card__header h3 {
+  font-size: 1.25rem;
+  color: #0f172a;
+  font-weight: 700;
+  margin: 0;
+}
+
+.pulse-dot {
+  color: #ef4444;
+  font-size: 22px;
+  line-height: 1;
+  animation: pulseAnimation 1.2s infinite alternate;
+}
+
+.popup-confirmacao-card__body p {
+  font-size: 0.95rem;
+  color: #334155;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.popup-confirmacao-card__body .description-text {
+  background: #f8fafc;
+  padding: 12px;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px;
+  margin-top: 14px;
+  color: #475569;
+}
+
+.popup-confirmacao-card__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-action-aceitar {
+  flex: 2;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-action-aceitar:hover {
+  background: #059669;
+}
+
+.btn-action-recusar {
+  flex: 1;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-action-recusar:hover {
+  background: #dc2626;
+}
+
+@keyframes pulseAnimation {
+  from {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+
+  to {
+    transform: scale(1.1);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1024px) {

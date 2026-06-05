@@ -213,20 +213,28 @@ export class MapboxService {
     }
   }
 
-  async forwardGeocode(address) {
+  // Dentro do seu arquivo mapboxService.js
+  async forwardGeocode(address, proximityCoords = null) {
     try {
-      const token = mapboxgl.accessToken || import.meta.env.VITE_MAPBOX_TOKEN;
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${token}&limit=1`;
+      const token = import.meta.env.VITE_MAPBOX_TOKEN;
+
+      let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${token}`;
+
+      url += `&country=br`;
+
+      if (proximityCoords && Array.isArray(proximityCoords)) {
+        url += `&proximity=${proximityCoords[0]},${proximityCoords[1]}`;
+      }
 
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.features && data.features.length > 0) {
-        return data.features[0].center;
+        return data.features[0].center; // Retorna [lng, lat]
       }
       return null;
     } catch (error) {
-      console.error('Erro ao converter endereço em coordenadas:', error);
+      console.error("Erro no forwardGeocode do MapboxService:", error);
       return null;
     }
   }
