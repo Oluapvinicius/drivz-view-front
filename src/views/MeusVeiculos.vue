@@ -19,6 +19,14 @@
 
       <div v-else class="vehicles-list">
         <div v-for="(vehicle, index) in vehicles" :key="index" class="vehicle-card">
+          <div class="vehicle-card__labels">
+            <span class="vehicle-card__label vehicle-card__id-label">ID</span>
+            <span class="vehicle-card__label vehicle-card__placa-label">PLACA</span>
+            <span class="vehicle-card__label vehicle-card__renavam-label">RENAVAM</span>
+            <span class="vehicle-card__label vehicle-card__validade-label">VALIDADE DOC.</span>
+            <span class="vehicle-card__label vehicle-card__categoria-label">CATEGORIA</span>
+            <span class="vehicle-card__actions-label"></span>
+          </div>
           <div class="vehicle-card__header">
             <span class="vehicle-card__id">{{ index + 1 }}</span>
             <span class="vehicle-card__placa">{{ vehicle.placa }}</span>
@@ -298,20 +306,17 @@ export default {
 }
 
 .header__back {
-  background: none;
+  background: #c41e1e;
   border: none;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
-  padding: 8px 16px;
+  color: white;
+  padding: 8px 12px;
   border-radius: 6px;
   transition: background 0.3s ease;
 }
 
-.header__back:hover {
-  background: #f5f5f5;
-}
 
 .content {
   padding: 0 20px 120px 20px;
@@ -337,16 +342,60 @@ export default {
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.vehicle-card__labels,
+.vehicle-card__header {
+  display: grid;
+  grid-template-columns: 40px 100px minmax(120px, 1fr) 100px 80px 56px;
+  align-items: center;
+  gap: 16px;
+}
+
+.vehicle-card__labels {
+  padding: 14px 16px;
+  background: #c41e1e;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.vehicle-card__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vehicle-card__id-label {
+  justify-self: center;
+}
+
+.vehicle-card__placa-label {
+  justify-self: start;
+}
+
+.vehicle-card__renavam-label {
+  justify-self: start;
+}
+
+.vehicle-card__validade-label {
+  justify-self: center;
+}
+
+.vehicle-card__categoria-label {
+  justify-self: center;
+}
+
+.vehicle-card__actions-label {
+  justify-self: end;
 }
 
 .vehicle-card__header {
-  display: flex;
-  align-items: center;
   padding: 16px;
   background: #f9f9f9;
   border-bottom: 1px solid #f0f0f0;
-  gap: 16px;
 }
 
 .vehicle-card__header:hover {

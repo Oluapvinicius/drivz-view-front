@@ -98,6 +98,7 @@
       </header>
       <div class="map-container">
         <div class="map-placeholder"></div>
+        <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
       </div>
     </main>
 
@@ -179,6 +180,46 @@
       </div>
     </div>
 
+    <div v-if="emergencyPopupOpen" class="modal-overlay" @click="closeEmergencyPopup">
+      <div class="emergency-modal" @click.stop>
+        <div class="emergency-modal__top">
+          <div class="emergency-modal__icon">
+            <img src="../assets/emergencia-cima.svg" alt="Emergência" />
+          </div>
+          <div class="emergency-modal__title-group">
+            <span class="emergency-modal__title-label">EMERGÊNCIA</span>
+          </div>
+          <button class="emergency-modal__close" @click="closeEmergencyPopup">×</button>
+        </div>
+
+        <div class="emergency-modal__avatar">
+          <img :src="emergencyRequest.avatar" alt="" />
+        </div>
+        <h2 class="emergency-modal__name">{{ emergencyRequest.name }}</h2>
+        <div class="emergency-modal__stars">
+          <span v-for="i in 5" :key="i" :class="['emergency-modal__star', { filled: i <= emergencyRequest.rating }]">★</span>
+        </div>
+
+        <div class="emergency-modal__locations">
+          <div class="emergency-modal__location-row">
+            <img src="../assets/origem.svg" alt="Origem" class="emergency-modal__location-icon" />
+            <div>
+              <span class="emergency-modal__location-label">ORIGEM</span>
+              <p>{{ emergencyRequest.origin }}</p>
+            </div>
+          </div>
+          <div class="emergency-modal__location-row">
+            <img src="../assets/destino.svg" alt="Destino" class="emergency-modal__location-icon" />
+            <div>
+              <span class="emergency-modal__location-label">DESTINO</span>
+              <p>{{ emergencyRequest.destination }}</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="emergency-modal__accept-btn" @click="acceptEmergencyService">Aceitar Serviço</button>
+      </div>
+    </div>
     </template>
   </div>
 </template>
@@ -198,6 +239,14 @@ export default {
       rightSidebarOpen: true,
       activeScreen: 'home',
       selectedRequest: null,
+      emergencyPopupOpen: false,
+      emergencyRequest: {
+        name: 'Rogerio',
+        origin: 'Rodovia dos Bandeirantes, KM 152',
+        destination: 'Centro Automotivo Porto, Rua das Flores, 500.',
+        rating: 4,
+        avatar: '../assets/profile.svg'
+      },
       orders: ordersData,
       nearbyRequests: [
         {
@@ -324,6 +373,17 @@ export default {
       console.log('Solicitação aceita:', this.selectedRequest);
       this.$router.push({ name: 'pedido-prestador' });
       this.selectedRequest = null;
+    },
+    showEmergencyPopup() {
+      this.emergencyPopupOpen = true;
+    },
+    closeEmergencyPopup() {
+      this.emergencyPopupOpen = false;
+    },
+    acceptEmergencyService() {
+      console.log('Emergência aceita:', this.emergencyRequest);
+      this.closeEmergencyPopup();
+      this.$router.push({ name: 'pedido-prestador' });
     }
   },
   async mounted() {
@@ -1236,6 +1296,185 @@ export default {
 .request-modal__ignore-btn:hover {
   color: #333;
   text-decoration: underline;
+}
+
+.emergency-test-btn {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  padding: 14px 20px;
+  background: #D62828;
+  color: white;
+  border: none;
+  border-radius: 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(214, 40, 40, 0.25);
+  z-index: 10;
+}
+
+.emergency-test-btn:hover {
+  background: #a01818;
+}
+
+.emergency-modal {
+  width: min(520px, calc(100% - 40px));
+  background: #ffffff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.emergency-modal__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  background: #D62828;
+}
+
+.emergency-modal__icon {
+  width: 24px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emergency-modal__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.emergency-modal__title-group {
+  flex: 1;
+}
+
+.emergency-modal__title-label {
+  display: block;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+}
+
+.emergency-modal__subtitle {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.emergency-modal__close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 38px;
+  cursor: pointer;
+}
+
+.emergency-modal__avatar {
+  margin: 24px auto 16px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 6px solid #f5f5f5;
+}
+
+.emergency-modal__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.emergency-modal__name {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  color: #1f1f1f;
+}
+
+.emergency-modal__stars {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 0 20px;
+
+}
+
+.emergency-modal__star {
+  font-size: 24px;
+  color: #ddd;
+}
+
+.emergency-modal__star.filled {
+  color: #ffc107;
+}
+
+.emergency-modal__locations {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 0 28px 24px;
+}
+
+.emergency-modal__location-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.emergency-modal__location-icon {
+  width: 28px;
+  height: 28px;
+  margin-top: 4px;
+}
+
+.emergency-modal__location-row div {
+  flex: 1;
+}
+
+.emergency-modal__location-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #7a7a7a;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.emergency-modal__location-row p {
+  margin: 0;
+  color: #333;
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+.emergency-modal__accept-btn {
+  width: 85%;
+  background: #D62828;
+  border: none;
+  color: white;
+  padding: 28px 59px;
+  font-size:18px;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  margin: 24px auto 32px;
+  display: flex;
+  align-items: center; 
+  justify-content: center;
+}
+
+.emergency-modal__accept-btn:hover {
+  background: #a01818;
 }
 
 @media (max-width: 1024px) {
