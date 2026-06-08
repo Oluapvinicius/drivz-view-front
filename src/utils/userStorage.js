@@ -9,6 +9,22 @@ export const userStorage = {
     return localStorage.getItem('userId');
   },
 
+  getClienteId() {
+    return this.getUserId();
+  },
+
+  getPrestadorId() {
+    return this.getUserId();
+  },
+
+  setClienteData(data) {
+    localStorage.setItem('userData', JSON.stringify(data));
+  },
+
+  setPrestadorData(data) {
+    localStorage.setItem('userData', JSON.stringify(data));
+  },
+
   getUserData() {
     const data = localStorage.getItem('userData');
     return data ? JSON.parse(data) : null;
@@ -25,12 +41,12 @@ export const userStorage = {
   isPrestador() {
     const type = this.getUserType().toLowerCase();
     const data = this.getUserData() || {};
-    
+
     return (
-      type === 'prestador' || 
-      type === 'provider' || 
-      type === 'professional' || 
-      !!data.id_prestador || 
+      type === 'prestador' ||
+      type === 'provider' ||
+      type === 'professional' ||
+      !!data.id_prestador ||
       !!data.prestadorId
     );
   },
@@ -38,11 +54,11 @@ export const userStorage = {
   isCliente() {
     const type = this.getUserType().toLowerCase();
     const data = this.getUserData() || {};
-    
+
     return (
-      type === 'cliente' || 
-      type === 'client' || 
-      !!data.id_cliente || 
+      type === 'cliente' ||
+      type === 'client' ||
+      !!data.id_cliente ||
       !!data.clienteId
     );
   },
@@ -52,6 +68,4 @@ export const userStorage = {
     localStorage.removeItem('userData');
     localStorage.removeItem('userType');
   }
-
 };
->>>>>>> origin/cadastro-prestador

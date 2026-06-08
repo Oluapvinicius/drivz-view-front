@@ -37,3 +37,18 @@ export async function buscarAvaliacaoCliente(id) {
     });
     return response.json();
 }
+
+export async function alterarSenhaCliente(id, senhaAtual, novaSenha) {
+    const url = `http://localhost:8080/v1/drivez/cliente/${id}/alterarsenha`;
+    const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            senhaAtual: senhaAtual,
+            novaSenha: novaSenha
+        })
+    });
+    return response.json();
+}

@@ -8,7 +8,7 @@
     </div>
 
     <div class="sidebar__profile-block">
-      <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+      <img :src="userProfileImage" alt="Foto do usuário" class="sidebar__logo">
     </div>
 
     <div class="sidebar__user-info">
@@ -31,6 +31,13 @@
     </nav>
 
     <div class="sidebar__footer">
+      <button class="sidebar__logout" @click="logout" title="Sair da conta">
+        <svg class="sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
       <button class="sidebar__settings" @click="$emit('togglePopup')">
         <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
       </button>
@@ -45,18 +52,58 @@
           <button class="sidebar-popup__option" @click="goToOrderScreen">
             Registro de Pedidos
           </button>
+          <button class="sidebar-popup__option" @click="logout" style="color: #D62828; font-weight: 700;">
+            Sair da Conta
+          </button>
         </div>
       </div>
   </aside>
 </template>
 
 <script>
+import { useRouter } from 'vue-router';
+import { userStorage } from '../utils/userStorage';
+import defaultProfile from '../assets/profile.svg';
+
+const router = useRouter();
+
 export default {
   name: 'SidebarCliente',
   props: {
     sidebarOpen: Boolean,
     user: Object,
     popupOpen: Boolean
+  },
+  data() {
+    return {
+      orderPopupOpen: false
+    };
+  },
+  computed: {
+    userProfileImage() {
+      if (this.user && (this.user.img_perfil || this.user.profileImage || this.user.foto)) {
+        return this.user.img_perfil || this.user.profileImage || this.user.foto;
+      }
+      return defaultProfile;
+    }
+  },
+  methods: {
+    closeAllPopups() {
+      this.orderPopupOpen = false;
+      this.$emit('toggleSidebar');
+    },
+    goToOrderScreen() {
+      this.$emit('sidebarAction', 'orders');
+      this.closeAllPopups();
+    },
+    logout() {
+      if (confirm('Deseja sair da sua conta?')) {
+        userStorage.clear();
+        localStorage.clear();
+        sessionStorage.clear();
+        router.push('/');
+      }
+    }
   }
 }
 </script>

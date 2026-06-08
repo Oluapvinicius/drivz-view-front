@@ -41,7 +41,12 @@
             <input type="text" placeholder="Nome do usuario" v-model="form.nome" />
           </div>
           <div class="profile-screen__field profile-screen__field--half">
-            <input type="text" placeholder="CPF/CNPJ" v-model="form.documento" @input="handleDocumentoInput"
+            <input 
+              type="text" 
+              placeholder="CPF/CNPJ" 
+              v-model="form.documento" 
+              @input="handleDocumentoInput"
+              @blur="formatarDocumentoOnBlur"
               :class="{ 'profile-screen__field-invalid': form.documento && !documentoValido }"
             />
             <span v-if="form.documento && !documentoValido" class="profile-screen__field-error">
@@ -49,7 +54,12 @@
             </span>
           </div>
           <div class="profile-screen__field profile-screen__field--half">
-            <input type="text" placeholder="Telefone" v-model="form.telefone" @input="handleTelefoneInput"
+            <input 
+              type="text" 
+              placeholder="Telefone" 
+              v-model="form.telefone" 
+              @input="handleTelefoneInput"
+              @blur="formatarTelefoneOnBlur"
               :class="{ 'profile-screen__field-invalid': form.telefone && !telefoneValido }"
             />
             <span v-if="form.telefone && !telefoneValido" class="profile-screen__field-error">
@@ -57,7 +67,7 @@
             </span>
           </div>
           <div class="profile-screen__field profile-screen__field--full">
-            <input type="email" placeholder="Email" v-model="form.email" />
+            <input type="email" placeholder="Email" v-model="form.email" readonly class="profile-screen__field-readonly" />
           </div>
         </div>
 
@@ -66,44 +76,96 @@
         </button>
 
         <div v-if="showPassword" class="profile-screen__password-card">
-          <div class="profile-screen__password-title">Alterar a Senha de Usuario</div>
+          <div class="profile-screen__password-title">Alterar Senha</div>
           <div class="profile-screen__password-form">
             <div class="profile-screen__field">
-              <input type="password" placeholder="Senha Atual" />
+              <label class="profile-screen__field-label">Senha Atual</label>
+              <input 
+                v-model="senhaAtual"
+                type="password" 
+                placeholder="Digite sua senha atual" 
+                class="profile-screen__field-input"
+              />
             </div>
             <div class="profile-screen__field">
-              <input type="password" placeholder="Nova Senha" />
+              <label class="profile-screen__field-label">Nova Senha</label>
+              <input 
+                v-model="novaSenha"
+                type="password" 
+                placeholder="Digite uma nova senha"
+                @input="atualizarIndicadorForca"
+                class="profile-screen__field-input"
+              />
+              <div class="profile-screen__password-strength">
+                <div class="profile-screen__strength-bar">
+                  <div 
+                    class="profile-screen__strength-fill"
+                    :class="[
+                      `profile-screen__strength-${forcaSenha}`,
+                      { 'profile-screen__strength-hidden': !novaSenha }
+                    ]"
+                  ></div>
+                </div>
+                <span v-if="novaSenha" class="profile-screen__strength-text" :class="`profile-screen__strength-text-${forcaSenha}`">
+                  {{ textoForca }}
+                </span>
+              </div>
             </div>
-            <div class="profile-screen__password-warning">Senha fraca</div>
             <div class="profile-screen__field">
-              <input type="password" placeholder="Confirme a Nova Senha" />
+              <label class="profile-screen__field-label">Confirmar Nova Senha</label>
+              <input 
+                v-model="confirmaSenha"
+                type="password" 
+                placeholder="Confirme sua nova senha"
+                class="profile-screen__field-input"
+                :class="{ 'profile-screen__field-input-error': confirmaSenha && confirmaSenha !== novaSenha }"
+              />
+              <span v-if="confirmaSenha && confirmaSenha !== novaSenha" class="profile-screen__field-error">
+                As senhas não conferem
+              </span>
             </div>
           </div>
-          <button class="profile-screen__button profile-screen__button--primary">
-            Alterar Senha
-          </button>
+          <div class="profile-screen__password-actions">
+            <button 
+              class="profile-screen__button profile-screen__button--outline" 
+              @click="cancelarAlteracaoSenha"
+            >
+              Cancelar
+            </button>
+            <button 
+              class="profile-screen__button profile-screen__button--primary"
+              @click="salvarNovaSenha"
+              :disabled="!podeAlterarSenha || carregandoSenha"
+            >
+              {{ carregandoSenha ? 'Salvando...' : 'Alterar Senha' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-    <div v-if="temAlteracao" class="profile-screen__confirm-card"
-      :class="{ 'profile-screen__confirm-card--shaking': chamarAtencaoCard }">
-      <p>Você possui alterações não salvas.</p>
-      <div class="profile-screen__confirm-buttons">
-        <button class="profile-screen__button profile-screen__button--outline" @click="descartarAlteracoes">
-          Descartar
-        </button>
-        <button class="profile-screen__button profile-screen__button--primary" @click="salvarAlteracoes" :disabled="!podeSalvar">
-          Salvar Alterações
-        </button>
+    <div v-if="temAlteracao" class="profile-screen__confirm-banner" :class="{ 'profile-screen__confirm-banner--shaking': chamarAtencaoCard }">
+      <div class="profile-screen__confirm-banner__content">
+        <div>
+          <strong>Alterações não salvas</strong>
+          <p>Salve para manter seus dados atualizados.</p>
+        </div>
+        <div class="profile-screen__confirm-buttons">
+          <button class="profile-screen__button profile-screen__button--outline" @click="descartarAlteracoes">
+            Descartar
+          </button>
+          <button class="profile-screen__button profile-screen__button--primary" @click="salvarAlteracoes" :disabled="!podeSalvar">
+            Salvar Alterações
+          </button>
+        </div>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { buscarClientePorId, atualizarCliente, buscarAvaliacaoCliente } from '@/requests/cliente';
+import { buscarClientePorId, atualizarCliente, buscarAvaliacaoCliente, alterarSenhaCliente } from '@/requests/cliente';
 import { userStorage } from '@/utils/userStorage';
-import { computed, onBeforeUnmount, ref, onMounted } from 'vue';
+import { computed, onBeforeUnmount, ref, reactive, onMounted } from 'vue';
 import defaultProfile from '@/assets/profile.svg';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
 import { uploadImagemCloudinary } from '@/requests/cloudinary'; 
@@ -116,7 +178,17 @@ const goBack = () => router.back();
 const showPassword = ref(false);
 const togglePassword = () => {
   showPassword.value = !showPassword.value;
+  if (!showPassword.value) {
+    cancelarAlteracaoSenha();
+  }
 };
+
+// Variáveis para trocar senha
+const senhaAtual = ref('');
+const novaSenha = ref('');
+const confirmaSenha = ref('');
+const forcaSenha = ref('fraca');
+const carregandoSenha = ref(false);
 
 const dadosIniciais = ref({
   nome: 'Nome do Usuário',
@@ -130,7 +202,20 @@ const dadosIniciais = ref({
   senha: ''
 });
 
-const form = ref({ ...dadosIniciais.value });
+const clienteId = userStorage.getClienteId();
+const userDataStorage = userStorage.getUserData() || {};
+const localProfileDefaults = {
+  nome: userDataStorage.nome || userDataStorage.nome_cliente || '',
+  documento: userDataStorage.cpf || userDataStorage.cnpj || userDataStorage.documento || '',
+  telefone: userDataStorage.telefone || '',
+  email: userDataStorage.email || userDataStorage.email_cliente || '',
+  profileImage: userDataStorage.img_perfil || userDataStorage.foto || userDataStorage.imagem || '',
+  img_perfil: userDataStorage.img_perfil || userDataStorage.foto || userDataStorage.imagem || '',
+  cpf: userDataStorage.cpf || '',
+  cnpj: userDataStorage.cnpj || '',
+  senha: ''
+};
+const form = reactive({ ...dadosIniciais.value, ...localProfileDefaults });
 const fileInput = ref(null);
 
 const triggerImageInput = () => {
@@ -163,12 +248,12 @@ const onImageSelected = async (event) => {
   try {
     const urlGerada = await uploadImagemCloudinary(file);
     
-    form.value.profileImage = urlGerada;
+    form.profileImage = urlGerada;
     
   } catch (error) {
     console.error(error);
     alert('Erro ao processar imagem de perfil. Tente novamente.');
-    form.value.profileImage = dadosIniciais.value.profileImage;
+    form.profileImage = dadosIniciais.value.profileImage;
   } finally {
     previewLocalImagem.value = '';
     enviandoImagem.value = false;
@@ -177,7 +262,7 @@ const onImageSelected = async (event) => {
 };
 
 const avatarSrc = computed(() => {
-  return previewLocalImagem.value || form.value.profileImage || defaultProfile;
+  return previewLocalImagem.value || form.profileImage || defaultProfile;
 });
 
 const formatarDocumento = (valor) => {
@@ -195,11 +280,37 @@ const formatarTelefone = (valor) => {
 };
 
 const handleDocumentoInput = () => {
-  form.value.documento = formatarDocumento(form.value.documento);
+  // Apenas aceita números
+  const apenasDigitos = form.documento.replace(/\D/g, '');
+  
+  // Limita a 14 caracteres (máximo do CNPJ)
+  if (apenasDigitos.length > 14) {
+    form.documento = apenasDigitos.slice(0, 14);
+  } else {
+    form.documento = apenasDigitos;
+  }
+};
+
+const formatarDocumentoOnBlur = () => {
+  // Formata quando sai do campo
+  form.documento = formatarDocumento(form.documento);
 };
 
 const handleTelefoneInput = () => {
-  form.value.telefone = formatarTelefone(form.value.telefone);
+  // Apenas aceita números
+  const apenasDigitos = form.telefone.replace(/\D/g, '');
+  
+  // Limita a 11 caracteres
+  if (apenasDigitos.length > 11) {
+    form.telefone = apenasDigitos.slice(0, 11);
+  } else {
+    form.telefone = apenasDigitos;
+  }
+};
+
+const formatarTelefoneOnBlur = () => {
+  // Formata quando sai do campo
+  form.telefone = formatarTelefone(form.telefone);
 };
 
 const validarDocumento = (doc) => {
@@ -217,27 +328,29 @@ const validarEmail = (email) => {
 };
 
 const documentoValido = computed(() => {
-  return form.value.documento && validarDocumento(form.value.documento);
+  return form.documento && validarDocumento(form.documento);
 });
 
 const telefoneValido = computed(() => {
-  return form.value.telefone && validarTelefone(form.value.telefone);
+  return form.telefone && validarTelefone(form.telefone);
 });
 
 const emailValido = computed(() => {
-  return form.value.email && validarEmail(form.value.email);
+  return form.email && validarEmail(form.email);
 });
 
 const nomeValido = computed(() => {
-  return form.value.nome && form.value.nome.trim().length > 0;
+  return form.nome && form.nome.trim().length > 0;
 });
 
 const podeSalvar = computed(() => {
-  return nomeValido.value && emailValido.value && documentoValido.value && telefoneValido.value && form.value.profileImage;
+  // Permite salvar se tem imagem nova OU se tinha imagem anterior
+  const temImagemValida = form.profileImage || dadosIniciais.value.profileImage;
+  return nomeValido.value && emailValido.value && documentoValido.value && telefoneValido.value && temImagemValida;
 });
 
 const mostrarFinalizarCadastro = computed(() => {
-  return !podeSalvar.value;
+  return !podeSalvar.value && !temAlteracao.value;
 });
 
 const dadosCarregados = ref(false);
@@ -245,63 +358,105 @@ const avaliacao = ref(0);
 
 onMounted(async () => {
   try {
-    const usuario = await buscarClientePorId(userStorage.getClienteId())
-    // const avaliacaoResposta = await buscarAvaliacaoCliente(userStorage.getClienteId());
-    // usuario.response.avaliacao = avaliacaoResposta.avaliacao || 0;
-    console.log(usuario)
+    dadosIniciais.value = { ...dadosIniciais.value, ...localProfileDefaults };
+    Object.assign(form, dadosIniciais.value);
+
+    if (!clienteId) {
+      console.warn('PerfilCliente: clienteId não encontrado em localStorage. Usando dados locais se houver.');
+      dadosCarregados.value = true;
+      return;
+    }
+
+    const usuario = await buscarClientePorId(clienteId);
+    const response = usuario?.response || usuario || {};
 
     const dadosFormatados = {
-      nome: usuario.response.nome || '',
-      documento: usuario.response.cpf || usuario.response.cnpj || '',
-      telefone: usuario.response.telefone || '',
-      email: usuario.response.email || '',
-      profileImage: usuario.response.img_perfil || usuario.response.foto || usuario.response.imagem || '',
-      img_perfil: usuario.response.img_perfil || usuario.response.foto || usuario.response.imagem || '',
-      cpf: usuario.response.cpf || '',
-      cnpj: usuario.response.cnpj || '',
-      senha: usuario.response.senha || ''
+      nome: response.nome || response.nome_cliente || localProfileDefaults.nome || '',
+      documento: response.cpf || response.cnpj || response.documento || localProfileDefaults.documento || '',
+      telefone: response.telefone || localProfileDefaults.telefone || '',
+      email: response.email || response.email_cliente || localProfileDefaults.email || '',
+      profileImage: response.img_perfil || response.foto || response.imagem || localProfileDefaults.profileImage || '',
+      img_perfil: response.img_perfil || response.foto || response.imagem || localProfileDefaults.img_perfil || '',
+      cpf: response.cpf || localProfileDefaults.cpf || '',
+      cnpj: response.cnpj || localProfileDefaults.cnpj || '',
+      senha: ''
     };
 
-    dadosIniciais.value = { ...dadosFormatados };
-    form.value = { ...dadosFormatados };
+    dadosIniciais.value = { ...dadosIniciais.value, ...dadosFormatados };
+    Object.assign(form, dadosIniciais.value);
     dadosCarregados.value = true;
-    // avaliacao.value = usuario.response.avaliacao
-    console.log('Dados do perfil carregados:', form.value);
 
+    const sessionPayload = { ...userDataStorage, ...dadosFormatados };
+    userStorage.setSession(clienteId, sessionPayload, 'cliente');
+
+    console.log('Dados do perfil carregados:', form);
   } catch (error) {
     console.error('Falha ao carregar dados do perfil:', error);
+    dadosCarregados.value = true;
   }
 });
 
 const temAlteracao = computed(() => {
   if (!dadosCarregados.value) return false;
-  return JSON.stringify(form.value) !== JSON.stringify(dadosIniciais.value);
+  
+  // Normalizar dados para comparação (remove formatação)
+  const normalizarDados = (dados) => ({
+    nome: dados.nome,
+    documento: dados.documento.replace(/\D/g, ''),
+    telefone: dados.telefone.replace(/\D/g, ''),
+    email: dados.email,
+    profileImage: dados.profileImage,
+    img_perfil: dados.img_perfil
+  });
+  
+  return JSON.stringify(normalizarDados(form)) !== JSON.stringify(normalizarDados(dadosIniciais.value));
 });
 
 
 const salvarAlteracoes = async () => {
   if (!podeSalvar.value) {
-    alert('Preencha todos os campos corretamente antes de salvar.');
+    // Gerar mensagem de erro detalhada
+    let erros = [];
+    if (!nomeValido.value) erros.push('Nome');
+    if (!emailValido.value) erros.push('Email');
+    if (!documentoValido.value) erros.push('CPF/CNPJ');
+    if (!telefoneValido.value) erros.push('Telefone');
+    if (!form.profileImage && !dadosIniciais.value.profileImage) erros.push('Foto de perfil');
+    
+    const mensagem = erros.length > 0 
+      ? `Campos inválidos: ${erros.join(', ')}`
+      : 'Preencha todos os campos corretamente antes de salvar.';
+    
+    alert(mensagem);
     return;
   }
 
-  const documentoLimpo = form.value.documento.replace(/\D/g, '');
+  if (!clienteId) {
+    alert('ID de cliente não encontrado. Faça login novamente.');
+    return;
+  }
+
+  const documentoLimpo = form.documento.replace(/\D/g, '');
   const payload = {
-    nome: form.value.nome.trim(),
-    email: form.value.email.trim(),
-    telefone: form.value.telefone.replace(/\D/g, ''),
-    img_perfil: form.value.profileImage,
+    nome: form.nome.trim(),
+    email: form.email.trim(),
+    telefone: form.telefone.replace(/\D/g, ''),
+    img_perfil: form.profileImage || dadosIniciais.value.profileImage || '',
     cpf: documentoLimpo.length === 11 ? documentoLimpo : '',
     cnpj: documentoLimpo.length === 14 ? documentoLimpo : '',
-    senha: form.value.senha || dadosIniciais.value.senha || ''
+    senha: ''
   };
 
   console.log('Payload enviado para backend:', payload);
 
   try {
-    const resposta = await atualizarCliente(userStorage.getClienteId(), payload);
+    const resposta = await atualizarCliente(clienteId, payload);
     console.log('Resposta do backend:', resposta);
-    dadosIniciais.value = { ...form.value };
+
+    const sessionPayload = { ...userDataStorage, ...payload };
+    userStorage.setSession(clienteId, sessionPayload, 'cliente');
+
+    dadosIniciais.value = { ...form };
     previewLocalImagem.value = '';
     dadosCarregados.value = true;
   } catch (error) {
@@ -311,7 +466,94 @@ const salvarAlteracoes = async () => {
 };
 
 const descartarAlteracoes = () => {
-  form.value = { ...dadosIniciais.value };
+  Object.assign(form, dadosIniciais.value);
+};
+
+const atualizarIndicadorForca = () => {
+  const senha = novaSenha.value;
+  
+  if (senha.length < 6) {
+    forcaSenha.value = 'fraca';
+  } else if (senha.length < 10) {
+    const temNumero = /\d/.test(senha);
+    const temLetraAlta = /[A-Z]/.test(senha);
+    if (temNumero && temLetraAlta) {
+      forcaSenha.value = 'forte';
+    } else {
+      forcaSenha.value = 'media';
+    }
+  } else {
+    const temNumero = /\d/.test(senha);
+    const temLetraAlta = /[A-Z]/.test(senha);
+    const temEspecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(senha);
+    if (temNumero && temLetraAlta && temEspecial) {
+      forcaSenha.value = 'muito-forte';
+    } else if (temNumero && temLetraAlta) {
+      forcaSenha.value = 'forte';
+    } else {
+      forcaSenha.value = 'media';
+    }
+  }
+};
+
+const textoForca = computed(() => {
+  const forca = {
+    'fraca': '❌ Fraca',
+    'media': '⚠️ Média',
+    'forte': '✓ Forte',
+    'muito-forte': '✓✓ Muito Forte'
+  };
+  return forca[forcaSenha.value] || 'Fraca';
+});
+
+const podeAlterarSenha = computed(() => {
+  return (
+    senhaAtual.value.length > 0 &&
+    novaSenha.value.length >= 6 &&
+    confirmaSenha.value === novaSenha.value &&
+    (forcaSenha.value === 'forte' || forcaSenha.value === 'muito-forte')
+  );
+});
+
+const cancelarAlteracaoSenha = () => {
+  senhaAtual.value = '';
+  novaSenha.value = '';
+  confirmaSenha.value = '';
+  forcaSenha.value = 'fraca';
+  showPassword.value = false;
+};
+
+const salvarNovaSenha = async () => {
+  if (!podeAlterarSenha.value) {
+    alert('Preencha todos os campos corretamente. A nova senha deve ser forte.');
+    return;
+  }
+
+  if (!clienteId) {
+    alert('ID de cliente não encontrado. Faça login novamente.');
+    return;
+  }
+
+  carregandoSenha.value = true;
+
+  try {
+    console.log('Alterando senha para clienteId:', clienteId);
+    const resultado = await alterarSenhaCliente(clienteId, senhaAtual.value, novaSenha.value);
+
+    console.log('Resposta da alteração de senha:', resultado);
+
+    if (resultado.status_code === 200 || resultado.status === 200) {
+      alert('✓ Senha alterada com sucesso!');
+      cancelarAlteracaoSenha();
+    } else {
+      alert('❌ ' + (resultado.message || 'Erro ao alterar senha.'));
+    }
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    alert('❌ Erro ao processar a alteração. Tente novamente.');
+  } finally {
+    carregandoSenha.value = false;
+  }
 };
 
 const chamarAtencaoCard = ref(false);
@@ -369,11 +611,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  background: #d62828;
+  background: linear-gradient(135deg, #d62828 0%, #b02020 100%);
   color: white;
   padding: 18px 32px 18px 80px;
   gap: 16px;
-
+  box-shadow: 0 4px 12px rgba(214, 40, 40, 0.15);
 }
 
 .profile-screen__finalize-card {
@@ -549,124 +791,292 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 44px;
   border-radius: 8px;
-  border: none;
-  background: #E8F0FE;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
   padding: 0 16px;
-  color: #555;
+  color: #1b263b;
   font-size: 14px;
   outline: none;
-  transition: background-color 0.2s, border 0.2s;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.profile-screen__field input:focus {
+  border-color: #d62828;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.1);
 }
 
 .profile-screen__field input.profile-screen__field-invalid {
   background: #ffe6e6;
-  border: 1px solid #d62828;
+  border: 1.5px solid #d62828;
 }
 
 .profile-screen__field input::placeholder {
-  color: #7a7a7a;
+  color: #94a3b8;
+}
+
+.profile-screen__field-readonly {
+  background: #edf2f7;
+  color: #5f6c7b;
+  border: 1px solid #cbd5e1;
+  cursor: not-allowed;
 }
 
 .profile-screen__button {
   width: fit-content;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-weight: 700;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   border: none;
-  transition: opacity 0.2s;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.profile-screen__button:hover {
-  opacity: 0.8;
+.profile-screen__button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-screen__button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .profile-screen__button:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .profile-screen__button--outline {
   background: white;
   color: #d62828;
-  border: 1px solid #7a7a7a;
+  border: 1.5px solid #d62828;
+}
+
+.profile-screen__button--outline:hover:not(:disabled) {
+  background: #f8f8f8;
+  border-color: #b02020;
 }
 
 .profile-screen__button--primary {
-  background: #d62828;
+  background: linear-gradient(135deg, #d62828 0%, #b02020 100%);
   color: white;
   align-self: flex-end;
-  padding: 10px 24px;
-  font-size: 14px;
+  padding: 11px 28px;
+  font-size: 13px;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(214, 40, 40, 0.2);
+}
+
+.profile-screen__button--primary:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(214, 40, 40, 0.3);
+}
+
+.profile-screen__button--primary:active:not(:disabled) {
+  background: linear-gradient(135deg, #b02020 0%, #8a1818 100%);
 }
 
 .profile-screen__password-card {
-  background: white;
-  border: 1px solid #d8d8d8;
-  border-radius: 8px;
-  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 8px;
+  gap: 18px;
+  margin-top: 12px;
   width: 100%;
   max-width: 580px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s;
+}
+
+.profile-screen__password-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .profile-screen__password-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #1b263b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .profile-screen__password-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
 }
 
-.profile-screen__password-warning {
-  color: #d62828;
-  font-size: 12px;
-  font-weight: 700;
-  margin-left: 4px;
+.profile-screen__field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
 }
 
-.profile-screen__confirm-card {
-  background: #efefef;
+.profile-screen__field-input {
+  width: 100%;
+  height: 44px;
   border-radius: 8px;
-  padding: 16px 24px;
-  margin-top: 20px;
-  width: 100%;
-  max-width: 580px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  padding: 0 14px;
+  color: #1b263b;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.profile-screen__field-input:focus {
+  border-color: #d62828;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.1);
+}
+
+.profile-screen__field-input-error {
+  border-color: #d62828;
+  background: #ffe6e6;
+}
+
+.profile-screen__password-strength {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  align-self: flex-end;
+  gap: 6px;
 }
 
-.profile-screen__confirm-card p {
-  margin: 0;
-  font-size: 20px;
-  color: #1B2D45;
+.profile-screen__strength-bar {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.profile-screen__strength-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s, background-color 0.3s;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #d62828 0%, #f08030 100%);
+}
+
+.profile-screen__strength-fill.profile-screen__strength-hidden {
+  display: none;
+}
+
+.profile-screen__strength-fraca {
+  width: 25%;
+  background: linear-gradient(90deg, #d62828 0%, #d62828 100%);
+}
+
+.profile-screen__strength-media {
+  width: 50%;
+  background: linear-gradient(90deg, #f08030 0%, #f08030 100%);
+}
+
+.profile-screen__strength-forte {
+  width: 75%;
+  background: linear-gradient(90deg, #10b981 0%, #10b981 100%);
+}
+
+.profile-screen__strength-muito-forte {
+  width: 100%;
+  background: linear-gradient(90deg, #047857 0%, #10b981 100%);
+}
+
+.profile-screen__strength-text {
+  font-size: 12px;
   font-weight: 600;
-  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.profile-screen__strength-text-fraca {
+  color: #d62828;
+}
+
+.profile-screen__strength-text-media {
+  color: #f08030;
+}
+
+.profile-screen__strength-text-forte,
+.profile-screen__strength-text-muito-forte {
+  color: #10b981;
+}
+
+.profile-screen__password-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.profile-screen__confirm-banner {
+  position: sticky;
+  bottom: 0;
+  margin-top: 24px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px 16px;
+  z-index: 1;
+}
+
+.profile-screen__confirm-banner__content {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 860px;
+  border: 1px solid rgba(27, 38, 59, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+}
+
+.profile-screen__confirm-banner__content strong {
+  display: block;
+  font-size: 1rem;
+  color: #1b263b;
+  margin-bottom: 4px;
+}
+
+.profile-screen__confirm-banner__content p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.5;
 }
 
 .profile-screen__confirm-buttons {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 12px;
+  flex-wrap: wrap;
   font-size: 14px;
 }
 
-.profile-screen__confirm-card--shaking {
+.profile-screen__confirm-banner--shaking {
   animation: shakeEffect 0.4s ease-in-out;
-  border-color: #d62828 !important;
-  background: #f8d7da !important;
 }
 
 @keyframes shakeEffect {

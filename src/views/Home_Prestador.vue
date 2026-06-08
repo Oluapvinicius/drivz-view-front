@@ -38,7 +38,7 @@
         <div class="sidebar__top-row"></div>
 
         <div class="sidebar__profile-block">
-          <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+          <img :src="userProfileImage" alt="Foto do usuário" class="sidebar__logo">
         </div>
 
         <div class="sidebar__user-info">
@@ -54,6 +54,10 @@
           <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
           <span class="sidebar__label">Mensagens</span>
         </button>
+        <button class="sidebar__item" @click="handleSidebarAction('profile')">
+          <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
+          <span class="sidebar__label">Editar Perfil</span>
+        </button>
         <button class="sidebar__item" @click="handleSidebarAction('garage')">
           <img src="../assets/Warehouse.svg" alt="Garagem" class="sidebar__icon">
           <span class="sidebar__label">Minha Garagem</span>
@@ -61,6 +65,7 @@
       </nav>
 
         <div class="sidebar__footer">
+         
           <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
             <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
           </button>
@@ -74,6 +79,9 @@
           <div class="sidebar-popup__list">
             <button class="sidebar-popup__option" @click="handleSidebarAction('orders')">
               Registro de Pedido
+            </button>
+            <button class="sidebar-popup__option" @click="logout" style="color: #D62828; font-weight: 700;">
+              Sair da Conta
             </button>
           </div>
         </div>
@@ -231,6 +239,7 @@ import { userStorage } from '../utils/userStorage';
 import { MapboxService } from '../requests/mapboxService';
 import { listarPedidos } from '../requests/pedido';
 import { prestadoresGuincho } from '../requests/prestador';
+import defaultProfile from '../assets/profile.svg';
 
 export default {
   name: 'HomePrestador',
@@ -261,6 +270,14 @@ export default {
       pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' }
     };
   },
+  computed: {
+    userProfileImage() {
+      if (this.user && (this.user.img_perfil || this.user.profileImage || this.user.foto)) {
+        return this.user.img_perfil || this.user.profileImage || this.user.foto;
+      }
+      return defaultProfile;
+    }
+  },
   methods: {
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
@@ -277,6 +294,8 @@ export default {
         this.carregarHistoricoDePedidos();
       } else if (action === 'messages') {
         this.$router.push('/mensagens-prestador');
+      } else if (action === 'profile') {
+        this.$router.push('/perfil-prestador');
       } else if (action === 'garage') {
         this.$router.push('/meus-veiculos');
       } else {
@@ -528,6 +547,15 @@ export default {
       } catch (error) {
         console.error('Erro ao aceitar serviço de emergência:', error);
       }
+    },
+
+    logout() {
+      if (confirm('Deseja sair da sua conta?')) {
+        userStorage.clear();
+        localStorage.clear();
+        sessionStorage.clear();
+        this.$router.push('/');
+      }
     }
   },
 
@@ -749,6 +777,32 @@ export default {
   margin-top: auto;
   display: flex;
   justify-content: flex-start;
+  gap: 12px;
+  align-items: center;
+}
+
+.sidebar__logout {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar__logout:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.sidebar__logout .sidebar__icon {
+  width: 32px;
+  height: 32px;
 }
 
 .sidebar__settings {

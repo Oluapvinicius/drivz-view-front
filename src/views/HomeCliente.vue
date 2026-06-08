@@ -13,7 +13,7 @@
     </div>
 
     <div class="sidebar__profile-block">
-      <img src="../assets/profile.svg" alt="Foto do usuário" class="sidebar__logo">
+      <img :src="userProfileImage" alt="Foto do usuário" class="sidebar__logo">
     </div>
 
     <div class="sidebar__user-info">
@@ -36,6 +36,7 @@
     </nav>
 
     <div class="sidebar__footer">
+   
       <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
       
         <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
@@ -51,13 +52,9 @@
           <button class="sidebar-popup__option" @click="goToOrderScreen">
             Registro de Pedidos
           </button>
-        <a 
-        href="#"
-        @click.prevent="" 
-        class="text-gray-500 hover:text-red-600 transition-colors text-sm underline"
-        >
-        Encerrar sessão
-        </a>
+          <button class="sidebar-popup__option" @click="logout" style="color: #D62828; font-weight: 700;">
+            Sair da Conta
+          </button>
         </div>
       </div>
   
@@ -232,6 +229,7 @@ import { useRouter } from 'vue-router';
 import { buscarCliente } from '../requests/buscarUsuarios';
 import { buscarPedidosComFallback } from '../requests/pedidos';
 import { userStorage } from '../utils/userStorage';
+import defaultProfile from '../assets/profile.svg';
 
 
 
@@ -262,6 +260,12 @@ export default {
     };
   },
   computed: {
+    userProfileImage() {
+      if (this.user && (this.user.img_perfil || this.user.profileImage || this.user.foto)) {
+        return this.user.img_perfil || this.user.profileImage || this.user.foto;
+      }
+      return defaultProfile;
+    },
     filteredServices() {
       if (!this.searchQuery.trim()) {
         return this.services;
@@ -467,6 +471,14 @@ irParaPerfil () {
       } catch (error) {
         console.error('[HomeCliente] Erro ao buscar pedidos da API:', error);
         this.orders = [];
+      }
+    },
+    logout() {
+      if (confirm('Deseja sair da sua conta?')) {
+        userStorage.clear();
+        localStorage.clear();
+        sessionStorage.clear();
+        this.$router.push('/');
       }
     }
   },

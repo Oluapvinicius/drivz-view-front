@@ -408,93 +408,45 @@ const validarCampos = async () => {
 @media (min-width: 2560px) {
 .containerLeft {
 padding-left: 80px;
-<<<<<<< HEAD
-=======
-}
+  .subtitle {
+    font-size: 18px;
+    margin-bottom: 24px;
+  }
 
-.subtitle {
-font-size: 18px;
-margin-bottom: 24px;
-}
+  .headline {
+    font-size: 6rem;
+  }
 
-.headline {
-font-size: 6rem;
-}
+  .box_place {
+    max-width: 800px;
+    padding: 80px 64px;
+    gap: 36px;
+  }
 
-.box_place {
-max-width: 800px;
-padding: 80px 64px;
-gap: 36px;
-}
+  .titulo_login {
+    font-size: 52px;
+  }
 
-.titulo_login {
-font-size: 52px;
-}
+  .campos input {
+    height: 88px;
+    padding: 0 28px;
+    font-size: 20px;
+  }
 
-.campos input {
-height: 88px;
-padding: 0 28px;
-font-size: 20px;
-}
+  .button-entrar {
+    height: 80px;
+    font-size: 24px;
+  }
 
-.button-entrar {
-height: 80px;
-font-size: 24px;
-}
+  .esqueceu-senha {
+    font-size: 24px;
+  }
 
-.esqueceu-senha {
-font-size: 24px;
-}
+  .cadastroH1 {
+    font-size: 26px;
+  }
 
-.cadastroH1 {
-font-size: 26px;
-}
-
-.link-destaque {
-font-size: 26px;
-}
->>>>>>> origin/cadastro-prestador
-}
-
-.subtitle {
-font-size: 18px;
-margin-bottom: 24px;
-}
-
-.headline {
-font-size: 6rem;
-}
-
-.box_place {
-max-width: 800px;
-padding: 80px 64px;
-gap: 36px;
-}
-
-.titulo_login {
-font-size: 52px;
-}
-
-.campos input {
-height: 88px;
-padding: 0 28px;
-font-size: 20px;
-}
-
-.button-entrar {
-height: 80px;
-font-size: 24px;
-}
-
-.esqueceu-senha {
-font-size: 24px;
-}
-
-.cadastroH1 {
-font-size: 26px;
-}
-
-.link-destaque {
-font-size: 26px;
-}
+  .link-destaque {
+    font-size: 26px;
+  }
 }
