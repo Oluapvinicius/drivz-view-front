@@ -168,11 +168,10 @@
             <div class="request-modal__location-icon"><img src="../assets/location.png" alt="" class="locationIcon"></div>
             <span class="request-modal__location-label">LOCAL DE SOLICITAÇÃO</span>
           </div>
+          <p class="request-modal__location-address">{{ selectedRequest.address }}</p>
 
           <div class="request-modal__map">
-            <div class="request-modal__map-placeholder">
-         
-            </div>
+            <div id="request-card-map" class="request-modal__map-placeholder"></div>
           </div>
 
           <div class="request-modal__actions">
@@ -263,6 +262,7 @@ export default {
       mapService: null,
       requestMarkerIds: [],
       presenterLocation: [-46.9015, -23.5255],
+      requestMapService: null,
       nearbyRequests: [],
 
       timerConvites: null,
@@ -507,12 +507,51 @@ export default {
       this.requestMarkerIds = [];
     },
 
-    openRequestModal(request) {
+    async openRequestModal(request) {
       this.selectedRequest = request;
+      await this.$nextTick();
+      await this.initRequestCardMap();
     },
 
     closeRequestModal() {
+      if (this.requestMapService) {
+        this.requestMapService.destroyMap();
+        this.requestMapService = null;
+      }
       this.selectedRequest = null;
+    },
+
+    async initRequestCardMap() {
+      if (!this.selectedRequest) return;
+
+      if (this.requestMapService) {
+        this.requestMapService.destroyMap();
+        this.requestMapService = null;
+      }
+
+      this.requestMapService = new MapboxService();
+
+      let coords = null;
+      if (this.selectedRequest.lng != null && this.selectedRequest.lat != null) {
+        coords = [this.selectedRequest.lng, this.selectedRequest.lat];
+      } else if (this.selectedRequest.address) {
+        coords = await this.requestMapService.forwardGeocode(this.selectedRequest.address, this.presenterLocation);
+      }
+
+      if (!coords) {
+        return;
+      }
+
+      this.requestMapService.initPresenterMap('request-card-map', coords);
+      if (this.requestMapService.map) {
+        this.requestMapService.map.on('load', () => {
+          this.requestMapService.addMarker('selected-request', coords[0], coords[1], {
+            color: '#D62828',
+            popupHTML: '<div style="padding: 8px;"><strong>Origem do solicitante</strong></div>'
+          });
+          this.requestMapService.map.flyTo({ center: coords, zoom: 14 });
+        });
+      }
     },
 
     async acceptRequest() {
@@ -1435,7 +1474,16 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+
+.request-modal__location-address {
+  margin: 0 auto 20px;
+  max-width: 90%;
+  font-size: 14px;
+  color: #4a4a4a;
+  text-align: center;
+  line-height: 1.6;
 }
 
 .request-modal__location-icon {
