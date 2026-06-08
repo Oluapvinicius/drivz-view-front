@@ -1,46 +1,31 @@
+import { apiFetch } from './api';
+
 export async function buscarCliente(id) {
-  const url = `http://localhost:8080/v1/drivez/cliente/${id}`;
-  const response = await fetch(url);
-  return response.json();
+  return apiFetch(`/cliente/${id}`);
 }
 
 export async function buscarPrestador(id) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
-  const response = await fetch(url);
-  return response.json();
+  return apiFetch(`/prestador/${id}`);
 }
 
 export async function buscarPrestadorPorId(id) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
-  const response = await fetch(url);
-  return response.json();
+  return apiFetch(`/prestador/${id}`);
 }
 
 export async function atualizarPrestador(id, dados) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
-  const response = await fetch(url, {
+  return apiFetch(`/prestador/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados)
   });
-  return response.json();
 }
 
 export async function buscarAvaliacaoPrestador(id) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}/avaliacoes`;
-  const response = await fetch(url);
-  return response.json();
+  return apiFetch(`/prestador/${id}/avaliacoes`);
 }
 
 export async function alterarSenhaPrestador(id, senhaAtual, novaSenha) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}/alterar-senha`;
-  const response = await fetch(url, {
+  return apiFetch(`/prestador/${id}/alterar-senha`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      senhaAtual,
-      novaSenha
-    })
+    body: JSON.stringify({ senhaAtual, novaSenha })
   });
-  return response.json();
 }

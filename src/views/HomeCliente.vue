@@ -230,6 +230,7 @@ import { buscarCliente } from '../requests/buscarUsuarios';
 import { buscarPedidosComFallback } from '../requests/pedidos';
 import { userStorage } from '../utils/userStorage';
 import defaultProfile from '../assets/profile.svg';
+import { apiFetch } from '../requests/api';
 
 
 
@@ -309,11 +310,8 @@ irParaPerfil () {
         console.log('[HomeCliente] Iniciando fetchServices...');
           
         try {
-          const url = 'http://localhost:8080/v1/drivez/prestador';
-          console.log('[HomeCliente] Buscando prestadores de:', url);
-          
-          const response = await fetch(url);
-          const data = await response.json();
+          console.log('[HomeCliente] Buscando prestadores via apiFetch /prestador');
+          const data = await apiFetch('/prestador');
           
           console.log('[HomeCliente] Resposta da API de prestadores:', data);
           
@@ -410,8 +408,7 @@ irParaPerfil () {
       this.isLoading = true;
       console.log('[HomeCliente] Atualizando serviços (refresh)...');
       
-      fetch('http://localhost:8080/v1/drivez/prestador')
-        .then(response => response.json())
+      apiFetch('/prestador')
         .then(data => {
           console.log('[HomeCliente] Resposta do refresh:', data);
           

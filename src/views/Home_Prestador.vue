@@ -240,6 +240,7 @@ import { MapboxService } from '../requests/mapboxService';
 import { listarPedidos } from '../requests/pedido';
 import { prestadoresGuincho } from '../requests/prestador';
 import defaultProfile from '../assets/profile.svg';
+import { apiFetch } from '../requests/api';
 
 export default {
   name: 'HomePrestador',
@@ -407,8 +408,7 @@ export default {
 
     async aceitarPedido() {
       try {
-        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
-        await fetch(url, { method: 'POST' });
+        await apiFetch(`/pedidos/aceitar/${this.pedidoPendente.id}`, { method: 'POST' });
 
         this.popupConfirmacaoOpen = false;
         alert('Você aceitou a solicitação! Ela será incluída na sua rota.');
@@ -426,9 +426,7 @@ export default {
     async carregarHistoricoDePedidos() {
       try {
         const prestadorId = userStorage.getUserId();
-        const url = `http://localhost:8080/v1/drivez/pedidos/historico/${prestadorId}`;
-        const response = await fetch(url);
-        const dados = await response.json();
+        const dados = await apiFetch(`/pedidos/historico/${prestadorId}`);
 
         const listaHistorico = dados.response || dados || [];
         this.orders = listaHistorico.map(o => ({
@@ -518,8 +516,7 @@ export default {
     async acceptRequest() {
       if (!this.selectedRequest) return;
       try {
-        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.selectedRequest.id}`;
-        await fetch(url, { method: 'POST' });
+        await apiFetch(`/pedidos/aceitar/${this.selectedRequest.id}`, { method: 'POST' });
         alert('Serviço aceito com sucesso!');
         this.closeRequestModal();
         await this.refreshRequests();
@@ -539,8 +536,7 @@ export default {
 
     async acceptEmergencyService() {
       try {
-        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.emergencyRequest.id}`;
-        await fetch(url, { method: 'POST' });
+        await apiFetch(`/pedidos/aceitar/${this.emergencyRequest.id}`, { method: 'POST' });
         alert('Serviço de emergência aceito!');
         this.closeEmergencyPopup();
         await this.refreshRequests();

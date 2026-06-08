@@ -1,4 +1,5 @@
 import { userStorage } from '@/utils/userStorage';
+import { apiFetch } from './api';
 
 // export async function loginApi(usuario, senha) {
 //   const response = await fetch('http://localhost:8080/v1/drivez/login', {
@@ -22,16 +23,8 @@ import { userStorage } from '@/utils/userStorage';
 // }
 
 export async function loginApi(usuario, senha) {
-  const response = await fetch('http://localhost:8080/v1/drivez/login', {
+  return apiFetch('/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: usuario, senha: senha })
   });
-
-  if (!response.ok) {
-    const dadosErro = await response.json().catch(() => ({}));
-    throw new Error(dadosErro.message || 'Erro ao realizar login.');
-  }
-
-  return await response.json();
 }

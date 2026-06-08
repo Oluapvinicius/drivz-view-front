@@ -123,29 +123,7 @@ export default {
   name: 'MeusVeiculos',
   data() {
     return {
-      vehicles: [
-        {
-          id: 1,
-          placa: 'ABC-1D23',
-          renavam: '12345678910',
-          validadeDoc: '20/05/2027',
-          categoria: 'SEDAN'
-        },
-        {
-          id: 2,
-          placa: 'XYZ-9E87',
-          renavam: '09876543211',
-          validadeDoc: '15/09/2026',
-          categoria: 'SEDAN'
-        },
-        {
-          id: 3,
-          placa: 'KRT-4J11',
-          renavam: '11223344556',
-          validadeDoc: '02/01/2028',
-          categoria: 'SEDAN'
-        }
-      ],
+      vehicles: [],
       showAddDialog: false,
       showVehicleForm: false,
       showSaveConfirm: false,
@@ -153,11 +131,14 @@ export default {
       isEditing: false,
       editingIndex: null,
       formData: {
+        id: null,
         placa: '',
         renavam: '',
         validadeDoc: '',
         categoria: ''
-      }
+      },
+      loading: false,
+      apiAvailable: true
     }
   },
   computed: {
@@ -171,6 +152,29 @@ export default {
     }
   },
   methods: {
+    async loadVehicles() {
+      this.loading = true;
+      try {
+        const { listarVeiculos } = await import('@/requests/veiculo');
+        const apiVehicles = await listarVeiculos();
+        if (Array.isArray(apiVehicles) && apiVehicles.length > 0) {
+          this.vehicles = apiVehicles;
+          localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+        } else {
+          // fallback to local storage
+          const stored = localStorage.getItem('meusVeiculos');
+          this.vehicles = stored ? JSON.parse(stored) : [];
+        }
+        this.apiAvailable = true;
+      } catch (e) {
+        console.warn('API unavailable, using local data', e.message);
+        this.apiAvailable = false;
+        const stored = localStorage.getItem('meusVeiculos');
+        this.vehicles = stored ? JSON.parse(stored) : [];
+      } finally {
+        this.loading = false;
+      }
+    },
     confirmAddVehicle() {
       this.showAddDialog = false;
       this.resetForm();
@@ -193,38 +197,95 @@ export default {
       this.showVehicleForm = true;
       this.editMenuOpen = null;
     },
-    deleteVehicle(index) {
+    async deleteVehicle(index) {
       if (confirm('Tem certeza que deseja deletar este veículo?')) {
+        const vehicle = this.vehicles[index];
+        // optimistic UI
         this.vehicles.splice(index, 1);
         this.editMenuOpen = null;
+        localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+
+        if (this.apiAvailable && vehicle && vehicle.id) {
+          const { deletarVeiculo } = await import('@/requests/veiculo');
+          try {
+            await deletarVeiculo(vehicle.id);
+          } catch (e) {
+            console.error('Erro ao deletar no backend:', e.message);
+            // Revert UI
+            this.vehicles.splice(index, 0, vehicle);
+            localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+            alert('Falha ao deletar no servidor. Tente novamente.');
+          }
+        }
       }
     },
-    saveVehicle() {
+    async saveVehicle() {
       if (!this.isFormValid) return;
       this.showVehicleForm = false;
       this.showSaveConfirm = true;
     },
-    confirmSave() {
+    async confirmSave() {
       if (this.isEditing) {
-        const vehicle = this.vehicles[this.editingIndex];
-        Object.assign(vehicle, {
+        const idx = this.editingIndex;
+        const updated = {
+          id: this.formData.id,
           placa: this.formData.placa.toUpperCase(),
           renavam: this.formData.renavam,
           validadeDoc: this.formData.validadeDoc,
           categoria: this.formData.categoria
-        });
-        alert('Veículo atualizado com sucesso!');
+        };
+
+        // optimistic update
+        this.vehicles.splice(idx, 1, updated);
+        localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+
+        if (this.apiAvailable && updated.id) {
+          const { atualizarVeiculo } = await import('@/requests/veiculo');
+          try {
+            await atualizarVeiculo(updated.id, updated);
+            alert('Veículo atualizado com sucesso!');
+          } catch (e) {
+            console.error('Erro ao atualizar no backend:', e.message);
+            alert('Falha ao atualizar no servidor. Dados mantidos localmente.');
+            this.apiAvailable = false;
+          }
+        } else {
+          alert('Veículo atualizado localmente.');
+        }
       } else {
-        const nextId = this.vehicles.length > 0 ? Math.max(...this.vehicles.map(v => v.id)) + 1 : 1;
-        this.vehicles.push({
-          id: nextId,
+        const newVehicle = {
           placa: this.formData.placa.toUpperCase(),
           renavam: this.formData.renavam,
           validadeDoc: this.formData.validadeDoc,
           categoria: this.formData.categoria
-        });
-        alert('Veículo adicionado com sucesso!');
+        };
+
+        if (this.apiAvailable) {
+          const { criarVeiculo } = await import('@/requests/veiculo');
+          try {
+            const res = await criarVeiculo(newVehicle);
+            // if backend returns created item, map id; otherwise fallback generate id
+            const createdId = res && (res.veiculo && res.veiculo.id ? res.veiculo.id : res.id) || (Date.now());
+            this.vehicles.push({ id: createdId, ...newVehicle });
+            localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+            alert('Veículo adicionado com sucesso!');
+          } catch (e) {
+            console.error('Erro ao criar no backend:', e.message);
+            // fallback: add to local storage
+            const fallbackId = Date.now();
+            this.vehicles.push({ id: fallbackId, ...newVehicle });
+            localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+            this.apiAvailable = false;
+            alert('Veículo adicionado localmente (servidor indisponível).');
+          }
+        } else {
+          const fallbackId = Date.now();
+          this.vehicles.push({ id: fallbackId, ...newVehicle });
+          localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
+          alert('Veículo adicionado localmente.');
+        }
       }
+
       this.showSaveConfirm = false;
       this.resetForm();
     },
@@ -234,6 +295,7 @@ export default {
     },
     resetForm() {
       this.formData = {
+        id: null,
         placa: '',
         renavam: '',
         validadeDoc: '',
@@ -242,6 +304,10 @@ export default {
       this.isEditing = false;
       this.editingIndex = null;
     }
+  }
+  ,
+  async mounted() {
+    await this.loadVehicles();
   }
 }
 </script>

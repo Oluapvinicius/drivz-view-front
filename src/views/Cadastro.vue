@@ -19,6 +19,7 @@ const emailErro = ref('')
 const senhaErro = ref('')
 const confirmaSenhaErro = ref('')
 const nomeErro = ref('')
+const apiErro = ref('')
 
 const selecionarTipoUsuario = (tipo) => {
   tipoUsuarioSelecionado.value = tipo
@@ -35,35 +36,53 @@ const selecionarPrestador = () => selecionarTipoUsuario('prestador')
 
 
 const enviarCadastro = async () => {
-  const usuario = {
-    nome: nome.value,
-    email: email.value,
-    senha: senha.value,
-    confirmaSenha: confirmaSenha.value,
-    tipoUsuario: tipoUsuarioSelecionado.value,
-    telefone: null,
-    cpf: null,
-    cnpj: null,
-    img_perfil: null
-  }
+  apiErro.value = '';
+  try {
+    const usuario = {
+      nome: nome.value,
+      email: email.value,
+      senha: senha.value,
+      confirmaSenha: confirmaSenha.value,
+      tipoUsuario: tipoUsuarioSelecionado.value,
+      telefone: null,
+      cpf: null,
+      cnpj: null,
+      img_perfil: null
+    }
 
-  if(validarCampos()) {
+    if (!validarCampos()) {
+      console.log('Dados inválidos. Verifique as informações inseridas.')
+      return;
+    }
 
     let resultado;
 
-    if(tipoUsuarioSelecionado.value === 'prestador') {
-      resultado = await inserirPrestador(usuario)
+    if (tipoUsuarioSelecionado.value === 'prestador') {
+      try {
+        resultado = await inserirPrestador(usuario)
+      } catch (err) {
+        console.error('Erro ao cadastrar prestador:', err);
+        apiErro.value = err && (err.body?.message || err.message) ? (err.body?.message || err.message) : 'Erro ao conectar com o servidor.';
+        return;
+      }
     } else {
-      resultado = await inserirCliente(usuario)
+      try {
+        resultado = await inserirCliente(usuario)
+      } catch (err) {
+        console.error('Erro ao cadastrar cliente:', err);
+        apiErro.value = err && (err.body?.message || err.message) ? (err.body?.message || err.message) : 'Erro ao conectar com o servidor.';
+        return;
+      }
     }
+
     console.log(resultado)
 
-    if(resultado.status_code === 201){
+    if (resultado && resultado.status_code === 201) {
       irParaLogin()
     }
-
-  } else {
-    console.log('Dados inválidos. Verifique as informações inseridas.')
+  } catch (err) {
+    console.error('Erro inesperado ao enviar cadastro:', err);
+    apiErro.value = err && (err.body?.message || err.message) ? (err.body?.message || err.message) : 'Erro inesperado. Tente novamente mais tarde.';
   }
 }
 
@@ -154,6 +173,9 @@ confirmaSenha.onChange = () => {
 
 
           <div class="cadastro-fields">
+            <div v-if="apiErro" class="api-error" style="color: #b00020; margin-bottom: 12px; font-weight: 700;">
+              {{ apiErro }}
+            </div>
             <div>
               <input type="text" placeholder="Digite seu nome completo" v-model="nome" />
               <span v-if="nomeErro" class="erro-campo erro-animada">{{ nomeErro }}</span>

@@ -1,5 +1,6 @@
 import { userStorage } from '@/utils/userStorage';
 import ordersData from '../data/orders.json';
+import { buildUrl } from './api';
 
 export async function buscarPedidos() {
   try {
@@ -10,7 +11,7 @@ export async function buscarPedidos() {
       return { response: [] };
     }
 
-    const url = `http://localhost:8080/v1/drivez/pedido/cliente/${clienteId}`;
+    const url = buildUrl(`/pedido/cliente/${clienteId}`);
     console.log('[pedidos.js] Buscando de:', url);
     const response = await fetch(url);
     const data = await response.json();
@@ -34,7 +35,7 @@ export async function buscarPedidosComFallback() {
       return ordersData;
     }
 
-    const url = `http://localhost:8080/v1/drivez/pedido/cliente/${clienteId}`;
+    const url = buildUrl(`/pedido/cliente/${clienteId}`);
     console.log('[pedidos.js] Buscando pedidos de:', url);
     
     try {

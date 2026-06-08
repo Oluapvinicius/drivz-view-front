@@ -440,13 +440,12 @@ onMounted(async () => {
 
 
     try {
-      const metricsRes = await fetch(`http://localhost:8080/v1/drivez/avaliacoes/mediaPrestador/${prestadorId}`);
-      const metrics    = await metricsRes.json();
-      if (metrics.status_code === 200 && metrics.response) {
+      const metrics = await (await import('@/requests/api')).then(m => m.apiFetch(`/avaliacoes/mediaPrestador/${prestadorId}`));
+      if (metrics && (metrics.status_code === 200 || metrics.status === 200) && metrics.response) {
         avaliacao.value = Math.round(metrics.response.media || 0);
       }
-    } catch {
-      console.warn('Não foi possível carregar as métricas de avaliação.');
+    } catch (e) {
+      console.warn('Não foi possível carregar as métricas de avaliação.', e);
     }
 
   } catch (error) {
