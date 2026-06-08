@@ -250,91 +250,10 @@ export default {
         rating: 4,
         avatar: '../assets/profile.svg'
       },
-      orders: ordersData,
-      nearbyRequests: [
-        {
-          id: 1,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 2,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 3,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 4,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 5,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 6,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 7,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 8,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 9,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 10,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        },
-        {
-          id: 11,
-          name: 'Rogerio',
-          distance: '423m de distância',
-          rating: 3,
-          avatar: '../assets/profile.svg'
-        }
-      ]
       orders: [],
       mapService: null,
       requestMarkerIds: [],
       presenterLocation: [-46.9015, -23.5255],
-
       nearbyRequests: [],
 
       timerConvites: null,
@@ -356,6 +275,10 @@ export default {
       if (action === 'orders') {
         this.activeScreen = 'history';
         this.carregarHistoricoDePedidos();
+      } else if (action === 'messages') {
+        this.$router.push('/mensagens-prestador');
+      } else if (action === 'garage') {
+        this.$router.push('/meus-veiculos');
       } else {
         console.log(`Navegando para a tela: ${action}`);
       }
@@ -563,6 +486,48 @@ export default {
     clearRequestMarkers() {
       this.requestMarkerIds.forEach(id => this.mapService.removeMarker(id));
       this.requestMarkerIds = [];
+    },
+
+    openRequestModal(request) {
+      this.selectedRequest = request;
+    },
+
+    closeRequestModal() {
+      this.selectedRequest = null;
+    },
+
+    async acceptRequest() {
+      if (!this.selectedRequest) return;
+      try {
+        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.selectedRequest.id}`;
+        await fetch(url, { method: 'POST' });
+        alert('Serviço aceito com sucesso!');
+        this.closeRequestModal();
+        await this.refreshRequests();
+      } catch (error) {
+        console.error('Erro ao aceitar serviço:', error);
+        alert('Erro ao aceitar serviço');
+      }
+    },
+
+    showEmergencyPopup() {
+      this.emergencyPopupOpen = true;
+    },
+
+    closeEmergencyPopup() {
+      this.emergencyPopupOpen = false;
+    },
+
+    async acceptEmergencyService() {
+      try {
+        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.emergencyRequest.id}`;
+        await fetch(url, { method: 'POST' });
+        alert('Serviço de emergência aceito!');
+        this.closeEmergencyPopup();
+        await this.refreshRequests();
+      } catch (error) {
+        console.error('Erro ao aceitar serviço de emergência:', error);
+      }
     }
   },
 

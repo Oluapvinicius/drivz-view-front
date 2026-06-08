@@ -8,6 +8,7 @@ import PedidoCliente from '../views/PedidoCliente.vue';
 import PedidoPrestador from '../views/PedidoPrestador.vue';
 import ConfigurarPedidoCliente from '../views/ConfigurarPedidoCliente.vue';
 import MensagemCliente from '../views/MensagemCliente.vue';
+import MensagemPrestador from '../views/MensagemPrestador.vue';
 import PerfilCliente from '../views/PerfilCliente.vue';
 import PerfilPrestador from '../views/PerfilPrestador.vue';
 import MeusVeiculos from '../views/MeusVeiculos.vue';
@@ -53,6 +54,11 @@ const routes = [
     path: '/mensagem-cliente',
     name: 'mensagem-cliente',
     component: MensagemCliente
+  },
+  {
+    path: '/mensagens-prestador',
+    name: 'mensagens-prestador',
+    component: MensagemPrestador
   },
   {
     path: '/perfil-cliente',

@@ -52,4 +52,6 @@ export const userStorage = {
     localStorage.removeItem('userData');
     localStorage.removeItem('userType');
   }
+
 };
+>>>>>>> origin/cadastro-prestador

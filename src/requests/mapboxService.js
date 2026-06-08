@@ -105,6 +105,12 @@ export class MapboxService {
     } catch (e) {
       console.warn('VITE_MAPBOX_TOKEN não disponível');
     }
+=======
+  }
+
+  initMap(containerId, originCoords, destinationCoords, onRouteCalculated) {
+    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+>>>>>>> origin/cadastro-prestador
 
     if (!mapboxgl.accessToken) {
       console.error("⚠️ Token do Mapbox não encontrado. Verifique seu arquivo .env");
@@ -213,6 +219,7 @@ export class MapboxService {
     }
   }
 
+<<<<<<< HEAD
   // Dentro do seu arquivo mapboxService.js
   async forwardGeocode(address, proximityCoords = null) {
     try {
@@ -244,6 +251,11 @@ export class MapboxService {
     if (this.map) {
       this.map.remove();
       this.map = null;
+=======
+  destroyMap() {
+    if (this.map) {
+      this.map.remove();
+>>>>>>> origin/cadastro-prestador
     }
   }
 }
