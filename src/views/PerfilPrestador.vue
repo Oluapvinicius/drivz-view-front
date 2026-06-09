@@ -255,6 +255,10 @@ const togglePassword = () => {
 const prestadorId = userStorage.getUserId();
 const userDataStorage = userStorage.getUserData() || {};
 
+const dispatchUserDataUpdated = (updatedData) => {
+  window.dispatchEvent(new CustomEvent('userDataUpdated', { detail: updatedData }));
+};
+
 const estruturaDados = {
   nome:         '',
   categoria:    '',
@@ -544,12 +548,14 @@ const salvarAlteracoes = async () => {
       cnpj:         form.cnpj,
       cnh:          form.cnh,
       data_validade:form.data_validade,
+      localizacao:  dadosIniciais.value.localizacao || userDataStorage.localizacao || '',
       senha:        ''
     };
 
     // Sincronizar estado
     Object.assign(dadosIniciais.value, dadosSalvos);
     userStorage.setSession(prestadorId, dadosSalvos, 'prestador');
+    dispatchUserDataUpdated(dadosSalvos);
 
     previewLocalImagem.value = '';
 

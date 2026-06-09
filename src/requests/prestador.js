@@ -39,6 +39,7 @@ export async function atualizarPrestador(id, prestador) {
         },
         body: JSON.stringify(prestador)
     });
+    console.log("Resposta da API de atualização:", await response.json());
     return response.json();
 }
 

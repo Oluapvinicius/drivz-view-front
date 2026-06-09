@@ -5,17 +5,31 @@
         <div class="orders-screen__header">
           <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
         </div>
-        <div class="orders-screen__list">
+
+        <div v-if="historyLoading" class="orders-screen__empty">
+          <p>Carregando histórico de pedidos...</p>
+        </div>
+
+        <div v-else-if="orders.length === 0" class="orders-screen__empty">
+          <p>Você ainda não atendeu nenhum pedido.</p>
+          <p>Peça atendimento agora para ver seu histórico aparecer aqui.</p>
+          <button class="orders-screen__cta" @click="activeScreen = 'home'">Voltar para o mapa</button>
+        </div>
+
+        <div v-else class="orders-screen__list">
           <article v-for="order in orders" :key="order.id" class="orders-screen__card">
             <div class="orders-screen__top">
               <div class="orders-screen__provider">
-                <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
+                <img :src="order.clientAvatar" alt="Avatar do cliente" class="orders-screen__avatar" />
                 <div>
-                  <span class="orders-screen__provider-label">Prestador:</span>
-                  <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
+                  <span class="orders-screen__provider-label">Cliente:</span>
+                  <strong class="orders-screen__provider-name">{{ order.clientName }}</strong>
                 </div>
               </div>
-              <span class="orders-screen__date">{{ order.date }}</span>
+              <div>
+                <span class="orders-screen__date">{{ order.date }}</span>
+                <span class="orders-screen__status">{{ order.status }}</span>
+              </div>
             </div>
             <div class="orders-screen__route">
               <div class="orders-screen__route-group">
@@ -259,6 +273,7 @@ export default {
         avatar: '../assets/profile.svg'
       },
       orders: [],
+      historyLoading: false,
       mapService: null,
       requestMarkerIds: [],
       presenterLocation: [-46.9015, -23.5255],
@@ -272,8 +287,8 @@ export default {
   },
   computed: {
     userProfileImage() {
-      if (this.user && (this.user.img_perfil || this.user.profileImage || this.user.foto)) {
-        return this.user.img_perfil || this.user.profileImage || this.user.foto;
+      if (this.user && (this.user.profileImage || this.user.img_perfil || this.user.foto)) {
+        return this.user.profileImage || this.user.img_perfil || this.user.foto;
       }
       return defaultProfile;
     }
@@ -285,6 +300,26 @@ export default {
     closeAllPopups() {
       this.sidebarOpen = false;
       this.orderPopupOpen = false;
+    },
+
+    normalizeUserSessionData(userData = {}) {
+      const imagem = userData.profileImage || userData.img_perfil || userData.foto || userData.imagem || '';
+      return {
+        nome: userData.nome || userData.nome_prestador || userData.name || '',
+        telefone: userData.telefone || userData.phone || userData.celular || '',
+        localizacao: userData.localizacao || userData.endereco || '',
+        img_perfil: imagem,
+        profileImage: imagem
+      };
+    },
+
+    loadUserFromStorage(event) {
+      const sourceData = event?.detail || userStorage.getUserData();
+      if (!sourceData) return;
+      this.user = {
+        ...this.user,
+        ...this.normalizeUserSessionData(sourceData)
+      };
     },
 
     handleSidebarAction(action) {
@@ -424,23 +459,43 @@ export default {
     },
 
     async carregarHistoricoDePedidos() {
+      this.historyLoading = true;
       try {
         const prestadorId = userStorage.getUserId();
-        const url = `http://localhost:8080/v1/drivez/pedidos/historico/${prestadorId}`;
-        const response = await fetch(url);
-        const dados = await response.json();
+        if (!prestadorId) {
+          this.orders = [];
+          return;
+        }
 
-        const listaHistorico = dados.response || dados || [];
-        this.orders = listaHistorico.map(o => ({
-          id: o.id,
-          provider: o.clienteNome || 'Cliente',
-          avatar: o.avatar || 'https://via.placeholder.com/150',
-          date: o.data_solicitacao ? new Date(o.data_solicitacao).toLocaleDateString('pt-BR') : 'Recentemente',
-          origin: o.endereco_origem || 'Origem não gravada',
-          destination: o.endereco_destino || 'Destino não gravado'
+        const dadosPedidos = await listarPedidos();
+        let listaReal = [];
+        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
+        else if (dadosPedidos?.response) listaReal = dadosPedidos.response;
+        else if (dadosPedidos?.pedidos) listaReal = dadosPedidos.pedidos;
+
+        const prestadorIdString = String(prestadorId);
+        const pedidosDoPrestador = listaReal.filter(pedido => {
+          const pedidoPrestadorId = String(pedido.id_prestador || pedido.prestadorId || pedido.idPrestador || pedido.prestador?.id || pedido.prestador_id || '');
+          const pedidoPrestadorEmail = String(pedido.prestadorEmail || pedido.email_prestador || pedido.prestador?.email || pedido.email || '');
+
+          return pedidoPrestadorId === prestadorIdString || pedidoPrestadorEmail === prestadorIdString;
+        });
+
+        this.orders = pedidosDoPrestador.map(o => ({
+          id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_prestador}`,
+          clientName: o.clienteNome || o.nome_cliente || o.nomeCliente || o.cliente?.nome || 'Cliente',
+          clientAvatar: o.avatar || o.foto_cliente || o.cliente?.avatar || o.cliente?.foto || defaultProfile,
+          status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído',
+          date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ?
+            new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
+          origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
+          destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado'
         }));
       } catch (error) {
         console.error("Erro ao carregar histórico:", error);
+        this.orders = [];
+      } finally {
+        this.historyLoading = false;
       }
     },
 
@@ -600,6 +655,9 @@ export default {
 
   async mounted() {
 
+    this.loadUserFromStorage();
+    window.addEventListener('userDataUpdated', this.loadUserFromStorage);
+
     this.timerConvites = setInterval(async () => {
       await this.verificarNovosConvitesDePedido();
     }, 5000);
@@ -610,7 +668,7 @@ export default {
         let response = await buscarPrestador(userId);
         const dadosFinais = response.response || response;
         if (dadosFinais) {
-          this.user = { ...this.user, ...dadosFinais };
+          this.user = { ...this.user, ...this.normalizeUserSessionData(dadosFinais) };
           userStorage.setSession(userId, dadosFinais, 'prestador');
         }
       } catch (error) {
@@ -632,6 +690,7 @@ export default {
   },
 
   beforeDestroy() {
+    window.removeEventListener('userDataUpdated', this.loadUserFromStorage);
     if (this.timerConvites) {
       clearInterval(this.timerConvites);
     }
@@ -1245,6 +1304,41 @@ export default {
   cursor: pointer;
   font-size: 14px;
   font-weight: 700;
+}
+
+.orders-screen__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 240px;
+  text-align: center;
+  color: #334155;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px 24px;
+  border: 1px dashed #d8d8d8;
+}
+
+.orders-screen__empty p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.orders-screen__cta {
+  background: #D62828;
+  border: none;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.orders-screen__cta:hover {
+  background: #a01818;
 }
 
 .orders-screen__list {
