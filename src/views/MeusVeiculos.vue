@@ -115,10 +115,16 @@
         </div>
       </div>
     </div>
+    
+    <div v-if="toastVisible" :class="['toast', toastType]">
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
 
 <script>
+import { userStorage } from '@/utils/userStorage';
+
 export default {
   name: 'MeusVeiculos',
   data() {
@@ -139,6 +145,11 @@ export default {
       },
       loading: false,
       apiAvailable: true
+      ,
+      toastVisible: false,
+      toastMessage: '',
+      toastType: '',
+      toastTimeout: null
     }
   },
   computed: {
@@ -159,18 +170,14 @@ export default {
         const apiVehicles = await listarVeiculos();
         if (Array.isArray(apiVehicles) && apiVehicles.length > 0) {
           this.vehicles = apiVehicles;
-          localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
         } else {
-          // fallback to local storage
-          const stored = localStorage.getItem('meusVeiculos');
-          this.vehicles = stored ? JSON.parse(stored) : [];
+          this.vehicles = [];
         }
         this.apiAvailable = true;
       } catch (e) {
         console.warn('API unavailable, using local data', e.message);
         this.apiAvailable = false;
-        const stored = localStorage.getItem('meusVeiculos');
-        this.vehicles = stored ? JSON.parse(stored) : [];
+        this.vehicles = [];
       } finally {
         this.loading = false;
       }
@@ -189,6 +196,7 @@ export default {
       this.editingIndex = index;
       const vehicle = this.vehicles[index];
       this.formData = {
+        id: vehicle.id,
         placa: vehicle.placa,
         renavam: vehicle.renavam,
         validadeDoc: vehicle.validadeDoc,
@@ -200,22 +208,25 @@ export default {
     async deleteVehicle(index) {
       if (confirm('Tem certeza que deseja deletar este veículo?')) {
         const vehicle = this.vehicles[index];
-        // optimistic UI
-        this.vehicles.splice(index, 1);
         this.editMenuOpen = null;
-        localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
 
         if (this.apiAvailable && vehicle && vehicle.id) {
           const { deletarVeiculo } = await import('@/requests/veiculo');
           try {
             await deletarVeiculo(vehicle.id);
+            // reload authoritative list
+            await this.loadVehicles();
+            this.showToast('Veículo deletado com sucesso!', 'success');
           } catch (e) {
             console.error('Erro ao deletar no backend:', e.message);
-            // Revert UI
-            this.vehicles.splice(index, 0, vehicle);
-            localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
-            alert('Falha ao deletar no servidor. Tente novamente.');
+            this.showToast('Falha ao deletar no servidor. Tente novamente.', 'error');
+            // try reload to get consistent state
+            await this.loadVehicles();
           }
+        } else {
+          // Do not save/delete locally — require login/server
+          this.showToast('Operação não permitida localmente. Faça login para gerenciar veículos.', 'warning');
+          return;
         }
       }
     },
@@ -234,23 +245,23 @@ export default {
           validadeDoc: this.formData.validadeDoc,
           categoria: this.formData.categoria
         };
-
-        // optimistic update
-        this.vehicles.splice(idx, 1, updated);
-        localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
-
+        // Persist change on server when possible and then reload full list
         if (this.apiAvailable && updated.id) {
           const { atualizarVeiculo } = await import('@/requests/veiculo');
           try {
             await atualizarVeiculo(updated.id, updated);
-            alert('Veículo atualizado com sucesso!');
+            await this.loadVehicles();
+            this.showToast('Veículo atualizado com sucesso!', 'success');
           } catch (e) {
             console.error('Erro ao atualizar no backend:', e.message);
-            alert('Falha ao atualizar no servidor. Dados mantidos localmente.');
+            // mark API as unavailable and notify
+            this.showToast('Falha ao atualizar no servidor. Tente novamente mais tarde.', 'error');
             this.apiAvailable = false;
           }
         } else {
-          alert('Veículo atualizado localmente.');
+          // Do not allow local-only updates — require login/server
+          this.showToast('Operação não permitida localmente. Faça login para atualizar veículos.', 'warning');
+          return;
         }
       } else {
         const newVehicle = {
@@ -259,30 +270,29 @@ export default {
           validadeDoc: this.formData.validadeDoc,
           categoria: this.formData.categoria
         };
+        // Require server & login to create vehicle (no local fallback)
+        if (!this.apiAvailable) {
+          this.showToast('Servidor indisponível. Não é permitido salvar localmente.', 'warning');
+          return;
+        }
 
-        if (this.apiAvailable) {
-          const { criarVeiculo } = await import('@/requests/veiculo');
-          try {
-            const res = await criarVeiculo(newVehicle);
-            // if backend returns created item, map id; otherwise fallback generate id
-            const createdId = res && (res.veiculo && res.veiculo.id ? res.veiculo.id : res.id) || (Date.now());
-            this.vehicles.push({ id: createdId, ...newVehicle });
-            localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
-            alert('Veículo adicionado com sucesso!');
-          } catch (e) {
-            console.error('Erro ao criar no backend:', e.message);
-            // fallback: add to local storage
-            const fallbackId = Date.now();
-            this.vehicles.push({ id: fallbackId, ...newVehicle });
-            localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
-            this.apiAvailable = false;
-            alert('Veículo adicionado localmente (servidor indisponível).');
-          }
-        } else {
-          const fallbackId = Date.now();
-          this.vehicles.push({ id: fallbackId, ...newVehicle });
-          localStorage.setItem('meusVeiculos', JSON.stringify(this.vehicles));
-          alert('Veículo adicionado localmente.');
+        const userId = userStorage.getUserId();
+        if (!userId) {
+          this.showToast('Você precisa estar logado como prestador/cliente para adicionar veículos.', 'warning');
+          return;
+        }
+
+        const { criarVeiculo } = await import('@/requests/veiculo');
+        try {
+          await criarVeiculo(newVehicle);
+          // reload authoritative list from backend to get assigned ids
+          await this.loadVehicles();
+          this.showToast('Veículo adicionado com sucesso!', 'success');
+        } catch (e) {
+          console.error('Erro ao criar no backend:', e.message);
+          this.apiAvailable = false;
+          this.showToast('Falha ao criar no servidor. Tente novamente mais tarde.', 'error');
+          return;
         }
       }
 
@@ -303,6 +313,17 @@ export default {
       };
       this.isEditing = false;
       this.editingIndex = null;
+    }
+    ,
+    showToast(message, type = 'info', duration = 4000) {
+      this.toastMessage = message;
+      this.toastType = type; // 'success' | 'error' | 'info' | 'warning'
+      this.toastVisible = true;
+      if (this.toastTimeout) clearTimeout(this.toastTimeout);
+      this.toastTimeout = setTimeout(() => {
+        this.toastVisible = false;
+        this.toastTimeout = null;
+      }, duration);
     }
   }
   ,
@@ -794,6 +815,42 @@ export default {
     height: 32px;
   }
 
+  .toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 24px;
+    z-index: 9999;
+    padding: 12px 18px;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+  }
+
+  .toast.success { background: #28a745; }
+  .toast.error { background: #dc3545; }
+  .toast.info { background: #17a2b8; }
+  .toast.warning { background: #ff9800; }
+
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 24px;
+  z-index: 9999;
+  padding: 12px 18px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+}
+
+.toast.success { background: #28a745; }
+.toast.error { background: #dc3545; }
+.toast.info { background: #17a2b8; }
+.toast.warning { background: #ff9800; }
   .header__back {
     font-size: 12px;
     padding: 6px 12px;

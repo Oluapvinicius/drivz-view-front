@@ -1,17 +1,24 @@
 import { apiFetch } from './api';
+import { userStorage } from '@/utils/userStorage';
 
 export async function listarVeiculos() {
   try {
-    const res = await apiFetch('/veiculo');
-    // API returns { response: { movies: [...] } } based on controller
+    const userId = userStorage.getUserId();
+    const isPrestador = userStorage.isPrestador();
+
+    const path = (isPrestador && userId) ? `/prestador/${userId}/veiculos` : '/veiculos';
+    const res = await apiFetch(path);
+   
     if (res && res.response && Array.isArray(res.response.movies)) {
-      return res.response.movies.map(v => ({
-        id: v.id_veiculo || v.id || null,
-        placa: v.placa,
-        renavam: v.codigo_renavam || v.renavam || '',
-        validadeDoc: v.validade ? v.validade.split('T')[0] : v.validade || '',
-        categoria: v.categoria || ''
-      }));
+        const vehicles = res.response.movies.map(v => ({
+          id: v.id_veiculo || v.id || null,
+          placa: v.placa,
+          renavam: v.codigo_renavam || v.renavam || '',
+          validadeDoc: v.validade ? (String(v.validade).split('T')[0]) : v.validade || '',
+          categoria: v.categoria || ''
+        }));
+
+        return vehicles;
     }
     return [];
   } catch (e) {
@@ -28,6 +35,16 @@ export async function criarVeiculo(veiculo) {
     placa: veiculo.placa
   };
 
+  const userId = userStorage.getUserId();
+  if (userId) {
+    // Preferir prestador; se o tipo não estiver definido, enviar como prestador (fallback)
+    if (userStorage.isPrestador()) payload.id_prestador = Number(userId);
+    else if (userStorage.isCliente()) payload.id_cliente = Number(userId);
+    else payload.id_prestador = Number(userId);
+  }
+
+  console.debug('[veiculo] criar payload:', payload);
+
   return apiFetch('/veiculo', {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -42,6 +59,12 @@ export async function atualizarVeiculo(id, veiculo) {
     placa: veiculo.placa
   };
 
+  const userId = userStorage.getUserId();
+  if (userId) {
+    if (userStorage.isCliente()) payload.id_cliente = Number(userId);
+    else if (userStorage.isPrestador()) payload.id_prestador = Number(userId);
+  }
+
   return apiFetch(`/veiculo/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload)
@@ -49,7 +72,16 @@ export async function atualizarVeiculo(id, veiculo) {
 }
 
 export async function deletarVeiculo(id) {
-  return apiFetch(`/veiculo/${id}`, {
+  const userId = userStorage.getUserId();
+  if (userId) {
+    if (userStorage.isPrestador()) {
+      return apiFetch(`/prestador/${userId}/veiculo/${id}`, { method: 'DELETE' });
+    } else if (userStorage.isCliente()) {
+      return apiFetch(`/cliente/${userId}/veiculo/${id}`, { method: 'DELETE' });
+    }
+  }
+
+  return apiFetch(`/veiculos/${id}`, {
     method: 'DELETE'
   });
 }
