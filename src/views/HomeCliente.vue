@@ -46,7 +46,7 @@
      <div v-if="orderPopupOpen" class="sidebar-popup">
         <div class="sidebar-popup__header">
           <h4>Menu</h4>
-          <button class="sidebar-popup__close" @click="closeAllPopups">×</button>
+          <button class="sidebar-popup__close" @click="closeAllPopups">X</button>
         </div>
         <div class="sidebar-popup__list">
           <button class="sidebar-popup__option" @click="goToOrderScreen">
@@ -112,32 +112,31 @@
               <div class="spinner"></div>
               <span>Carregando serviços...</span>
             </div>
+
             <div v-else class="services__grid">
-              <div 
-                v-for="service in visibleServices" 
+              <div
+                v-for="service in visibleServices"
                 :key="service.id"
                 class="service-card"
                 @click="handleServiceClick(service)"
               >
                 <img :src="service.image" :alt="service.title" class="service-card__image">
                 <div class="service-card__content">
-                  <div class="service-card__header">
-                    <h3 class="service-card__title">{{ service.title }}</h3>
-                    <div class="service-card__rating">
-                      <span v-for="i in 5" :key="i" class="service-card__star">
-                        {{ i <= service.rating ? '★' : '☆' }}
-                      </span>
-                    </div>
-                  </div>
-                  <p class="service-card__description">{{ service.description }}</p>
-                  <div class="service-card__location">
-                    <span>{{ service.location }}</span>
+                  <h3 class="service-card__title">{{ service.title }}</h3>
+                  <p class="service-card__desc">{{ service.description }}</p>
+                  <div class="service-card__rating">
+                    <span v-for="i in 5" :key="`star-${service.id}-${i}`" class="service-card__star">
+                      {{ i <= (service.rating || 0) ? '★' : '☆' }}
+                    </span>
+                    <span class="service-card__rating-value">{{ (service.rating || 0).toFixed(1) }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
+        <!-- Orders preview removed — history now shows only when 'Registro de Pedidos' is clicked in the sidebar -->
 
         <button class="call-button" @click="handleCallButtonClick">
           <span>SOCORRO</span>
@@ -169,7 +168,9 @@
                       <strong class="services-screen__provider-name">{{ service.provider }}</strong>
                     </div>
                   </div>
-                  <span class="services-screen__date">{{ service.date }}</span>
+                  <div class="services-screen__info">
+                    <span class="services-screen__date">{{ service.date }}</span>
+                  </div>
                 </div>
                 <div class="services-screen__route">
                   <div class="services-screen__route-group">
@@ -193,8 +194,8 @@
 
       <div v-if="serviceModalOpen" class="service-modal-overlay" @click="closeAllPopups">
         <div class="service-detail-modal" @click.stop>
-          <div class="service-detail-modal__back-row">
-            <button class="service-detail-modal__back" @click="closeAllPopups"><img src="../assets/arrow.png" alt="" class="back-button"></button>
+          <div class="service-detail-modal__close-row">
+            <button class="service-detail-modal__close" @click="closeAllPopups">×</button>
           </div>
           <div class="service-detail-modal__header">
             <img :src="selectedService?.image" :alt="selectedService?.title" class="service-detail-modal__image">
@@ -211,9 +212,9 @@
           <p class="service-detail-modal__text">
             Especializada em serviços de {{ (selectedService?.category || 'Guincho').toLowerCase() }} e assistência veicular, a {{ selectedService?.title }} oferece suporte rápido e seguro para o seu veículo. Com foco na eficiência e no cuidado com o patrimônio do cliente, estamos prontos para atender emergências com profissionalismo e pontualidade.
           </p>
-          <p class="service-detail-modal__text">{{ selectedService?.description }}</p>
+          <!-- <p class="service-detail-modal__text">{{ selectedService?.description }}</p> -->
           <div class="service-detail-modal__footer">
-            <button class="service-detail-modal__button">Solicitar Serviço</button>
+            <button class="service-detail-modal__button" @click="requestService(selectedService)">Solicitar Serviço</button>
           </div>
         </div>
       </div>
@@ -226,8 +227,9 @@ import profileImg from '../assets/profile.svg';
 import PerfilCliente from './PerfilCliente.vue';
 
 import { useRouter } from 'vue-router';
-import { buscarCliente } from '../requests/buscarUsuarios';
-import { buscarPedidosComFallback } from '../requests/pedidos';
+import { buscarCliente, buscarPrestador } from '../requests/buscarUsuarios';
+import { listarPedidos } from '../requests/pedido';
+import { listarPrestadores, buscarAvaliacaoPrestador } from '../requests/prestador';
 import { userStorage } from '../utils/userStorage';
 import defaultProfile from '../assets/profile.svg';
 
@@ -253,7 +255,7 @@ export default {
       searchQuery: '',
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
-      maxVisibleServices: 8,
+      maxVisibleServices: 12,
       orders: [],
       services: [],
       isLoading: false,
@@ -281,7 +283,7 @@ export default {
       });
     },
     visibleServices() {
-      const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 4) : this.maxVisibleServices;
+      const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 6) : this.maxVisibleServices;
       return this.filteredServices.slice(0, limit);
     },
     visibleOrders() {
@@ -307,39 +309,46 @@ irParaPerfil () {
       async fetchServices() {
         this.isLoading = true;
         console.log('[HomeCliente] Iniciando fetchServices...');
-          
+
         try {
-          const url = 'http://localhost:8080/v1/drivez/prestador';
-          console.log('[HomeCliente] Buscando prestadores de:', url);
-          
-          const response = await fetch(url);
-          const data = await response.json();
-          
+          const data = await listarPrestadores();
           console.log('[HomeCliente] Resposta da API de prestadores:', data);
-          
-          // Trata diferentes formatos de resposta
+
           let prestadores = [];
-          
           if (Array.isArray(data)) {
             prestadores = data;
-          } else if (data && data.response && Array.isArray(data.response)) {
+          } else if (data?.response && Array.isArray(data.response)) {
             prestadores = data.response;
-          } else if (data && Array.isArray(data)) {
-            prestadores = data;
+          } else if (data?.prestadores && Array.isArray(data.prestadores)) {
+            prestadores = data.prestadores;
+          } else if (data?.data && Array.isArray(data.data)) {
+            prestadores = data.data;
           }
-          
+
           console.log('[HomeCliente] Total de prestadores:', prestadores.length);
-          
+
           if (prestadores.length > 0) {
-            this.services = prestadores.map(item => ({
-              id: item.id_prestador || item.id || item.email,
-              title: item.nome || item.name || 'Serviço',
-              description: item.email || 'Email não informado',
-              location: item.cidade || item.city || 'Local não informado',
-              category: item.categoria || item.category || '',
-              rating: 5,
-              image: profileImg
-            }));
+            const providersToShow = prestadores.slice(0, 12);
+            const servicePromises = providersToShow.map(async item => {
+              const providerId = item.id_prestador || item.id || item.email;
+              const rawRating = await this.loadProviderRating(providerId);
+              const rating = rawRating > 0 ? rawRating : 5;
+
+              return {
+                id: providerId,
+                contactId: providerId,
+                providerName: item.nome || item.name || 'Serviço',
+                title: item.nome || item.name || 'Serviço',
+                description: item.email || 'Email não informado',
+                providerEmail: item.email || '',
+                location: item.cidade || item.city || 'Local não informado',
+                category: item.categoria || item.category || '',
+                rating,
+                image: profileImg
+              };
+            });
+
+            this.services = await Promise.all(servicePromises);
             console.log('[HomeCliente] Serviços carregados:', this.services.length);
           } else {
             console.warn('[HomeCliente] Nenhum prestador encontrado');
@@ -396,6 +405,20 @@ irParaPerfil () {
       this.selectedService = service;
       this.serviceModalOpen = true;
     },
+    requestService(service) {
+      if (!service) return;
+      this.serviceModalOpen = false;
+      this.closeAllPopups();
+
+      this.$router.push({
+        name: 'mensagem-cliente',
+        query: {
+          contactId: service.contactId || service.id,
+          providerName: service.providerName || service.title,
+          providerEmail: service.providerEmail || ''
+        }
+      });
+    },
     goToOrderScreen() {
       this.activeScreen = 'orders';
       this.orderPopupOpen = true;
@@ -406,50 +429,30 @@ irParaPerfil () {
     },
     filterServices() {
     },
-    refreshServices() {
-      this.isLoading = true;
+    async loadProviderRating(providerId) {
+      if (!providerId) {
+        return 0;
+      }
+
+      try {
+        const metricsRes = await buscarAvaliacaoPrestador(providerId);
+        const media = metricsRes?.response?.media ?? metricsRes?.media ?? metricsRes?.rating ?? 0;
+        return Number(media) || 0;
+      } catch (error) {
+        console.warn('[HomeCliente] Erro ao carregar avaliação do prestador:', providerId, error);
+        return 0;
+      }
+    },
+    shuffleArray(array) {
+      return array
+        .map(value => ({ value, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ value }) => value);
+    },
+    async refreshServices() {
       console.log('[HomeCliente] Atualizando serviços (refresh)...');
-      
-      fetch('http://localhost:8080/v1/drivez/prestador')
-        .then(response => response.json())
-        .then(data => {
-          console.log('[HomeCliente] Resposta do refresh:', data);
-          
-          // Trata diferentes formatos de resposta
-          let prestadores = [];
-          
-          if (Array.isArray(data)) {
-            prestadores = data;
-          } else if (data && data.response && Array.isArray(data.response)) {
-            prestadores = data.response;
-          } else if (data && Array.isArray(data)) {
-            prestadores = data;
-          }
-          
-          if (prestadores.length > 0) {
-            // Embaralha os prestadores
-            const shuffled = prestadores
-              .map(value => ({ value, sort: Math.random() }))
-              .sort((a, b) => a.sort - b.sort)
-              .map(({ value }) => value);
-              
-            this.services = shuffled.map(item => ({
-              id: item.id_prestador || item.id || item.email,
-              title: item.nome || item.name || 'Serviço',
-              description: item.email || 'Email não informado',
-              location: item.cidade || item.city || 'Local não informado',
-              rating: 5,
-              image: profileImg
-            }));
-            console.log('[HomeCliente] Serviços atualizados:', this.services.length);
-          }
-        })
-        .catch(error => {
-          console.error('[HomeCliente] Erro ao buscar serviços no refresh:', error);
-        })
-        .finally(() => {
-          setTimeout(() => { this.isLoading = false; }, 600);
-        });
+      await this.fetchServices();
+      this.services = this.shuffleArray(this.services);
     },
     updateWindowWidth() {
       this.windowWidth = window.innerWidth;
@@ -457,17 +460,61 @@ irParaPerfil () {
     },
     async fetchPedidos() {
       try {
-        console.log('[HomeCliente] Iniciando fetchPedidos...');
-        const pedidos = await buscarPedidosComFallback();
-        console.log('[HomeCliente] Resposta de fetchPedidos:', pedidos);
-        
-        if (Array.isArray(pedidos) && pedidos.length > 0) {
-          this.orders = pedidos;
-          console.log('[HomeCliente] Pedidos carregados com sucesso:', this.orders);
-        } else {
-          console.log('[HomeCliente] Nenhum pedido encontrado - retorno vazio');
+        console.log('[HomeCliente] Iniciando fetchPedidos usando listarPedidos()...');
+        const pedidosRaw = await listarPedidos();
+        console.log('[HomeCliente] Resposta de listarPedidos:', pedidosRaw);
+
+        const clienteId = userStorage.getUserId();
+        if (!clienteId) {
+          console.warn('[HomeCliente] Nenhum cliente logado (clienteId ausente)');
           this.orders = [];
+          return;
         }
+
+        let lista = [];
+        if (Array.isArray(pedidosRaw)) lista = pedidosRaw;
+        else if (pedidosRaw && Array.isArray(pedidosRaw.response)) lista = pedidosRaw.response;
+        else if (pedidosRaw && Array.isArray(pedidosRaw.pedidos)) lista = pedidosRaw.pedidos;
+
+        const providerCache = {};
+        const fetchProvider = async (id) => {
+          if (!id) return null;
+          if (providerCache[id]) return providerCache[id];
+
+          try {
+            const data = await buscarPrestador(id);
+            const usuario = data?.response || data;
+            providerCache[id] = usuario || null;
+            return providerCache[id];
+          } catch (err) {
+            console.warn(`[HomeCliente] Falha ao buscar prestador ${id}:`, err);
+            providerCache[id] = null;
+            return null;
+          }
+        };
+
+        const filteredPedidos = lista.filter(p => {
+          const pid = String(p.id_cliente || p.clienteId || p.cliente?.id || p.cliente_id || p.idCliente || '');
+          return pid === String(clienteId);
+        });
+
+        const pedidosComPrestador = await Promise.all(filteredPedidos.map(async (o) => {
+          const prestadorId = o.id_prestador || o.prestadorId || o.idPrestador || o.prestador?.id || o.prestador_id || o.prestador?.id_prestador || '';
+          const prestadorInfo = await fetchProvider(prestadorId);
+
+          return {
+            id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_cliente}`,
+            provider: prestadorInfo?.nome || prestadorInfo?.nome_prestador || prestadorInfo?.name || o.prestadorNome || o.nome_prestador || o.provider || 'Prestador',
+            avatar: prestadorInfo?.img_perfil || prestadorInfo?.profileImage || prestadorInfo?.foto || prestadorInfo?.avatar || o.avatar || o.foto_prestador || defaultProfile,
+            date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ? new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
+            origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
+            destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado',
+            status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído'
+          };
+        }));
+
+        this.orders = pedidosComPrestador;
+        console.log('[HomeCliente] Pedidos do cliente carregados:', this.orders.length);
       } catch (error) {
         console.error('[HomeCliente] Erro ao buscar pedidos da API:', error);
         this.orders = [];
@@ -999,19 +1046,21 @@ html, body {
   height: 28px;
 }
 
-.service-detail-modal__back-row {
+.service-detail-modal__close-row {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
   margin-bottom: 14px;
 }
 
-.service-detail-modal__back {
+.service-detail-modal__close {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 28px;
+  font-weight: 700;
   color: #222222;
   cursor: pointer;
   padding: 0;
+  line-height: 1;
 }
 
 .service-detail-modal__header {
@@ -1295,7 +1344,7 @@ html, body {
 
 .service-card {
   background: white;
-  border: 1px solid #6D6D6D;
+  border: 1px solid #e8e8e8;
   border-radius: 20px;
   padding: 12px 14px;
   display: flex;
@@ -1364,6 +1413,11 @@ html, body {
 .service-card__star {
   color: #FFC107;
   font-size: 13px;
+}
+
+.service-card__rating-value {
+  font-size: 12px;
+  color: #444444;
 }
 
 .service-card__location {
@@ -1470,6 +1524,33 @@ html, body {
   min-height: 0;
 }
 
+.orders-preview {
+  max-width: 1520px;
+  margin: 18px auto 28px;
+  padding: 0 18px;
+}
+
+.orders-preview h3 {
+  margin: 8px 0 16px 6px;
+  font-size: 20px;
+  color: #111111;
+}
+
+.orders-preview .services-screen__grid {
+  gap: 20px;
+}
+
+.orders-preview .services-screen__card {
+  padding: 20px 22px;
+  border-radius: 20px;
+  min-height: 120px;
+}
+
+.orders-screen__date,
+.orders-screen__status {
+  white-space: nowrap;
+}
+
 .services-screen__card {
   background: #ffffff;
   border: 1px solid #e8e8e8;
@@ -1543,6 +1624,13 @@ html, body {
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.services-screen__info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
 }
 
 .services-screen__route {

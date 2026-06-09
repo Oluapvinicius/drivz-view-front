@@ -21,12 +21,12 @@
             <div class="orders-screen__top">
               <div class="orders-screen__provider">
                 <img :src="order.clientAvatar" alt="Avatar do cliente" class="orders-screen__avatar" />
-                <div>
+                <div class="orders-screen__provider-info">
                   <span class="orders-screen__provider-label">Cliente:</span>
                   <strong class="orders-screen__provider-name">{{ order.clientName }}</strong>
                 </div>
               </div>
-              <div>
+              <div class="orders-screen__info">
                 <span class="orders-screen__date">{{ order.date }}</span>
                 <span class="orders-screen__status">{{ order.status }}</span>
               </div>
@@ -36,7 +36,7 @@
                 <span class="orders-screen__route-title">Origem</span>
                 <span class="orders-screen__route-text">{{ order.origin }}</span>
               </div>
-              <div class="orders-screen__route-arrow">→</div>
+              <div class="orders-screen__route-arrow">↓</div>
               <div class="orders-screen__route-group">
                 <span class="orders-screen__route-title">Destino</span>
                 <span class="orders-screen__route-text">{{ order.destination }}</span>
@@ -363,10 +363,10 @@ export default {
 
           return {
             id: pedido.id || pedido.id_pedido,
-            name: dadosCliente?.nome || pedido.clienteNome || 'Cliente',
+            name: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || pedido.clienteNome || 'Cliente',
             address: pedido.endereco_origem || pedido.endereco || 'Endereço não informado',
             rating: Number(dadosCliente?.avaliacao || 5),
-            avatar: dadosCliente?.avatar || 'https://via.placeholder.com/150',
+            avatar: dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || defaultProfile,
             distance: pedido.distancia_km ? `${pedido.distancia_km} km` : 'Calculando...',
             detalhesPedido: pedido
           };
@@ -481,16 +481,32 @@ export default {
           return pedidoPrestadorId === prestadorIdString || pedidoPrestadorEmail === prestadorIdString;
         });
 
-        this.orders = pedidosDoPrestador.map(o => ({
-          id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_prestador}`,
-          clientName: o.clienteNome || o.nome_cliente || o.nomeCliente || o.cliente?.nome || 'Cliente',
-          clientAvatar: o.avatar || o.foto_cliente || o.cliente?.avatar || o.cliente?.foto || defaultProfile,
-          status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído',
-          date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ?
-            new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
-          origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
-          destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado'
+        const pedidosComCliente = await Promise.all(pedidosDoPrestador.map(async (o) => {
+          const clienteId = o.id_cliente || o.clienteId || o.idCliente || o.cliente?.id || o.cliente_id || '';
+          let dadosCliente = null;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente?.response || resCliente;
+            } catch (err) {
+              console.warn(`[HomePrestador] Falha ao buscar cliente ${clienteId}:`, err);
+            }
+          }
+
+          return {
+            id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_prestador}`,
+            clientName: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || o.clienteNome || o.nome_cliente || o.nomeCliente || 'Cliente',
+            clientAvatar: dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || o.avatar || o.foto_cliente || defaultProfile,
+            status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído',
+            date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ?
+              new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
+            origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
+            destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado'
+          };
         }));
+
+        this.orders = pedidosComCliente;
       } catch (error) {
         console.error("Erro ao carregar histórico:", error);
         this.orders = [];
@@ -1277,8 +1293,8 @@ export default {
 }
 
 .orders-screen {
-  margin: 18px;
-  padding: 22px;
+  margin: 50px;
+  padding: 32px;
   background: #f5f6f8;
   border-radius: 28px;
   display: flex;
@@ -1291,7 +1307,7 @@ export default {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -1299,11 +1315,17 @@ export default {
   background: #D62828;
   border: none;
   color: white;
-  border-radius: 14px;
-  padding: 12px 20px;
+  border-radius: 12px;
+  padding: 12px 24px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.orders-screen__back:hover {
+  background: #b81f1f;
+  transform: translateY(-1px);
 }
 
 .orders-screen__empty {
@@ -1338,16 +1360,17 @@ export default {
 }
 
 .orders-screen__cta:hover {
-  background: #a01818;
+  background: #b81f1f;
 }
 
 .orders-screen__list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
   overflow-y: auto;
-  padding-right: 6px;
+  padding-right: 8px;
   flex: 1;
+  min-height: 0;
 }
 
 .orders-screen__list::-webkit-scrollbar {
@@ -1382,54 +1405,88 @@ export default {
 .orders-screen__card {
   background: #ffffff;
   border: 1px solid #e8e8e8;
-  border-radius: 24px;
-  padding: 22px 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border-radius: 28px;
+  padding: 28px 32px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  transition: border-color 0.2s ease;
+}
+
+.orders-screen__card:hover {
+  border-color: #D62828;
 }
 
 .orders-screen__top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
 }
 
 .orders-screen__provider {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .orders-screen__avatar {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .orders-screen__provider-label {
   display: block;
-  font-size: 12px;
+  font-size: 20px;
   color: #7f7f7f;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.orders-screen__provider-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .orders-screen__provider-name {
   display: block;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #111111;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .orders-screen__date {
-  font-size: 13px;
-  color: #7f7f7f;
+  font-size: 16px;
+  color: #333333;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.orders-screen__info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
 }
 
 .orders-screen__route {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -1444,18 +1501,20 @@ export default {
   font-weight: 700;
   color: #333333;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .orders-screen__route-text {
-  font-size: 14px;
+  font-size: 15px;
   color: #4a4a4a;
   line-height: 1.5;
+  font-weight: 500;
 }
 
 .orders-screen__route-arrow {
   font-size: 20px;
   color: #b3b3b3;
-  text-align: center;
+  text-align: start;
 }
 
 .modal-overlay {
@@ -1961,6 +2020,10 @@ export default {
   .right-sidebar__title {
     font-size: 13px;
   }
+
+  .orders-screen__list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1974,7 +2037,41 @@ export default {
     max-width: 340px;
   }
 
+  .orders-screen {
+    margin: 18px;
+    padding: 25px;
+  }
 
+  .orders-screen__grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .orders-screen__card {
+    padding: 20px 24px;
+    gap: 20px;
+  }
+
+  .orders-screen__avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .orders-screen__provider-name {
+    font-size: 14px;
+  }
+
+  .orders-screen__date {
+    font-size: 14px;
+  }
+
+  .orders-screen__route-text {
+    font-size: 14px;
+  }
+
+  .orders-screen__list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1985,6 +2082,38 @@ export default {
 
   .right-sidebar {
     width: 100%;
+  }
+
+  .orders-screen {
+    margin: 12px;
+    padding: 18px;
+  }
+
+  .orders-screen__list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .orders-screen__card {
+    padding: 16px 18px;
+    gap: 16px;
+  }
+
+  .orders-screen__avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .orders-screen__provider-name {
+    font-size: 13px;
+  }
+
+  .orders-screen__date {
+    font-size: 12px;
+  }
+
+  .orders-screen__route-text {
+    font-size: 13px;
   }
 }
 

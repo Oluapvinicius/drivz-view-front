@@ -442,8 +442,8 @@ const salvarAlteracoes = async () => {
     email: form.email.trim(),
     telefone: form.telefone.replace(/\D/g, ''),
     img_perfil: form.profileImage || dadosIniciais.value.profileImage || '',
-    cpf: documentoLimpo.length === 11 ? documentoLimpo : '',
-    cnpj: documentoLimpo.length === 14 ? documentoLimpo : '',
+    cpf: documentoLimpo.length === 11 ? documentoLimpo : null,
+    cnpj: documentoLimpo.length === 14 ? documentoLimpo : null,
     senha: ''
   };
 

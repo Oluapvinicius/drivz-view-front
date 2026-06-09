@@ -8,6 +8,7 @@
         <span>Contatos</span>
       </div>
       <div class="mensagem-topbar__spacer"></div>
+      <button type="button" @click="requestService">Solicitar Serviço</button>
     </header>
 
     <div class="mensagem-screen">
@@ -78,24 +79,26 @@
 
 <script setup>
 import mensagensData from '../data/mensagens.json';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
-const contacts = mensagensData.contacts;
-const chats = mensagensData.chats;
+const route = useRoute();
+const contacts = ref([...mensagensData.contacts]);
+const chats = ref([...mensagensData.chats]);
 
 const searchQuery = ref('');
-const selectedContactId = ref(1);
+const selectedContactId = ref(route.query.contactId ? Number(route.query.contactId) : contacts.value[0]?.id || 1);
 const newMessage = ref('');
 
 const selectedContact = computed(() => {
-  return contacts.find((contact) => contact.id === selectedContactId.value) || contacts[0];
+  return contacts.value.find((contact) => String(contact.id) === String(selectedContactId.value)) || contacts.value[0] || {};
 });
 
 const filteredContacts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts;
+  if (!query) return contacts.value;
 
-  return contacts.filter((contact) => {
+  return contacts.value.filter((contact) => {
     return (
       contact.name.toLowerCase().includes(query) ||
       contact.subtitle.toLowerCase().includes(query) ||
@@ -105,7 +108,7 @@ const filteredContacts = computed(() => {
 });
 
 const chatMessages = computed(() => {
-  const chat = chats.find((item) => item.contactId === selectedContactId.value);
+  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
   return chat ? chat.messages : [];
 });
 
@@ -113,11 +116,72 @@ function selectContact(contactId) {
   selectedContactId.value = contactId;
 }
 
+function findContactByQuery(query) {
+  if (!query) return null;
+  const contactId = query.contactId;
+  const providerName = query.providerName;
+  const providerEmail = query.providerEmail;
+
+  let contact = contacts.value.find((item) => String(item.id) === String(contactId));
+  if (contact) return contact;
+  if (providerEmail) {
+    contact = contacts.value.find((item) => item.email === providerEmail);
+    if (contact) return contact;
+  }
+  if (providerName) {
+    contact = contacts.value.find((item) => item.name === providerName);
+    if (contact) return contact;
+  }
+  return null;
+}
+
+function createDynamicContact(query) {
+  const nextId = contacts.value.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+  const newContact = {
+    id: nextId,
+    name: query.providerName || 'Prestador',
+    subtitle: 'Conversa iniciada após solicitação de serviço',
+    avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
+    location: '',
+    email: query.providerEmail || ''
+  };
+  contacts.value.push(newContact);
+  chats.value.push({
+    contactId: nextId,
+    messages: [
+      {
+        id: 1,
+        type: 'incoming',
+        text: 'Solicitação de serviço recebida. Vamos conversar pelo chat.',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]
+  });
+  return newContact;
+}
+
+watch(
+  () => route.query,
+  (query) => {
+    if (!query?.contactId) return;
+
+    const contact = findContactByQuery(query);
+    if (contact) {
+      selectedContactId.value = contact.id;
+      return;
+    }
+
+    const newContact = createDynamicContact(query);
+    selectedContactId.value = newContact.id;
+  },
+  { immediate: true }
+);
+
 function sendMessage() {
   const text = newMessage.value.trim();
   if (!text) return;
 
-  const chat = chats.find((item) => item.contactId === selectedContactId.value);
+  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
   if (chat) {
     chat.messages.push({
       id: Date.now(),
@@ -129,6 +193,8 @@ function sendMessage() {
 
   newMessage.value = '';
 }
+
+
 </script>
 
 <style scoped>

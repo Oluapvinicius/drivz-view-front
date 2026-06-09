@@ -85,7 +85,7 @@
             />
           </div>
 
-          <div class="profile-screen__field profile-screen__field--half">
+          <!-- <div class="profile-screen__field profile-screen__field--half">
             <label class="profile-screen__field-label">Data de Validade</label>
             <input
               type="date"
@@ -95,7 +95,7 @@
             <span v-if="form.data_validade && !dataValidadeValida" class="profile-screen__field-error">
               A CNH está vencida
             </span>
-          </div>
+          </div> -->
 
           <div class="profile-screen__field profile-screen__field--half">
             <label class="profile-screen__field-label">Telefone</label>
@@ -523,8 +523,8 @@ const salvarAlteracoes = async () => {
     telefone:     form.telefone.replace(/\D/g, ''),
     descricao:    form.descricao.trim(),
     img_perfil:   form.profileImage || form.img_perfil || dadosIniciais.value.img_perfil || '',
-    cpf:          documentoLimpo.length === 11 ? documentoLimpo : '',
-    cnpj:         documentoLimpo.length === 14 ? documentoLimpo : '',
+    cpf:          documentoLimpo.length === 11 ? documentoLimpo : null,
+    cnpj:         documentoLimpo.length === 14 ? documentoLimpo : null,
     cnh:          form.cnh,
     data_validade:form.data_validade,
     senha:        ''
