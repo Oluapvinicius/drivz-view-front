@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div class="order-tracking-container">
     <div id="map" class="map-background"></div>
 
@@ -57,7 +57,7 @@
             <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
           </div>
 
-          <button class="action-button cancel">Cancelar Solicitação</button>
+          <button class="action-button cancel" @click="showCancelModal = true">Cancelar Solicitação</button>
           <div class="tip-box">
             <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
             <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
@@ -151,8 +151,8 @@
           <div class="chat-driver-info">
             <img src="/driver-default.svg" alt="Motorista" class="chat-driver-photo" />
             <div class="chat-driver-details">
-              <h3 class="chat-driver-name">Rimberio Guincho</h3>
-              <span class="chat-driver-role">★ 4.0 • Prestador</span>
+              <h3 class="chat-driver-name">{{ driver.name }}</h3>
+              <span class="chat-driver-role">★ {{ driver.rating }} • Prestador</span>
             </div>
           </div>
         </div>
@@ -197,11 +197,221 @@
         </div>
       </div>
     </div>
+    <div v-if="showCancelModal" class="custom-modal-overlay" @click="showCancelModal = false">
+      <div class="custom-modal-box" @click.stop>
+        <h3 class="modal-title">Deseja mesmo cancelar?</h3>
+        <p class="modal-text">Esta ação não poderá ser desfeita e sua busca por um prestador será encerrada.</p>
+
+        <div class="modal-actions">
+          <button class="btn-keep" @click="showCancelModal = false">Continuar com o pedido</button>
+          <button class="btn-confirm-cancel" @click="confirmarCancelamento">Sim, cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template> -->
+
+<template>
+  <div class="order-tracking-container">
+    <div id="map" class="map-background"></div>
+
+    <div class="tracking-card" :class="{ 'expanded': currentStep === 3 }">
+
+      <div class="timeline-section">
+        <div class="step-container">
+          <div class="step-point" :class="{ active: currentStep >= 1 }">
+            <img src="../assets/lupaIcon.svg" alt="Buscando" class="step-icon" />
+          </div>
+          <span class="step-label" :class="{ active: currentStep >= 1 }">Buscando</span>
+        </div>
+        <div class="line-wrapper">
+          <div class="step-line" :class="{ active: currentStep >= 2 }"></div>
+        </div>
+        <div class="step-container">
+          <div class="step-point" :class="{ active: currentStep >= 2 }">
+            <img src="../assets/carroicon.svg" alt="A caminho" class="step-icon" />
+          </div>
+          <span class="step-label" :class="{ active: currentStep >= 2 }">A caminho</span>
+        </div>
+        <div class="line-wrapper">
+          <div class="step-line" :class="{ active: currentStep >= 3 }"></div>
+        </div>
+        <div class="step-container">
+          <div class="step-point" :class="{ active: currentStep >= 3 }">
+            <img src="../assets/bandeira.svg" alt="Viagem" class="step-icon" />
+          </div>
+          <span class="step-label" :class="{ active: currentStep >= 3 }">Avaliação</span>
+        </div>
+      </div>
+
+      <template v-if="currentStep === 1">
+        <div class="container-down">
+          <div class="addresses-section">
+            <div class="address-item">
+              <div class="address-icon origin"></div>
+              <div class="address-content">
+                <span class="address-label">Origem</span>
+                <span class="address-text">{{ endereçoOrigem }}</span>
+              </div>
+            </div>
+            <div class="address-item">
+              <div class="address-icon destination"></div>
+              <div class="address-content">
+                <span class="address-label">Destino</span>
+                <span class="address-text">{{ endereçoDestino }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="search-status">
+            <span class="status-text">Procurando motorista...</span>
+            <span class="demand-badge">Alta demanda</span>
+          </div>
+
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
+          </div>
+
+          <div class="tip-box">
+            <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
+            <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
+          </div>
+        </div>
+      </template>
+
+      <template v-if="currentStep === 2">
+        <div class="step2-Container">
+          <div class="driver-profile">
+            <div class="driver-photo">
+              <img src="/driver-default.svg" alt="Motorista" />
+            </div>
+            <div class="driver-center-content">
+              <h3 class="driver-name">{{ driver.name }}</h3>
+              <div class="plate-badge">{{ driver.plate }}</div>
+            </div>
+            <div class="driver-rating-badge">
+              <span class="rating-star">★</span>
+              <span class="rating-value">{{ driver.rating }}</span>
+            </div>
+            <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
+              <img src="../assets/icon.svg" alt="Chat" />
+            </button>
+          </div>
+
+          <div class="metrics-section">
+            <div class="metric-item">
+              <span class="metric-label">DISTÂNCIA</span>
+              <span class="metric-value">{{ driver.distance }}</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+              <span class="metric-label">CHEGADA EM</span>
+              <span class="metric-value">{{ driver.eta }}</span>
+            </div>
+          </div>
+
+          <div class="addresses-section">
+            <div class="address-item">
+              <div class="address-icon origin"></div>
+              <div class="address-content">
+                <span class="address-label">Origem</span>
+                <span class="address-text">{{ endereçoOrigem }}</span>
+              </div>
+            </div>
+            <div class="address-item">
+              <div class="address-icon destination"></div>
+              <div class="address-content">
+                <span class="address-label">Destino</span>
+                <span class="address-text">{{ endereçoDestino }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-if="currentStep === 3">
+        <div class="evaluation-container">
+          <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
+          <div class="evaluation-profile">
+            <div class="eval-driver-photo">
+              <img src="/driver-default.svg" alt="Prestador" />
+            </div>
+            <h3 class="eval-driver-name">{{ driver.name }}</h3>
+            <span class="eval-driver-role">Prestador</span>
+          </div>
+          <div class="rating-stars">
+            <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= userRating }"
+              @click="userRating = star">
+              ★
+            </span>
+          </div>
+
+          <div v-if="erroAvaliacao" class="error-message-box">
+            {{ erroAvaliacao }}
+          </div>
+
+          <div class="comment-section">
+            <label class="comment-label">Fazer comentário (Opcional)</label>
+            <textarea v-model="userComment" class="comment-input"
+              placeholder="Serviço de altissima qualidade!"></textarea>
+          </div>
+          <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
+        </div>
+      </template>
+      <div v-if="currentStep !== 3" class="cancel-button-wrapper">
+        <button class="action-button cancel btn-global-cancel" @click="showCancelModal = true">
+          Cancelar Solicitação
+        </button>
+      </div>
+    </div>
+
+    <div v-if="showCancelModal" class="custom-modal-overlay" @click="showCancelModal = false">
+      <div class="custom-modal-box" @click.stop>
+        <h3 class="modal-title">Deseja mesmo cancelar?</h3>
+        <p class="modal-text">Esta ação não poderá ser desfeita e sua busca por um prestador será encerrada.</p>
+        <div class="modal-actions">
+          <button class="btn-keep" @click="showCancelModal = false">Continuar com o pedido</button>
+          <button class="btn-confirm-cancel" @click="confirmarCancelamento">Sim, cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showChatModal" class="chat-modal-overlay" @click="toggleChatModal">
+      <div class="chat-modal" @click.stop>
+        <div class="chat-header">
+          <button class="back-button" @click="toggleChatModal">
+            <img src="../assets/arrow.png" class="back-arrow" alt="">
+          </button>
+          <div class="chat-driver-info">
+            <img src="/driver-default.svg" alt="Motorista" class="chat-driver-photo" />
+            <div class="chat-driver-details">
+              <h3 class="chat-driver-name">{{ driver.name }}</h3>
+              <span class="chat-driver-role">★ {{ driver.rating }} • Prestador</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-messages">
+          <div v-for="msg in mensagensChat" :key="msg.id"
+            :class="['message-group', msg.tipo === 'driver' ? 'driver-message' : 'client-message']">
+            <div class="message-bubble">{{ msg.texto }}</div>
+            <span class="message-time">{{ msg.hora }}</span>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" placeholder="Mensagem" v-model="novaMensagem"
+            @keyup.enter="enviarMensagem" />
+          <button class="chat-send-button" @click="enviarMensagem">
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script>
-import { MapboxService } from '@/requests/mapboxService';
 
 // export default {
 //   name: 'PedidoCliente',
@@ -254,6 +464,9 @@ import { MapboxService } from '@/requests/mapboxService';
 //   }
 // };
 
+import { MapboxService } from '@/requests/mapboxService';
+import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prestador';
+
 export default {
   name: 'PedidoCliente',
   data() {
@@ -263,39 +476,53 @@ export default {
       endereçoDestino: 'Buscando endereço...',
       mapboxService: null,
       showChatModal: false,
+      showCancelModal: false,
       userRating: 0,
       userComment: '',
+      erroAvaliacao: '',
       searchProgress: 0,
       searchInterval: null,
       simulationInterval: null,
       driver: {
-        name: 'Rimberio Guincho',
-        rating: '4.9',
-        plate: 'ABC-1234',
+        name: 'Carregando...',
+        rating: '--',
+        plate: '---',
         distance: '-- km',
         eta: '-- min'
-      }
+      },
+      novaMensagem: '',
+      mensagensChat: [
+        { id: 1, tipo: 'driver', texto: 'Olá! Já recebi seu pedido.', hora: '14:31' },
+      ]
     };
   },
-  mounted() {
-    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino } = this.$route.query;
+  async mounted() {
+    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId } = this.$route.query;
 
-    this.endereçoOrigem = txtOrigem || 'Av. Paulista, 1578 - Bela Vista';
-    this.endereçoDestino = txtDestino || 'Rua Augusta, 2200 - Jardins';
+    this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
+    this.endereçoDestino = txtDestino || 'Não informado';
 
-    const origin = [parseFloat(origemLng) || -46.6558, parseFloat(origemLat) || -23.5615];
-    const destination = [parseFloat(destinoLng) || -46.6624, parseFloat(destinoLat) || -23.5575];
+    // Dentro do mounted() da sua tela de acompanhamento (mapa):
+    const origin = [parseFloat(origemLng), parseFloat(origemLat)];
+    const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
 
     this.mapboxService = new MapboxService();
 
-    this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
-      this.driver.distance = dadosCalculados.distancia;
+    if (temDestino) {
+      const destination = [parseFloat(destinoLng), parseFloat(destinoLat)];
 
-      const minutosIniciais = parseInt(dadosCalculados.tempo);
-      this.driver.eta = this.formatarTempo(minutosIniciais);
-
-      this.iniciarLoadingBusca();
-    });
+      this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
+        this.driver.distance = dadosCalculados.distancia;
+        this.driver.eta = dadosCalculados.tempo;
+        this.iniciarLoadingBusca();
+      });
+    } else {
+      this.mapboxService.initMapApenasOrigem('map', origin, () => {
+        this.driver.distance = '-- km';
+        this.driver.eta = 'Calculando...';
+        this.iniciarLoadingBusca();
+      });
+    }
   },
   beforeDestroy() {
     if (this.mapboxService) this.mapboxService.destroyMap();
@@ -339,17 +566,11 @@ export default {
         tempoAtual = tempoAtual - 1;
 
         this.driver.distance = `${Math.max(0, distanciaAtual)} km`;
-
         this.driver.eta = this.formatarTempo(Math.max(1, tempoAtual));
       }, 4000);
     },
     toggleChatModal() {
       this.showChatModal = !this.showChatModal;
-    },
-    submitEvaluation() {
-      console.log('Avaliação enviada:', { rating: this.userRating, comment: this.userComment });
-      alert(`Avaliação enviada com sucesso!`);
-      this.$router.push({ name: 'Home' });
     },
     formatarTempo(minutosTotais) {
       if (minutosTotais >= 60) {
@@ -359,6 +580,53 @@ export default {
         return `${horas}h ${minFormatado}min`;
       }
       return `${minutosTotais} min`;
+    },
+    confirmarCancelamento() {
+      this.showCancelModal = false;
+      this.$router.push({ name: 'home-cliente' });
+    },
+
+    submitEvaluation() {
+      if (this.userRating === 0) {
+        this.erroAvaliacao = '⚠️ Por favor, selecione ao menos uma estrela para avaliar o serviço.';
+        return;
+      }
+
+      this.erroAvaliacao = '';
+
+      const dadosAvaliacao = {
+        prestadorId: this.$route.query.contactId,
+        nota: this.userRating,
+        comentario: this.userComment
+      };
+
+      console.log('Avaliação enviada com sucesso:', dadosAvaliacao);
+      this.$router.push({ name: 'home-cliente' });
+    },
+    enviarMensagem() {
+      const textoFormatado = this.novaMensagem.trim();
+      if (!textoFormatado) return;
+
+      const agora = new Date();
+      const horaFormatada = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      this.mensagensChat.push({
+        id: Date.now(),
+        tipo: 'client',
+        texto: textoFormatado,
+        hora: horaFormatada
+      });
+
+      this.novaMensagem = '';
+
+      setTimeout(() => {
+        this.mensagensChat.push({
+          id: Date.now() + 1,
+          tipo: 'driver',
+          texto: 'Combinado! Estou chegando.',
+          hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+      }, 1500);
     },
   }
 };
@@ -1490,6 +1758,136 @@ export default {
   background: #ccc;
   cursor: not-allowed;
   transform: none;
+}
+
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.custom-modal-box {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  animation: modalScale 0.2s ease-out;
+}
+
+.modal-title {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.modal-text {
+  font-size: 15px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-keep {
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-keep:hover {
+  background: #e5e7eb;
+}
+
+.btn-confirm-cancel {
+  background: #d62828;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-confirm-cancel:hover {
+  background: #b51e1e;
+}
+
+@keyframes modalScale {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.error-message-box {
+  background-color: #ffe3e3;
+  color: #d62828;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  margin: 10px 0;
+  border: 1px solid #f5baba;
+  animation: shakeFadeIn 0.3s ease-in-out;
+}
+
+@keyframes shakeFadeIn {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+
+  20% {
+    transform: translateX(-6px);
+  }
+
+  40% {
+    transform: translateX(6px);
+  }
+
+  60% {
+    transform: translateX(-4px);
+  }
+
+  80% {
+    transform: translateX(4px);
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {

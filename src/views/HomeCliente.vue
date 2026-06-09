@@ -425,7 +425,12 @@ irParaPerfil () {
       this.sidebarOpen = true;
     },
     handleCallButtonClick() {
-      this.$router.push({ name: 'configurar-pedido-cliente' });
+      this.$router.push({ 
+        name: 'configurar-pedido-cliente', 
+        query: { 
+          tipo: 'emergencia'
+        } 
+      });
     },
     filterServices() {
     },

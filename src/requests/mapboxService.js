@@ -99,6 +99,7 @@ export class MapboxService {
     this.map.fitBounds(bounds, defaultOptions);
   }
 
+  // COLOQUE ESTE MÉTODO LOGO ABAIXO DO SEU initMap ATUAL:
   initMap(containerId, originCoords, destinationCoords, onRouteCalculated) {
     try {
       mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -121,8 +122,41 @@ export class MapboxService {
     this.map.on('load', () => {
       this.fitMapToPoints(originCoords, destinationCoords);
 
-      // Passa o callback para a função que calcula a rota
+      // --- ADICIONADO: Insere os marcadores visuais de Origem e Destino automaticamente ---
+      this.addMarker('ponto-origem', originCoords[0], originCoords[1], { color: '#2563eb' }); // Azul para Origem
+      this.addMarker('ponto-destino', destinationCoords[0], destinationCoords[1], { color: '#dc2626' }); // Vermelho para Destino
+
       this.drawRoute(originCoords, destinationCoords, onRouteCalculated);
+    });
+
+    return this.map;
+  }
+
+  initMapApenasOrigem(containerId, originCoords, onMapLoaded) {
+    try {
+      mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    } catch (e) {
+      console.warn('VITE_MAPBOX_TOKEN não disponível');
+    }
+
+    if (!mapboxgl.accessToken) {
+      console.error("⚠️ Token do Mapbox não encontrado. Verifique seu arquivo .env");
+      return;
+    }
+
+    this.map = new mapboxgl.Map({
+      container: containerId,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: originCoords,
+      zoom: 15
+    });
+
+    this.map.on('load', () => {
+      this.addMarker('ponto-origem', originCoords[0], originCoords[1], { color: '#2563eb' });
+      
+      if (typeof onMapLoaded === 'function') {
+        onMapLoaded();
+      }
     });
 
     return this.map;

@@ -80,9 +80,10 @@
 <script setup>
 import mensagensData from '../data/mensagens.json';
 import { ref, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
+const router = useRouter();
 const contacts = ref([...mensagensData.contacts]);
 const chats = ref([...mensagensData.chats]);
 
@@ -194,6 +195,19 @@ function sendMessage() {
   newMessage.value = '';
 }
 
+function requestService() {
+  const contatoAtivo = selectedContact.value;
+
+  router.push({
+    name: 'configurar-pedido-cliente',
+    query: {
+      contactId: contatoAtivo.id,
+      providerName: contatoAtivo.name,
+      providerEmail: contatoAtivo.email,
+      tipo: 'comum'
+    }
+  });
+}
 
 </script>
 
