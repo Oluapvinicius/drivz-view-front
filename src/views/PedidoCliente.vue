@@ -876,9 +876,9 @@ export default {
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 17px;
+  gap: 13px;
   overflow-y: auto;
-  animation: cardSlideIn 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  
 }
 
 .tracking-card.expanded {

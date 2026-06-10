@@ -193,7 +193,7 @@
             </div>
 
             <div class="request-modal__actions">
-              <button class="request-modal__accept-btn" @click="acceptRequest">
+              <button class="request-modal__accept-btn" @click="aceitarPedido">
                 Aceitar Serviço
               </button>
               <button class="request-modal__ignore-btn" @click="closeRequestModal">
@@ -242,7 +242,7 @@
             </div>
           </div>
 
-          <button class="emergency-modal__accept-btn" @click="acceptEmergencyService">Aceitar Serviço</button>
+          <button class="emergency-modal__accept-btn" @click="aceitarPedido">Aceitar Serviço</button>
         </div>
       </div>
     </template>
@@ -255,9 +255,13 @@ import { buscarPrestador } from '../requests/buscarUsuarios';
 import { buscarClientePorId } from '../requests/cliente';
 import { userStorage } from '../utils/userStorage';
 import { MapboxService } from '../requests/mapboxService';
+import { ref } from 'vue'
 import { listarPedidos } from '../requests/pedido';
 import { prestadoresGuincho } from '../requests/prestador';
 import defaultProfile from '../assets/profile.svg';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 export default {
   name: 'HomePrestador',
@@ -461,11 +465,11 @@ export default {
 
     async aceitarPedido() {
       try {
-        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
-        await fetch(url, { method: 'POST' });
+        // const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
+        // await fetch(url, { method: 'POST' });
 
         this.popupConfirmacaoOpen = false;
-        alert('Você aceitou a solicitação! Ela será incluída na sua rota.');
+        this.$router.push({ name: 'pedido-prestador' });
         await this.refreshRequests();
       } catch (error) {
         console.error("Erro ao aceitar a solicitação direta:", error);
@@ -742,6 +746,10 @@ export default {
     if (this.mapService) this.mapService.destroyMap();
   }
 };
+
+
+
+
 </script>
 
 <style scoped>

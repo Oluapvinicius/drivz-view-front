@@ -444,7 +444,7 @@ const salvarAlteracoes = async () => {
     img_perfil: form.profileImage || dadosIniciais.value.profileImage || '',
     cpf: documentoLimpo.length === 11 ? documentoLimpo : null,
     cnpj: documentoLimpo.length === 14 ? documentoLimpo : null,
-    senha: ''
+    senha: '123'
   };
 
   console.log('Payload enviado para backend:', payload);
