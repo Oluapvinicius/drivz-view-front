@@ -20,7 +20,8 @@
           <article v-for="order in orders" :key="order.id" class="orders-screen__card">
             <div class="orders-screen__top">
               <div class="orders-screen__provider">
-                <img :src="order.clientAvatar" alt="Avatar do cliente" class="orders-screen__avatar" />
+                <img :src="order.clientAvatar" @error="order.clientAvatar = defaultProfileFallback"
+                  alt="Avatar do cliente" class="orders-screen__avatar" />
                 <div class="orders-screen__provider-info">
                   <span class="orders-screen__provider-label">Cliente:</span>
                   <strong class="orders-screen__provider-name">{{ order.clientName }}</strong>
@@ -63,23 +64,23 @@
 
         <div class="sidebar__divider"></div>
 
-      <nav class="sidebar__menu">
-        <button class="sidebar__item" @click="handleSidebarAction('messages')">
-          <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
-          <span class="sidebar__label">Mensagens</span>
-        </button>
-        <button class="sidebar__item" @click="handleSidebarAction('profile')">
-          <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
-          <span class="sidebar__label">Editar Perfil</span>
-        </button>
-        <button class="sidebar__item" @click="handleSidebarAction('garage')">
-          <img src="../assets/Warehouse.svg" alt="Garagem" class="sidebar__icon">
-          <span class="sidebar__label">Minha Garagem</span>
-        </button>
-      </nav>
+        <nav class="sidebar__menu">
+          <button class="sidebar__item" @click="handleSidebarAction('messages')">
+            <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
+            <span class="sidebar__label">Mensagens</span>
+          </button>
+          <button class="sidebar__item" @click="handleSidebarAction('profile')">
+            <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
+            <span class="sidebar__label">Editar Perfil</span>
+          </button>
+          <button class="sidebar__item" @click="handleSidebarAction('garage')">
+            <img src="../assets/Warehouse.svg" alt="Garagem" class="sidebar__icon">
+            <span class="sidebar__label">Minha Garagem</span>
+          </button>
+        </nav>
 
         <div class="sidebar__footer">
-         
+
           <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
             <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
           </button>
@@ -112,13 +113,13 @@
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-        <div class="header__logo">
-          <img src="../assets/Group 294.svg" alt="Logo">
-        </div>
+          <div class="header__logo">
+            <img src="../assets/Group 294.svg" alt="Logo">
+          </div>
         </header>
         <div class="map-container">
           <div id="map-prestador" class="map-placeholder"></div>
-        <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
+          <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
         </div>
       </main>
 
@@ -147,7 +148,8 @@
         </div>
 
         <div class="right-sidebar__list">
-          <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openRequestModal(request)">
+          <div v-for="request in nearbyRequests" :key="request.id" class="request-card"
+            @click="openRequestModal(request)">
             <div class="request-card__top">
               <div class="request-card__avatar">
                 <img :src="request.avatar" :alt="request.name" />
@@ -164,82 +166,85 @@
         </div>
       </aside>
 
-    <div v-if="selectedRequest" class="modal-overlay" @click="closeRequestModal">
-      <div class="request-modal" @click.stop>
-        <div class="request-modal__content">
-          <div class="request-modal__header">
-            <div class="request-modal__avatar">
-              <img src="../assets/profile.svg" alt="">
+      <div v-if="selectedRequest" class="modal-overlay" @click="closeRequestModal">
+        <div class="request-modal" @click.stop>
+          <div class="request-modal__content">
+            <div class="request-modal__header">
+              <div class="request-modal__avatar">
+                <img :src="selectedRequest.avatar" alt="Foto do cliente">
+              </div>
+              <h2 class="request-modal__name">{{ selectedRequest.name }}</h2>
+              <div class="request-modal__rating">
+                <span v-for="i in 5" :key="i" class="request-modal__star"
+                  :class="{ filled: i <= selectedRequest.rating }">★</span>
+                <span class="request-modal__rating-value">{{ selectedRequest.rating }}.0</span>
+              </div>
             </div>
-            <h2 class="request-modal__name">{{ selectedRequest.name }}</h2>
-            <div class="request-modal__rating">
-              <span v-for="i in 5" :key="i" class="request-modal__star" :class="{ filled: i <= selectedRequest.rating }">★</span>
-              <span class="request-modal__rating-value">{{ selectedRequest.rating }}.0</span>
+
+            <div class="request-modal__location">
+              <div class="request-modal__location-icon"><img src="../assets/location.png" alt="" class="locationIcon">
+              </div>
+              <span class="request-modal__location-label">LOCAL DE SOLICITAÇÃO</span>
             </div>
-          </div>
+            <p class="request-modal__location-address">{{ selectedRequest.address }}</p>
 
-          <div class="request-modal__location">
-            <div class="request-modal__location-icon"><img src="../assets/location.png" alt="" class="locationIcon"></div>
-            <span class="request-modal__location-label">LOCAL DE SOLICITAÇÃO</span>
-          </div>
-          <p class="request-modal__location-address">{{ selectedRequest.address }}</p>
+            <div class="request-modal__map">
+              <div id="request-card-map" class="request-modal__map-placeholder"></div>
+            </div>
 
-          <div class="request-modal__map">
-            <div id="request-card-map" class="request-modal__map-placeholder"></div>
-          </div>
-
-          <div class="request-modal__actions">
-            <button class="request-modal__accept-btn" @click="acceptRequest">
-              Aceitar Serviço 
-            </button>
-            <button class="request-modal__ignore-btn" @click="closeRequestModal">
-              Ignorar
-            </button>
+            <div class="request-modal__actions">
+              <button class="request-modal__accept-btn" @click="acceptRequest">
+                Aceitar Serviço
+              </button>
+              <button class="request-modal__ignore-btn" @click="closeRequestModal">
+                Ignorar
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-if="emergencyPopupOpen" class="modal-overlay" @click="closeEmergencyPopup">
-      <div class="emergency-modal" @click.stop>
-        <div class="emergency-modal__top">
-          <div class="emergency-modal__icon">
-            <img src="../assets/emergencia-cima.svg" alt="Emergência" />
+      <div v-if="emergencyPopupOpen" class="modal-overlay" @click="closeEmergencyPopup">
+        <div class="emergency-modal" @click.stop>
+          <div class="emergency-modal__top">
+            <div class="emergency-modal__icon">
+              <img src="../assets/emergencia-cima.svg" alt="Emergência" />
+            </div>
+            <div class="emergency-modal__title-group">
+              <span class="emergency-modal__title-label">EMERGÊNCIA</span>
+            </div>
+            <button class="emergency-modal__close" @click="closeEmergencyPopup">×</button>
           </div>
-          <div class="emergency-modal__title-group">
-            <span class="emergency-modal__title-label">EMERGÊNCIA</span>
+
+          <div class="emergency-modal__avatar">
+            <img :src="emergencyRequest.avatar" alt="" />
           </div>
-          <button class="emergency-modal__close" @click="closeEmergencyPopup">×</button>
-        </div>
+          <h2 class="emergency-modal__name">{{ emergencyRequest.name }}</h2>
+          <div class="emergency-modal__stars">
+            <span v-for="i in 5" :key="i"
+              :class="['emergency-modal__star', { filled: i <= emergencyRequest.rating }]">★</span>
+          </div>
 
-        <div class="emergency-modal__avatar">
-          <img :src="emergencyRequest.avatar" alt="" />
-        </div>
-        <h2 class="emergency-modal__name">{{ emergencyRequest.name }}</h2>
-        <div class="emergency-modal__stars">
-          <span v-for="i in 5" :key="i" :class="['emergency-modal__star', { filled: i <= emergencyRequest.rating }]">★</span>
-        </div>
-
-        <div class="emergency-modal__locations">
-          <div class="emergency-modal__location-row">
-            <img src="../assets/origem.svg" alt="Origem" class="emergency-modal__location-icon" />
-            <div>
-              <span class="emergency-modal__location-label">ORIGEM</span>
-              <p>{{ emergencyRequest.origin }}</p>
+          <div class="emergency-modal__locations">
+            <div class="emergency-modal__location-row">
+              <img src="../assets/origem.svg" alt="Origem" class="emergency-modal__location-icon" />
+              <div>
+                <span class="emergency-modal__location-label">ORIGEM</span>
+                <p>{{ emergencyRequest.origin }}</p>
+              </div>
+            </div>
+            <div class="emergency-modal__location-row">
+              <img src="../assets/destino.svg" alt="Destino" class="emergency-modal__location-icon" />
+              <div>
+                <span class="emergency-modal__location-label">DESTINO</span>
+                <p>{{ emergencyRequest.destination }}</p>
+              </div>
             </div>
           </div>
-          <div class="emergency-modal__location-row">
-            <img src="../assets/destino.svg" alt="Destino" class="emergency-modal__location-icon" />
-            <div>
-              <span class="emergency-modal__location-label">DESTINO</span>
-              <p>{{ emergencyRequest.destination }}</p>
-            </div>
-          </div>
-        </div>
 
-        <button class="emergency-modal__accept-btn" @click="acceptEmergencyService">Aceitar Serviço</button>
+          <button class="emergency-modal__accept-btn" @click="acceptEmergencyService">Aceitar Serviço</button>
+        </div>
       </div>
-    </div>
     </template>
   </div>
 </template>
@@ -279,7 +284,7 @@ export default {
       presenterLocation: [-46.9015, -23.5255],
       requestMapService: null,
       nearbyRequests: [],
-
+      defaultProfileFallback: defaultProfile,
       timerConvites: null,
       popupConfirmacaoOpen: false,
       pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' }
@@ -361,12 +366,26 @@ export default {
             }
           }
 
+          // 1. Captura a propriedade de imagem que vem da API do cliente
+          const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem;
+
+          // 2. TRATAMENTO DA URL: Se a foto existir, verifica se precisa injetar a URL do backend (http://localhost:8080)
+          let fotoFinal = defaultProfile;
+          if (rawAvatar) {
+            if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:image')) {
+              fotoFinal = rawAvatar;
+            } else {
+              // Ajuste o endereço "http://localhost:8080" se o seu backend rodar em outra porta
+              fotoFinal = `http://localhost:8080/${rawAvatar.replace(/^\//, '')}`;
+            }
+          }
+
           return {
             id: pedido.id || pedido.id_pedido,
             name: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || pedido.clienteNome || 'Cliente',
             address: pedido.endereco_origem || pedido.endereco || 'Endereço não informado',
             rating: Number(dadosCliente?.avaliacao || 5),
-            avatar: dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || defaultProfile,
+            avatar: fotoFinal, // <-- Agora passa a foto com a URL corrigida
             distance: pedido.distancia_km ? `${pedido.distancia_km} km` : 'Calculando...',
             detalhesPedido: pedido
           };
@@ -494,10 +513,19 @@ export default {
             }
           }
 
+          // Descobre qual propriedade de imagem o cliente possui na resposta da API
+          const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || o.avatar || o.foto_cliente;
+
+          // Se a imagem for uma rota relativa (ex: /uploads/foto.png), você pode concatenar com a URL do seu servidor aqui:
+          // const urlCompleta = rawAvatar && !rawAvatar.startsWith('http') ? `http://localhost:8080${rawAvatar}` : rawAvatar;
+
           return {
             id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_prestador}`,
             clientName: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || o.clienteNome || o.nome_cliente || o.nomeCliente || 'Cliente',
-            clientAvatar: dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || o.avatar || o.foto_cliente || defaultProfile,
+
+            // Se encontrou o avatar usa ele, se não, usa o defaultProfile importado lá no topo
+            clientAvatar: rawAvatar || defaultProfile,
+
             status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído',
             date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ?
               new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
@@ -1045,7 +1073,7 @@ export default {
   background: transparent;
   border: none;
   cursor: pointer;
-  
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1535,6 +1563,7 @@ export default {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1556,6 +1585,7 @@ export default {
     transform: translateY(50px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -1885,13 +1915,13 @@ export default {
   border: none;
   color: white;
   padding: 28px 59px;
-  font-size:18px;
+  font-size: 18px;
   font-weight: 700;
   border-radius: 12px;
   cursor: pointer;
   margin: 24px auto 32px;
   display: flex;
-  align-items: center; 
+  align-items: center;
   justify-content: center;
 }
 
@@ -2117,7 +2147,7 @@ export default {
   }
 }
 
-.locationIcon{
+.locationIcon {
   width: 18px;
   height: 18px;
 }
