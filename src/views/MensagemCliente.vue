@@ -8,29 +8,21 @@
         <span>Contatos</span>
       </div>
       <div class="mensagem-topbar__spacer"></div>
-      <button type="button" @click="requestService">Solicitar Serviço</button>
+      <button type="button" class="mensagem-topbar__action" @click="requestService">
+        Solicitar Serviço
+      </button>
     </header>
 
     <div class="mensagem-screen">
       <aside class="mensagem-sidebar">
         <div class="mensagem-sidebar__search">
           <img src="../assets/lupa.svg" alt="Pesquisar" class="mensagem-sidebar__icon" />
-          <input
-            type="text"
-            placeholder="Pesquisar Contato"
-            v-model="searchQuery"
-            class="mensagem-sidebar__input"
-          />
+          <input type="text" placeholder="Pesquisar Contato" v-model="searchQuery" class="mensagem-sidebar__input" />
         </div>
 
         <div class="mensagem-sidebar__list">
-          <button
-            v-for="contact in filteredContacts"
-            :key="contact.id"
-            class="mensagem-contact-card"
-            :class="{ active: contact.id === selectedContact.id }"
-            @click="selectContact(contact.id)"
-          >
+          <button v-for="contact in filteredContacts" :key="contact.id" class="mensagem-contact-card"
+            :class="{ active: contact.id === selectedContact.id }" @click="selectContact(contact.id)">
             <img :src="contact.avatar" :alt="contact.name" class="mensagem-contact-card__avatar" />
             <div class="mensagem-contact-card__text">
               <strong>{{ contact.name }}</strong>
@@ -42,11 +34,7 @@
 
       <section class="mensagem-chat">
         <div class="mensagem-chat__body">
-          <div
-            v-for="message in chatMessages"
-            :key="message.id"
-            :class="['mensagem-bubble', message.type]"
-          >
+          <div v-for="message in chatMessages" :key="message.id" :class="['mensagem-bubble', message.type]">
             <div class="mensagem-bubble__content">
               <p>{{ message.text }}</p>
               <template v-if="message.media">
@@ -61,14 +49,10 @@
           <button class="mensagem-icon-button mensagem-attach" type="button" aria-label="Anexar imagem">
             <img src="../assets/image.svg" alt="Anexar imagem" />
           </button>
-          <input
-            type="text"
-            placeholder="Digite a mensagem"
-            v-model="newMessage"
-            @keyup.enter="sendMessage"
-            class="mensagem-input"
-          />
-          <button class="mensagem-icon-button mensagem-send" type="button" @click="sendMessage" aria-label="Enviar mensagem">
+          <input type="text" placeholder="Digite a mensagem" v-model="newMessage" @keyup.enter="sendMessage"
+            class="mensagem-input" />
+          <button class="mensagem-icon-button mensagem-send" type="button" @click="sendMessage"
+            aria-label="Enviar mensagem">
             <img src="../assets/email.svg" alt="Enviar mensagem" />
           </button>
         </div>
@@ -303,7 +287,7 @@ function requestService() {
 }
 
 .mensagem-sidebar {
-  background: rgba(250,250,250);
+  background: rgba(250, 250, 250);
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   padding: 24px;
   display: flex;
@@ -522,6 +506,40 @@ function requestService() {
   font-size: 16px;
   color: #111827;
   background: transparent;
+}
+
+.mensagem-topbar__action {
+  background: #ffffff;
+  color: #d62828;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border: 2px solid #ffffff;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mensagem-topbar__action:hover {
+  background: #f9f6e6;
+  color: #b51a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.mensagem-topbar__action:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 760px) {
+  .mensagem-topbar__action {
+    padding: 8px 14px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
 }
 
 @media (max-width: 1100px) {

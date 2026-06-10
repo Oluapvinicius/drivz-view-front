@@ -2,48 +2,48 @@
   <PerfilCliente v-if="activeScreen === 'profile'" @back="activeScreen = 'home-cliente'" />
 
   <div v-else class="app-container">
-    
+
     <aside class="sidebar" :class="{ active: sidebarOpen }">
-      
-    <div class="sidebar__top-row">
-      <button class="sidebar__menu-button" @click="$emit('toggleSidebar')"></button>
-      <button class="sidebar__notification" @click="$emit('sidebarAction', 'notifications')">
-        <img src="../assets/notifica.svg" alt="Notificações" class="sidebar__notification-icon">
-      </button>
-    </div>
 
-    <div class="sidebar__profile-block">
-      <img :src="userProfileImage" alt="Foto do usuário" class="sidebar__logo">
-    </div>
+      <div class="sidebar__top-row">
+        <button class="sidebar__menu-button" @click="$emit('toggleSidebar')"></button>
+        <button class="sidebar__notification" @click="$emit('sidebarAction', 'notifications')">
+          <img src="../assets/notifica.svg" alt="Notificações" class="sidebar__notification-icon">
+        </button>
+      </div>
 
-    <div class="sidebar__user-info">
-      <span class="sidebar__title">{{ user.nome || user.nome_cliente || 'Usuário' }}</span>
-      <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
-      <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
-    </div>
+      <div class="sidebar__profile-block">
+        <img :src="userProfileImage" alt="Foto do usuário" class="sidebar__logo">
+      </div>
 
-    <div class="sidebar__divider"></div>
+      <div class="sidebar__user-info">
+        <span class="sidebar__title">{{ user.nome || user.nome_cliente || 'Usuário' }}</span>
+        <p v-if="user?.telefone" class="sidebar__phone">{{ user.telefone }}</p>
+        <p v-if="user?.localizacao" class="sidebar__location">{{ user.localizacao }}</p>
+      </div>
 
-    <nav class="sidebar__menu">
-      <button class="sidebar__item" @click="irParaMensagem()">
-        <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
-        <span class="sidebar__label">Mensagens</span>
-      </button>
-      <button class="sidebar__item" @click="irParaPerfil()">
-        <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
-        <span class="sidebar__label">Editar Perfil</span>
-      </button>
-    </nav>
+      <div class="sidebar__divider"></div>
 
-    <div class="sidebar__footer">
-   
-      <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
-      
-        <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
-      </button>
-    </div>
+      <nav class="sidebar__menu">
+        <button class="sidebar__item" @click="irParaMensagem()">
+          <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
+          <span class="sidebar__label">Mensagens</span>
+        </button>
+        <button class="sidebar__item" @click="irParaPerfil()">
+          <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
+          <span class="sidebar__label">Editar Perfil</span>
+        </button>
+      </nav>
 
-     <div v-if="orderPopupOpen" class="sidebar-popup">
+      <div class="sidebar__footer">
+
+        <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
+
+          <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
+        </button>
+      </div>
+
+      <div v-if="orderPopupOpen" class="sidebar-popup">
         <div class="sidebar-popup__header">
           <h4>Menu</h4>
           <button class="sidebar-popup__close" @click="closeAllPopups">X</button>
@@ -57,15 +57,16 @@
           </button>
         </div>
       </div>
-  
+
     </aside>
 
-    
-    <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen || serviceModalOpen }" @click="closeAllPopups"></div>
 
- 
+    <div class="overlay" :class="{ active: sidebarOpen || orderPopupOpen || serviceModalOpen }" @click="closeAllPopups">
+    </div>
+
+
     <main class="main-content">
-   
+
       <header class="header">
         <div class="header__top">
           <button class="header__menu-toggle" @click="toggleSidebar">
@@ -82,17 +83,12 @@
         <div class="header__bottom">
           <div class="header__search-wrapper">
             <div class="header__search">
-              <input 
-                type="text" 
-                class="header__search-input" 
-                placeholder="Buscar serviços"
-                v-model="searchQuery"
-                @input="filterServices"
-              >
+              <input type="text" class="header__search-input" placeholder="Buscar serviços" v-model="searchQuery"
+                @input="filterServices">
               <div class="header__search-divider">
-              <button class="header__search-btn">
-                <img src="../assets/lupa.svg" alt="Buscar" class="header__search-icon">
-              </button>
+                <button class="header__search-btn">
+                  <img src="../assets/lupa.svg" alt="Buscar" class="header__search-icon">
+                </button>
               </div>
             </div>
 
@@ -103,7 +99,7 @@
         </div>
       </header>
 
-     
+
       <template v-if="activeScreen === 'home'">
 
         <section class="services">
@@ -114,21 +110,16 @@
             </div>
 
             <div v-else class="services__grid">
-              <div
-                v-for="service in visibleServices"
-                :key="service.id"
-                class="service-card"
-                @click="handleServiceClick(service)"
-              >
+              <div v-for="service in visibleServices" :key="service.id" class="service-card"
+                @click="handleServiceClick(service)">
                 <img :src="service.image" :alt="service.title" class="service-card__image">
                 <div class="service-card__content">
                   <h3 class="service-card__title">{{ service.title }}</h3>
                   <p class="service-card__desc">{{ service.description }}</p>
                   <div class="service-card__rating">
                     <span v-for="i in 5" :key="`star-${service.id}-${i}`" class="service-card__star">
-                      {{ i <= (service.rating || 0) ? '★' : '☆' }}
-                    </span>
-                    <span class="service-card__rating-value">{{ (service.rating || 0).toFixed(1) }}</span>
+                      {{ i <= (service.rating || 0) ? '★' : '☆' }} </span>
+                        <span class="service-card__rating-value">{{ (service.rating || 0).toFixed(1) }}</span>
                   </div>
                 </div>
               </div>
@@ -143,8 +134,8 @@
         </button>
       </template>
 
-       <template v-else-if="activeScreen === 'orders'">
-        
+      <template v-else-if="activeScreen === 'orders'">
+
         <section class="services-screen">
           <div class="services-screen__header-actions">
             <button class="services-screen__back-button" @click="activeScreen = 'home'">Voltar</button>
@@ -155,11 +146,7 @@
               <span>Carregando...</span>
             </div>
             <div v-else class="services-screen__grid">
-              <article 
-                v-for="service in visibleOrders" 
-                :key="service.id"
-                class="services-screen__card"
-              >
+              <article v-for="service in visibleOrders" :key="service.id" class="services-screen__card">
                 <div class="services-screen__top">
                   <div class="services-screen__provider">
                     <img :src="service.avatar" :alt="service.provider" class="services-screen__avatar" />
@@ -203,18 +190,23 @@
               <h2 class="service-detail-modal__title">{{ selectedService?.title }}</h2>
               <div class="service-detail-modal__rating">
                 <span v-for="i in 5" :key="i" class="service-detail-modal__star">
-                  {{ i <= (selectedService?.rating || 0) ? '★' : '☆' }}
-                </span>
+                  {{ i <= (selectedService?.rating || 0) ? '★' : '☆' }} </span>
               </div>
               <span class="service-detail-modal__category">{{ selectedService?.category || 'Guincho' }}</span>
             </div>
           </div>
           <p class="service-detail-modal__text">
-            Especializada em serviços de {{ (selectedService?.category || 'Guincho').toLowerCase() }} e assistência veicular, a {{ selectedService?.title }} oferece suporte rápido e seguro para o seu veículo. Com foco na eficiência e no cuidado com o patrimônio do cliente, estamos prontos para atender emergências com profissionalismo e pontualidade.
+            Especializada em serviços de {{ (selectedService?.category || 'Guincho').toLowerCase() }} e assistência
+            veicular,
+            a {{ selectedService?.title }} oferece suporte rápido e seguro para o seu veículo. Com foco na eficiência e
+            no
+            cuidado com o patrimônio do cliente, estamos prontos para atender emergências com profissionalismo e
+            pontualidade.
           </p>
           <!-- <p class="service-detail-modal__text">{{ selectedService?.description }}</p> -->
           <div class="service-detail-modal__footer">
-            <button class="service-detail-modal__button" @click="requestService(selectedService)">Solicitar Serviço</button>
+            <button class="service-detail-modal__button" @click="requestService(selectedService)">Solicitar
+              Serviço</button>
           </div>
         </div>
       </div>
@@ -300,67 +292,70 @@ export default {
     }
   },
   methods: {
-  irParaMensagem () {
-    this.$router.push({ name: 'mensagem-cliente' });
-},
-irParaPerfil () {
-  this.$router.push({ name: 'perfil-cliente' });
-},
-      async fetchServices() {
-        this.isLoading = true;
-        console.log('[HomeCliente] Iniciando fetchServices...');
+    irParaMensagem() {
+      this.$router.push({ name: 'mensagem-cliente' });
+    },
+    irParaPerfil() {
+      this.$router.push({ name: 'perfil-cliente' });
+    },
+    async fetchServices() {
+      this.isLoading = true;
+      console.log('[HomeCliente] Iniciando fetchServices...');
 
-        try {
-          const data = await listarPrestadores();
-          console.log('[HomeCliente] Resposta da API de prestadores:', data);
+      try {
+        const data = await listarPrestadores();
+        console.log('[HomeCliente] Resposta da API de prestadores:', data);
 
-          let prestadores = [];
-          if (Array.isArray(data)) {
-            prestadores = data;
-          } else if (data?.response && Array.isArray(data.response)) {
-            prestadores = data.response;
-          } else if (data?.prestadores && Array.isArray(data.prestadores)) {
-            prestadores = data.prestadores;
-          } else if (data?.data && Array.isArray(data.data)) {
-            prestadores = data.data;
-          }
-
-          console.log('[HomeCliente] Total de prestadores:', prestadores.length);
-
-          if (prestadores.length > 0) {
-            const providersToShow = prestadores.slice(0, 12);
-            const servicePromises = providersToShow.map(async item => {
-              const providerId = item.id_prestador || item.id || item.email;
-              const rawRating = await this.loadProviderRating(providerId);
-              const rating = rawRating > 0 ? rawRating : 5;
-
-              return {
-                id: providerId,
-                contactId: providerId,
-                providerName: item.nome || item.name || 'Serviço',
-                title: item.nome || item.name || 'Serviço',
-                description: item.email || 'Email não informado',
-                providerEmail: item.email || '',
-                location: item.cidade || item.city || 'Local não informado',
-                category: item.categoria || item.category || '',
-                rating,
-                image: profileImg
-              };
-            });
-
-            this.services = await Promise.all(servicePromises);
-            console.log('[HomeCliente] Serviços carregados:', this.services.length);
-          } else {
-            console.warn('[HomeCliente] Nenhum prestador encontrado');
-            this.services = [];
-          }
-        } catch (error) {
-          console.error('[HomeCliente] Erro ao buscar serviços:', error);
-          this.services = [];
-        } finally {
-          setTimeout(() => { this.isLoading = false; }, 600);
+        let prestadores = [];
+        if (Array.isArray(data)) {
+          prestadores = data;
+        } else if (data?.response && Array.isArray(data.response)) {
+          prestadores = data.response;
+        } else if (data?.prestadores && Array.isArray(data.prestadores)) {
+          prestadores = data.prestadores;
+        } else if (data?.data && Array.isArray(data.data)) {
+          prestadores = data.data;
         }
-      },
+
+        console.log('[HomeCliente] Total de prestadores:', prestadores.length);
+
+        if (prestadores.length > 0) {
+          const providersToShow = prestadores.slice(0, 12);
+          const servicePromises = providersToShow.map(async item => {
+            const providerId = item.id_prestador || item.id || item.email;
+            const rawRating = await this.loadProviderRating(providerId);
+            const rating = rawRating > 0 ? rawRating : 5;
+
+            // Captura a imagem da API ou define a padrão caso venha vazia/nula
+            const imagemPrestador = item.img_perfil || item.foto || item.profileImage || defaultProfile;
+
+            return {
+              id: providerId,
+              contactId: providerId,
+              providerName: item.nome || item.name || 'Serviço',
+              title: item.nome || item.name || 'Serviço',
+              description: item.email || 'Email não informado',
+              providerEmail: item.email || '',
+              location: item.cidade || item.city || 'Local não informado',
+              category: item.categoria || item.category || '',
+              rating,
+              image: imagemPrestador // <-- Aqui passamos a imagem dinâmica da API
+            };
+          });
+
+          this.services = await Promise.all(servicePromises);
+          console.log('[HomeCliente] Serviços carregados:', this.services.length);
+        } else {
+          console.warn('[HomeCliente] Nenhum prestador encontrado');
+          this.services = [];
+        }
+      } catch (error) {
+        console.error('[HomeCliente] Erro ao buscar serviços:', error);
+        this.services = [];
+      } finally {
+        setTimeout(() => { this.isLoading = false; }, 600);
+      }
+    },
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
     },
@@ -425,11 +420,11 @@ irParaPerfil () {
       this.sidebarOpen = true;
     },
     handleCallButtonClick() {
-      this.$router.push({ 
-        name: 'configurar-pedido-cliente', 
-        query: { 
+      this.$router.push({
+        name: 'configurar-pedido-cliente',
+        query: {
           tipo: 'emergencia'
-        } 
+        }
       });
     },
     filterServices() {
@@ -535,10 +530,10 @@ irParaPerfil () {
     }
   },
   async mounted() {
-    
+
     this.fetchServices();
     this.fetchPedidos();
-    
+
     const clienteId = userStorage.getUserId();
 
     if (!clienteId) {
@@ -548,24 +543,24 @@ irParaPerfil () {
 
     buscarCliente(clienteId)
       .then(response => {
-        
+
         const dadosFinais = response.response || response;
 
         if (dadosFinais) {
           this.user = { ...this.user, ...dadosFinais };
 
-          
+
           userStorage.setSession(clienteId, dadosFinais, 'cliente');
         }
       })
       .catch(error => {
         console.error('=== ERRO NA REQUISIÇÃO ===', error);
       });
-    
+
     // Configurações de interface
     window.addEventListener('resize', this.updateWindowWidth);
     this.updateWindowWidth();
-    
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && (this.sidebarOpen || this.orderPopupOpen || this.serviceModalOpen)) {
         this.closeAllPopups();
@@ -585,7 +580,8 @@ irParaPerfil () {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
@@ -1046,6 +1042,7 @@ html, body {
   background: rgba(214, 40, 40, 0.75);
   border-radius: 999px;
 }
+
 .back-button {
   width: 28px;
   height: 28px;
@@ -1208,7 +1205,7 @@ html, body {
   background-color: #e0e0e0;
 }
 
-.header__menu-toggle, 
+.header__menu-toggle,
 
 .header__refresh {
   background: none;
@@ -1224,9 +1221,10 @@ html, body {
   min-width: 52px;
   min-height: 52px;
   align-self: flex-start;
-  
+
 }
-.header__menu-toggle img{
+
+.header__menu-toggle img {
   width: 50px;
   height: 50px;
 }
@@ -1444,7 +1442,7 @@ html, body {
   background: #27AE60;
 }
 
-  .call-button {
+.call-button {
   position: relative;
   width: min(420px, calc(100% - 180px));
   min-height: 91px;
@@ -1467,12 +1465,12 @@ html, body {
 }
 
 .call-button:hover {
-    transform: scale(1.02);
-    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+  transform: scale(1.02);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
 }
 
 .call-button:active {
-    transform: scale(0.98);
+  transform: scale(0.98);
 }
 
 .services-screen {
@@ -1890,6 +1888,7 @@ html, body {
   color: #D62828;
   font-size: 1.2rem;
 }
+
 .spinner {
   border: 4px solid #f3f3f3;
   border-top: 4px solid #D62828;
@@ -1899,8 +1898,14 @@ html, body {
   animation: spin 1s linear infinite;
   margin-bottom: 12px;
 }
+
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
