@@ -211,7 +211,7 @@
   </div>
 </template> -->
 
-<template>
+<!-- <template>
   <div class="order-tracking-container">
     <div id="map" class="map-background"></div>
 
@@ -409,6 +409,206 @@
     </div>
 
   </div>
+</template> -->
+
+<template>
+  <div class="order-tracking-container">
+    <div id="map" class="map-background"></div>
+
+    <div class="tracking-card" :class="{ 'expanded': currentStep === 3 }">
+
+      <div class="timeline-section">
+        <div class="step-container">
+          <div class="step-point" :class="{ active: currentStep >= 1 }">
+            <img src="../assets/lupaIcon.svg" alt="Buscando" class="step-icon" />
+          </div>
+          <span class="step-label" :class="{ active: currentStep >= 1 }">Buscando</span>
+        </div>
+        <div class="line-wrapper">
+          <div class="step-line" :class="{ active: currentStep >= 2 }"></div>
+        </div>
+        <div class="step-container">
+          <div class="step-point" :class="{ active: currentStep >= 2 }">
+            <img src="../assets/carroicon.svg" alt="A caminho" class="step-icon" />
+          </div>
+          <span class="step-label" :class="{ active: currentStep >= 2 }">A caminho</span>
+        </div>
+        <div class="line-wrapper">
+          <div class="step-line" :class="{ active: currentStep >= 3 }"></div>
+        </div>
+        <div class="step-container">
+          <div class="step-point" :class="{ active: currentStep >= 3 }">
+            <img src="../assets/bandeira.svg" alt="Viagem" class="step-icon" />
+          </div>
+          <span class="step-label" :class="{ active: currentStep >= 3 }">Avaliação</span>
+        </div>
+      </div>
+
+      <template v-if="currentStep === 1">
+        <div class="container-down">
+          <div class="addresses-section">
+            <div class="address-item">
+              <div class="address-icon origin"></div>
+              <div class="address-content">
+                <span class="address-label">Origem</span>
+                <span class="address-text">{{ endereçoOrigem }}</span>
+              </div>
+            </div>
+            <div class="address-item">
+              <div class="address-icon destination"></div>
+              <div class="address-content">
+                <span class="address-label">Destino</span>
+                <span class="address-text">{{ endereçoDestino }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="search-status">
+            <span class="status-text">Procurando motorista...</span>
+            <span class="demand-badge">Alta demanda</span>
+          </div>
+
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
+          </div>
+
+          <div class="tip-box">
+            <img src="../assets/lampada.svg" alt="Dica" class="tip-icon" />
+            <span class="tip-text">Dica: Mantenha o app aberto para agilizar a conexão</span>
+          </div>
+        </div>
+      </template>
+
+      <template v-if="currentStep === 2">
+        <div class="step2-Container">
+          <div class="driver-profile">
+            <div class="driver-photo">
+              <img :src="driver.avatar" :alt="driver.name" />
+            </div>
+            <div class="driver-center-content">
+              <h3 class="driver-name">{{ driver.name }}</h3>
+              <div class="plate-badge">{{ driver.plate }}</div>
+            </div>
+            <div class="driver-rating-badge">
+              <span class="rating-star">★</span>
+              <span class="rating-value">{{ driver.rating }}</span>
+            </div>
+            <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
+              <img src="../assets/icon.svg" alt="Chat" />
+            </button>
+          </div>
+
+          <div class="metrics-section">
+            <div class="metric-item">
+              <span class="metric-label">DISTÂNCIA</span>
+              <span class="metric-value">{{ driver.distance }}</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+              <span class="metric-label">CHEGADA EM</span>
+              <span class="metric-value">{{ driver.eta }}</span>
+            </div>
+          </div>
+
+          <div class="addresses-section">
+            <div class="address-item">
+              <div class="address-icon origin"></div>
+              <div class="address-content">
+                <span class="address-label">Origem</span>
+                <span class="address-text">{{ endereçoOrigem }}</span>
+              </div>
+            </div>
+            <div class="address-item">
+              <div class="address-icon destination"></div>
+              <div class="address-content">
+                <span class="address-label">Destino</span>
+                <span class="address-text">{{ endereçoDestino }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-if="currentStep === 3">
+        <div class="evaluation-container">
+          <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
+          <div class="evaluation-profile">
+            <div class="eval-driver-photo">
+              <img :src="driver.avatar" :alt="driver.name" />
+            </div>
+            <h3 class="eval-driver-name">{{ driver.name }}</h3>
+            <span class="eval-driver-role">Prestador</span>
+          </div>
+          <div class="rating-stars">
+            <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= userRating }"
+              @click="userRating = star">
+              ★
+            </span>
+          </div>
+
+          <div v-if="erroAvaliacao" class="error-message-box">
+            {{ erroAvaliacao }}
+          </div>
+
+          <div class="comment-section">
+            <label class="comment-label">Fazer comentário (Opcional)</label>
+            <textarea v-model="userComment" class="comment-input"
+              placeholder="Serviço de altissima qualidade!"></textarea>
+          </div>
+          <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
+        </div>
+      </template>
+      <div v-if="currentStep !== 3" class="cancel-button-wrapper">
+        <button class="action-button cancel btn-global-cancel" @click="showCancelModal = true">
+          Cancelar Solicitação
+        </button>
+      </div>
+    </div>
+
+    <div v-if="showCancelModal" class="custom-modal-overlay" @click="showCancelModal = false">
+      <div class="custom-modal-box" @click.stop>
+        <h3 class="modal-title">Deseja mesmo cancelar?</h3>
+        <p class="modal-text">Esta ação não poderá ser desfeita e sua busca por um prestador será encerrada.</p>
+        <div class="modal-actions">
+          <button class="btn-keep" @click="showCancelModal = false">Continuar com o pedido</button>
+          <button class="btn-confirm-cancel" @click="confirmarCancelamento">Sim, cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showChatModal" class="chat-modal-overlay" @click="toggleChatModal">
+      <div class="chat-modal" @click.stop>
+        <div class="chat-header">
+          <button class="back-button" @click="toggleChatModal">
+            <img src="../assets/arrow.png" class="back-arrow" alt="">
+          </button>
+          <div class="chat-driver-info">
+            <img :src="driver.avatar" :alt="driver.name" class="chat-driver-photo" />
+            <div class="chat-driver-details">
+              <h3 class="chat-driver-name">{{ driver.name }}</h3>
+              <span class="chat-driver-role">★ {{ driver.rating }} • Prestador</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-messages">
+          <div v-for="msg in mensagensChat" :key="msg.id"
+            :class="['message-group', msg.tipo === 'driver' ? 'driver-message' : 'client-message']">
+            <div class="message-bubble">{{ msg.texto }}</div>
+            <span class="message-time">{{ msg.hora }}</span>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" placeholder="Mensagem" v-model="novaMensagem"
+            @keyup.enter="enviarMensagem" />
+          <button class="chat-send-button" @click="enviarMensagem">
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </template>
 
 <script>
@@ -484,11 +684,12 @@ export default {
       searchInterval: null,
       simulationInterval: null,
       driver: {
-        name: 'Carregando...',
-        rating: '--',
-        plate: '---',
+        name: 'Guinchos Mariano',
+        rating: '4.0',
+        plate: 'BDA-4132',
         distance: '-- km',
-        eta: '-- min'
+        eta: '-- min',
+        avatar: new URL('../assets/pessoa.jpg', import.meta.url).href
       },
       novaMensagem: '',
       mensagensChat: [
@@ -502,7 +703,6 @@ export default {
     this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
     this.endereçoDestino = txtDestino || 'Não informado';
 
-    // Dentro do mounted() da sua tela de acompanhamento (mapa):
     const origin = [parseFloat(origemLng), parseFloat(origemLat)];
     const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
 
