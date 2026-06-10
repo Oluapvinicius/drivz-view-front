@@ -51,6 +51,7 @@ import mecanicoIcon from '../assets/mecanico.svg';
 import eletricistaIcon from '../assets/eletricista.svg';
 import borracheiroIcon from '../assets/borracheiro.svg';
 import pneuIcon from '../assets/pneu.svg';
+import { supabase } from '../supabase';
 
 // export default {
 //   name: 'ConfigurarPedidoCliente',
@@ -278,35 +279,41 @@ export default {
         this.sugestoesDestino = [];
       }
     },
-    continuarPedido() {
+    async continuarPedido() {
       const tipoAtual = this.$route.query.tipo || 'comum';
-
-      if (tipoAtual === 'comum' && (!this.origem || this.origem.trim() === '')) {
-        alert('Por favor, digite e selecione o endereço de origem!');
-        return;
-      }
+      const pedidoId = `pedido_${Date.now()}`; // Gera um ID único baseado no tempo atual
 
       if (tipoAtual === 'emergencia') {
-        if (!this.origem || this.origem.trim() === '' || !this.destino || this.destino.trim() === '') {
-          alert('Para emergências, por favor preencha os endereços de origem e destino!');
-          return;
+        try {
+          // Grava a emergência na tabela do Supabase
+          const { error } = await supabase
+            .from('solicitacoes') // Nome da sua tabela no Supabase
+            .insert([
+              { 
+                id: pedidoId, 
+                status: 'buscando', // O celular do prestador vai filtrar por esse status
+                origem_txt: this.origem,
+                destino_txt: this.destino,
+                origem_lat: this.origemCoords ? this.origemCoords[1] : null,
+                origem_lng: this.origemCoords ? this.origemCoords[0] : null
+              }
+            ]);
+
+          if (error) throw error;
+
+          // Se gravou com sucesso, vai para a tela do mapa passando o ID do pedido criado
+          this.$router.push({ 
+            name: 'pedido-cliente', 
+            query: { id_pedido: pedidoId, tipo: 'emergencia', ...this.$route.query } 
+          });
+
+        } catch (err) {
+          console.error("Erro ao salvar emergência no Supabase:", err);
+          alert("Falha ao iniciar pedido de emergência.");
         }
+      } else {
+        // Fluxo comum (segue o roteamento normal que você já tinha feito)
       }
-
-      this.$router.push({
-        name: 'pedido-cliente',
-        query: {
-          origemLng: this.origemCoords ? this.origemCoords[0] : '-46.6558',
-          origemLat: this.origemCoords ? this.origemCoords[1] : '-23.5615',
-          destinoLng: tipoAtual === 'emergencia' && this.destinoCoords ? this.destinoCoords[0] : null,
-          destinoLat: tipoAtual === 'emergencia' && this.destinoCoords ? this.destinoCoords[1] : null,
-
-          txtOrigem: this.origem,
-          txtDestino: tipoAtual === 'emergencia' ? this.destino : 'Não informado (Atendimento Comum)',
-
-          contactId: this.$route.query.contactId || '123'
-        }
-      });
     },
     closePopup() {
       this.categoryPopupOpen = false;

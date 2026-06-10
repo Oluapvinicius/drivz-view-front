@@ -464,14 +464,182 @@
 //   }
 // };
 
-import { MapboxService } from '@/requests/mapboxService';
-import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prestador';
+// import { MapboxService } from '@/requests/mapboxService';
+// import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prestador';
+
+// export default {
+//   name: 'PedidoCliente',
+//   data() {
+//     return {
+//       currentStep: 1,
+//       endereçoOrigem: 'Buscando endereço...',
+//       endereçoDestino: 'Buscando endereço...',
+//       mapboxService: null,
+//       showChatModal: false,
+//       showCancelModal: false,
+//       userRating: 0,
+//       userComment: '',
+//       erroAvaliacao: '',
+//       searchProgress: 0,
+//       searchInterval: null,
+//       simulationInterval: null,
+//       driver: {
+//         name: 'Carregando...',
+//         rating: '--',
+//         plate: '---',
+//         distance: '-- km',
+//         eta: '-- min'
+//       },
+//       novaMensagem: '',
+//       mensagensChat: [
+//         { id: 1, tipo: 'driver', texto: 'Olá! Já recebi seu pedido.', hora: '14:31' },
+//       ]
+//     };
+//   },
+//   async mounted() {
+//     const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId } = this.$route.query;
+
+//     this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
+//     this.endereçoDestino = txtDestino || 'Não informado';
+
+//     // Dentro do mounted() da sua tela de acompanhamento (mapa):
+//     const origin = [parseFloat(origemLng), parseFloat(origemLat)];
+//     const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
+
+//     this.mapboxService = new MapboxService();
+
+//     if (temDestino) {
+//       const destination = [parseFloat(destinoLng), parseFloat(destinoLat)];
+
+//       this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
+//         this.driver.distance = dadosCalculados.distancia;
+//         this.driver.eta = dadosCalculados.tempo;
+//         this.iniciarLoadingBusca();
+//       });
+//     } else {
+//       this.mapboxService.initMapApenasOrigem('map', origin, () => {
+//         this.driver.distance = '-- km';
+//         this.driver.eta = 'Calculando...';
+//         this.iniciarLoadingBusca();
+//       });
+//     }
+//   },
+//   beforeDestroy() {
+//     if (this.mapboxService) this.mapboxService.destroyMap();
+//     clearInterval(this.searchInterval);
+//     clearInterval(this.simulationInterval);
+//   },
+//   methods: {
+//     iniciarLoadingBusca() {
+//       this.searchProgress = 0;
+
+//       this.searchInterval = setInterval(() => {
+//         if (this.searchProgress >= 100) {
+//           clearInterval(this.searchInterval);
+
+//           this.currentStep = 2;
+//           this.iniciarDeslocamentoLento();
+//           return;
+//         }
+
+//         this.searchProgress += 2;
+//       }, 140);
+//     },
+
+//     iniciarDeslocamentoLento() {
+//       let distanciaAtual = parseFloat(this.driver.distance) || 6.2;
+//       let tempoAtual = parseInt(this.driver.eta.includes('h') ? (parseInt(this.driver.eta.split('h')[0]) * 60 + parseInt(this.driver.eta.split('h')[1])) : this.driver.eta) || 15;
+
+//       this.simulationInterval = setInterval(() => {
+//         if (distanciaAtual <= 0.2 || tempoAtual <= 1) {
+//           clearInterval(this.simulationInterval);
+//           this.driver.distance = '0 km';
+//           this.driver.eta = 'Chegou';
+
+//           setTimeout(() => {
+//             this.currentStep = 3;
+//           }, 1500);
+//           return;
+//         }
+
+//         distanciaAtual = (distanciaAtual - 0.4).toFixed(1);
+//         tempoAtual = tempoAtual - 1;
+
+//         this.driver.distance = `${Math.max(0, distanciaAtual)} km`;
+//         this.driver.eta = this.formatarTempo(Math.max(1, tempoAtual));
+//       }, 4000);
+//     },
+//     toggleChatModal() {
+//       this.showChatModal = !this.showChatModal;
+//     },
+//     formatarTempo(minutosTotais) {
+//       if (minutosTotais >= 60) {
+//         const horas = Math.floor(minutosTotais / 60);
+//         const minutosRestantes = minutosTotais % 60;
+//         const minFormatado = minutosRestantes < 10 ? `0${minutosRestantes}` : minutosRestantes;
+//         return `${horas}h ${minFormatado}min`;
+//       }
+//       return `${minutosTotais} min`;
+//     },
+//     confirmarCancelamento() {
+//       this.showCancelModal = false;
+//       this.$router.push({ name: 'home-cliente' });
+//     },
+
+//     submitEvaluation() {
+//       if (this.userRating === 0) {
+//         this.erroAvaliacao = '⚠️ Por favor, selecione ao menos uma estrela para avaliar o serviço.';
+//         return;
+//       }
+
+//       this.erroAvaliacao = '';
+
+//       const dadosAvaliacao = {
+//         prestadorId: this.$route.query.contactId,
+//         nota: this.userRating,
+//         comentario: this.userComment
+//       };
+
+//       console.log('Avaliação enviada com sucesso:', dadosAvaliacao);
+//       this.$router.push({ name: 'home-cliente' });
+//     },
+//     enviarMensagem() {
+//       const textoFormatado = this.novaMensagem.trim();
+//       if (!textoFormatado) return;
+
+//       const agora = new Date();
+//       const horaFormatada = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+//       this.mensagensChat.push({
+//         id: Date.now(),
+//         tipo: 'client',
+//         texto: textoFormatado,
+//         hora: horaFormatada
+//       });
+
+//       this.novaMensagem = '';
+
+//       setTimeout(() => {
+//         this.mensagensChat.push({
+//           id: Date.now() + 1,
+//           tipo: 'driver',
+//           texto: 'Combinado! Estou chegando.',
+//           hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+//         });
+//       }, 1500);
+//     },
+//   }
+// };
+
+import { supabase } from '../supabase';
+import MapboxService from '../services/MapboxService';
 
 export default {
   name: 'PedidoCliente',
   data() {
     return {
       currentStep: 1,
+      idPedidoAtual: null,
       endereçoOrigem: 'Buscando endereço...',
       endereçoDestino: 'Buscando endereço...',
       mapboxService: null,
@@ -482,27 +650,25 @@ export default {
       erroAvaliacao: '',
       searchProgress: 0,
       searchInterval: null,
-      simulationInterval: null,
+      supabaseChannel: null,
       driver: {
-        name: 'Carregando...',
+        name: 'Buscando prestador...',
         rating: '--',
         plate: '---',
         distance: '-- km',
         eta: '-- min'
       },
       novaMensagem: '',
-      mensagensChat: [
-        { id: 1, tipo: 'driver', texto: 'Olá! Já recebi seu pedido.', hora: '14:31' },
-      ]
+      mensagensChat: []
     };
   },
   async mounted() {
-    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId } = this.$route.query;
+    const { origemLng, originLat, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, id_pedido } = this.$route.query;
 
+    this.idPedidoAtual = id_pedido;
     this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
     this.endereçoDestino = txtDestino || 'Não informado';
 
-    // Dentro do mounted() da sua tela de acompanhamento (mapa):
     const origin = [parseFloat(origemLng), parseFloat(origemLat)];
     const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
 
@@ -514,61 +680,80 @@ export default {
       this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
         this.driver.distance = dadosCalculados.distancia;
         this.driver.eta = dadosCalculados.tempo;
-        this.iniciarLoadingBusca();
+        
+        this.iniciarAnimacaoLoading();
       });
     } else {
       this.mapboxService.initMapApenasOrigem('map', origin, () => {
         this.driver.distance = '-- km';
         this.driver.eta = 'Calculando...';
-        this.iniciarLoadingBusca();
+        this.iniciarAnimacaoLoading();
       });
     }
+
+    if (this.idPedidoAtual) {
+      this.escutarPedidoNoSupabase();
+    }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.mapboxService) this.mapboxService.destroyMap();
     clearInterval(this.searchInterval);
-    clearInterval(this.simulationInterval);
+    
+    if (this.supabaseChannel) {
+      supabase.removeChannel(this.supabaseChannel);
+    }
   },
   methods: {
-    iniciarLoadingBusca() {
+    iniciarAnimacaoLoading() {
       this.searchProgress = 0;
-
       this.searchInterval = setInterval(() => {
-        if (this.searchProgress >= 100) {
+        if (this.searchProgress < 96) {
+          this.searchProgress += 2;
+        } else {
           clearInterval(this.searchInterval);
-
-          this.currentStep = 2;
-          this.iniciarDeslocamentoLento();
-          return;
         }
-
-        this.searchProgress += 2;
-      }, 140);
+      }, 200);
     },
 
-    iniciarDeslocamentoLento() {
-      let distanciaAtual = parseFloat(this.driver.distance) || 6.2;
-      let tempoAtual = parseInt(this.driver.eta.includes('h') ? (parseInt(this.driver.eta.split('h')[0]) * 60 + parseInt(this.driver.eta.split('h')[1])) : this.driver.eta) || 15;
+    escutarPedidoNoSupabase() {
+      this.supabaseChannel = supabase
+        .channel(`acompanhamento_${this.idPedidoAtual}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'solicitacoes',
+            filter: `id=eq.${this.idPedidoAtual}`
+          },
+          (payload) => {
+            console.log('Update detectado pelo Supabase:', payload.new);
+            const pedido = payload.new;
 
-      this.simulationInterval = setInterval(() => {
-        if (distanciaAtual <= 0.2 || tempoAtual <= 1) {
-          clearInterval(this.simulationInterval);
-          this.driver.distance = '0 km';
-          this.driver.eta = 'Chegou';
+            if (pedido.status === 'a_caminho' && this.currentStep === 1) {
+              clearInterval(this.searchInterval);
+              this.searchProgress = 100;
+              
+              this.driver.name = pedido.prestador_nome || 'José da Silva';
+              this.driver.plate = pedido.prestador_placa || 'ABC-1234';
+              this.driver.rating = pedido.prestador_nota || '4.9';
+              
+              this.currentStep = 2;
+            }
 
-          setTimeout(() => {
-            this.currentStep = 3;
-          }, 1500);
-          return;
-        }
-
-        distanciaAtual = (distanciaAtual - 0.4).toFixed(1);
-        tempoAtual = tempoAtual - 1;
-
-        this.driver.distance = `${Math.max(0, distanciaAtual)} km`;
-        this.driver.eta = this.formatarTempo(Math.max(1, tempoAtual));
-      }, 4000);
+            if (pedido.status === 'concluido' && this.currentStep === 2) {
+              this.driver.distance = '0 km';
+              this.driver.eta = 'Chegou';
+              
+              setTimeout(() => {
+                this.currentStep = 3;
+              }, 1000);
+            }
+          }
+        )
+        .subscribe();
     },
+
     toggleChatModal() {
       this.showChatModal = !this.showChatModal;
     },
@@ -591,7 +776,6 @@ export default {
         this.erroAvaliacao = '⚠️ Por favor, selecione ao menos uma estrela para avaliar o serviço.';
         return;
       }
-
       this.erroAvaliacao = '';
 
       const dadosAvaliacao = {
@@ -603,6 +787,7 @@ export default {
       console.log('Avaliação enviada com sucesso:', dadosAvaliacao);
       this.$router.push({ name: 'home-cliente' });
     },
+    
     enviarMensagem() {
       const textoFormatado = this.novaMensagem.trim();
       if (!textoFormatado) return;
@@ -627,7 +812,7 @@ export default {
           hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
       }, 1500);
-    },
+    }
   }
 };
 </script>
