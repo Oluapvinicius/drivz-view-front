@@ -37,3 +37,49 @@ export async function buscarPedidoPorId(id) {
     });
     return response.json();
 }
+
+// ========== EMERGÊNCIA ENDPOINTS ==========
+
+export async function listarEmergenciasPendentes() {
+    const url = "http://localhost:8080/v1/drivez/emergencias";
+    const response = await fetch(url, {
+        method: "GET",
+    });
+    return response.json();
+}
+
+export async function buscarEmergenciaPendente(idPrestador) {
+    const url = `http://localhost:8080/v1/drivez/emergencias/pendente/${idPrestador}`;
+    const response = await fetch(url, {
+        method: "GET",
+    });
+    return response.json();
+}
+
+export async function aceitarEmergencia(idPedido, idPrestador) {
+    const url = `http://localhost:8080/v1/drivez/emergencias/aceitar/${idPedido}/${idPrestador}`;
+    const response = await fetch(url, {
+        method: "POST",
+    });
+    return response.json();
+}
+
+export async function solicitarEmergencia(dadosEmergencia) {
+    const url = "http://localhost:8080/v1/drivez/pedido";
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(dadosEmergencia)
+    });
+    return response.json();
+}
+
+export async function verificarEmergenciaPrestador(idPedido) {
+    const url = `http://localhost:8080/v1/drivez/pedido/${idPedido}`;
+    const response = await fetch(url, {
+        method: "GET",
+    });
+    return response.json();
+}

@@ -84,69 +84,69 @@ const selectedContactId = ref(1);
 const newMessage = ref('');
 
 const contacts = [
-  {
-    id: 1,
-    name: 'João Silva',
-    avatar: 'https://via.placeholder.com/150',
-    lastMessage: 'Chegou mais rápido que o esperado',
-  },
-  {
-    id: 2,
-    name: 'Maria Santos',
-    avatar: 'https://via.placeholder.com/150',
-    lastMessage: 'Você chega em quanto tempo?',
-  },
-  {
-    id: 3,
-    name: 'Carlos Oliveira',
-    avatar: 'https://via.placeholder.com/150',
-    lastMessage: 'Obrigado pela rapidez!',
-  },
-  {
-    id: 4,
-    name: 'Ana Costa',
-    avatar: 'https://via.placeholder.com/150',
-    lastMessage: 'Solicitação de um reboque urgente',
-  }
+  // {
+  //   id: 1,
+  //   name: 'João Silva',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Chegou mais rápido que o esperado',
+  // },
+  // {
+  //   id: 2,
+  //   name: 'Maria Santos',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Você chega em quanto tempo?',
+  // },
+  // {
+  //   id: 3,
+  //   name: 'Carlos Oliveira',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Obrigado pela rapidez!',
+  // },
+  // {
+  //   id: 4,
+  //   name: 'Ana Costa',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Solicitação de um reboque urgente',
+  // }
 ];
 
 const chats = [
-  {
-    contactId: 1,
-    messages: [
-      { id: 1, type: 'incoming', text: 'Olá, você consegue fazer um reboque agora?', time: '14:20' },
-      { id: 2, type: 'outgoing', text: 'Opa, sim! Já estou saindo para lá', time: '14:22' },
-      { id: 3, type: 'incoming', text: 'Perfeito, obrigado!', time: '14:25' },
-      { id: 4, type: 'incoming', text: 'Chegou mais rápido que o esperado', time: '14:50' }
-    ]
-  },
-  {
-    contactId: 2,
-    messages: [
-      { id: 1, type: 'incoming', text: 'Oi, preciso de um reboque urgente', time: '16:10' },
-      { id: 2, type: 'outgoing', text: 'Qual é a sua localização?', time: '16:11' },
-      { id: 3, type: 'incoming', text: 'Estou na Rua Oscar Freire, 500', time: '16:12' },
-      { id: 4, type: 'outgoing', text: 'Chegando em 5 minutos', time: '16:13' },
-      { id: 5, type: 'incoming', text: 'Você chega em quanto tempo?', time: '16:15' }
-    ]
-  },
-  {
-    contactId: 3,
-    messages: [
-      { id: 1, type: 'incoming', text: 'Olá, tudo bem?', time: '10:30' },
-      { id: 2, type: 'outgoing', text: 'Tudo certo! Qual é a necessidade?', time: '10:32' },
-      { id: 3, type: 'incoming', text: 'Meu carro pifou na Av. Faria Lima', time: '10:35' },
-      { id: 4, type: 'outgoing', text: 'Já estou indo, 10 minutos', time: '10:36' },
-      { id: 5, type: 'incoming', text: 'Obrigado pela rapidez!', time: '11:00' }
-    ]
-  },
-  {
-    contactId: 4,
-    messages: [
-      { id: 1, type: 'incoming', text: 'Oi, você atende reboque na Av. Brasil?', time: '17:00' },
-      { id: 2, type: 'outgoing', text: 'Sim, atendo sim! Qual é o endereço exato?', time: '17:01' }
-    ]
-  }
+  // {
+  //   contactId: 1,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Olá, você consegue fazer um reboque agora?', time: '14:20' },
+  //     { id: 2, type: 'outgoing', text: 'Opa, sim! Já estou saindo para lá', time: '14:22' },
+  //     { id: 3, type: 'incoming', text: 'Perfeito, obrigado!', time: '14:25' },
+  //     { id: 4, type: 'incoming', text: 'Chegou mais rápido que o esperado', time: '14:50' }
+  //   ]
+  // },
+  // {
+  //   contactId: 2,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Oi, preciso de um reboque urgente', time: '16:10' },
+  //     { id: 2, type: 'outgoing', text: 'Qual é a sua localização?', time: '16:11' },
+  //     { id: 3, type: 'incoming', text: 'Estou na Rua Oscar Freire, 500', time: '16:12' },
+  //     { id: 4, type: 'outgoing', text: 'Chegando em 5 minutos', time: '16:13' },
+  //     { id: 5, type: 'incoming', text: 'Você chega em quanto tempo?', time: '16:15' }
+  //   ]
+  // },
+  // {
+  //   contactId: 3,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Olá, tudo bem?', time: '10:30' },
+  //     { id: 2, type: 'outgoing', text: 'Tudo certo! Qual é a necessidade?', time: '10:32' },
+  //     { id: 3, type: 'incoming', text: 'Meu carro pifou na Av. Faria Lima', time: '10:35' },
+  //     { id: 4, type: 'outgoing', text: 'Já estou indo, 10 minutos', time: '10:36' },
+  //     { id: 5, type: 'incoming', text: 'Obrigado pela rapidez!', time: '11:00' }
+  //   ]
+  // },
+  // {
+  //   contactId: 4,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Oi, você atende reboque na Av. Brasil?', time: '17:00' },
+  //     { id: 2, type: 'outgoing', text: 'Sim, atendo sim! Qual é o endereço exato?', time: '17:01' }
+  //   ]
+  // }
 ];
 
 const selectedContact = computed(() => {

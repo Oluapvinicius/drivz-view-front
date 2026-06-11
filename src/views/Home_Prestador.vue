@@ -149,14 +149,14 @@
 
         <div class="right-sidebar__list">
           <div v-for="request in nearbyRequests" :key="request.id" class="request-card"
-            @click="openRequestModal(request)">
+            @click="irParaMensagem">
             <div class="request-card__top">
               <div class="request-card__avatar">
                 <img :src="request.avatar" :alt="request.name" />
               </div>
               <div class="request-card__header">
                 <h3 class="request-card__name">{{ request.name }}</h3>
-                <p class="request-card__distance">{{ request.distance }}</p>
+                <p class="request-card__distance">{{ request.message }}</p>
               </div>
             </div>
             <div class="request-card__rating">
@@ -463,6 +463,8 @@ export default {
       }
     },
 
+
+
     async aceitarPedido() {
       try {
         // const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
@@ -474,6 +476,14 @@ export default {
       } catch (error) {
         console.error("Erro ao aceitar a solicitação direta:", error);
       }
+    },
+    irParaMensagem(){
+      try {
+        this.$router.push({ name: 'mensagens-prestador' })
+      } catch (error) {
+        console.error("Erro ao ir para a mensagem:", error);
+      }
+      
     },
 
     recusarPedido() {

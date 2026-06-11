@@ -557,7 +557,6 @@ export default {
         console.error('=== ERRO NA REQUISIÇÃO ===', error);
       });
 
-    // Configurações de interface
     window.addEventListener('resize', this.updateWindowWidth);
     this.updateWindowWidth();
 

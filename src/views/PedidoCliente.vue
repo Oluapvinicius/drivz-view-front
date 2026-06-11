@@ -478,6 +478,46 @@
         </div>
       </template>
 
+      <template v-if="currentStep === 1">
+        <div v-if="tipoPedido === 'emergencia' && aguardandoAceite" class="emergency-container">
+          <div class="emergency-icon-top">
+            <img src="../assets/emergencia-cima.svg" alt="Emergência" class="emergency-icon-img" />
+          </div>
+
+          <div class="emergency-waiting">
+            <h2 class="emergency-waiting-title">⏳ Aguardando Prestador</h2>
+            <p class="emergency-waiting-text">Sua solicitação foi enviada para os prestadores disponíveis</p>
+
+            <div class="emergency-pulse-animation">
+              <div class="pulse-dot"></div>
+              <div class="pulse-dot"></div>
+              <div class="pulse-dot"></div>
+            </div>
+
+            <div class="emergency-locations-waiting">
+              <div class="emergency-location-item">
+                <img src="../assets/origem.svg" alt="Origem" class="emergency-location-icon" />
+                <div>
+                  <span class="emergency-location-label">ORIGEM</span>
+                  <p class="emergency-location-text">{{ endereçoOrigem }}</p>
+                </div>
+              </div>
+              <div class="emergency-location-item">
+                <img src="../assets/destino.svg" alt="Destino" class="emergency-location-icon" />
+                <div>
+                  <span class="emergency-location-label">DESTINO</span>
+                  <p class="emergency-location-text">{{ endereçoDestino }}</p>
+                </div>
+              </div>
+            </div>
+
+            <button class="emergency-cancel-btn" @click="cancelarEmergencia">
+              Cancelar Solicitação
+            </button>
+          </div>
+        </div>
+      </template>
+
       <template v-if="currentStep === 2">
         <div class="step2-Container">
           <div class="driver-profile">
@@ -666,6 +706,8 @@
 
 import { MapboxService } from '@/requests/mapboxService';
 import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prestador';
+import { solicitarEmergencia, verificarEmergenciaPrestador, aceitarEmergencia } from '@/requests/pedido';
+import { userStorage } from '@/utils/userStorage';
 
 export default {
   name: 'PedidoCliente',
@@ -683,6 +725,11 @@ export default {
       searchProgress: 0,
       searchInterval: null,
       simulationInterval: null,
+      tipoPedido: 'comum',
+      idPedidoEmergencia: null,
+      aguardandoAceite: false,
+      pollingInterval: null,
+      descricaoEmergencia: '',
       driver: {
         name: 'Guinchos Mariano',
         rating: '4.0',
@@ -698,10 +745,11 @@ export default {
     };
   },
   async mounted() {
-    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId } = this.$route.query;
+    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId, tipo } = this.$route.query;
 
     this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
     this.endereçoDestino = txtDestino || 'Não informado';
+    this.tipoPedido = tipo === 'emergencia' ? 'emergencia' : 'comum';
 
     const origin = [parseFloat(origemLng), parseFloat(origemLat)];
     const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
@@ -714,13 +762,23 @@ export default {
       this.mapboxService.initMap('map', origin, destination, (dadosCalculados) => {
         this.driver.distance = dadosCalculados.distancia;
         this.driver.eta = dadosCalculados.tempo;
-        this.iniciarLoadingBusca();
+        
+        if (this.tipoPedido === 'emergencia') {
+          this.solicitarEmergencia();
+        } else {
+          this.iniciarLoadingBusca();
+        }
       });
     } else {
       this.mapboxService.initMapApenasOrigem('map', origin, () => {
         this.driver.distance = '-- km';
         this.driver.eta = 'Calculando...';
-        this.iniciarLoadingBusca();
+        
+        if (this.tipoPedido === 'emergencia') {
+          this.solicitarEmergencia();
+        } else {
+          this.iniciarLoadingBusca();
+        }
       });
     }
   },
@@ -728,6 +786,7 @@ export default {
     if (this.mapboxService) this.mapboxService.destroyMap();
     clearInterval(this.searchInterval);
     clearInterval(this.simulationInterval);
+    clearInterval(this.pollingInterval);
   },
   methods: {
     iniciarLoadingBusca() {
@@ -827,6 +886,124 @@ export default {
           hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
       }, 1500);
+    },
+
+    async solicitarEmergencia() {
+      try {
+        console.log('[PedidoCliente] Solicitando emergência com dados:', {
+          origem: this.endereçoOrigem,
+          destino: this.endereçoDestino
+        });
+
+        const clienteId = userStorage.getUserId();
+        if (!clienteId) {
+          console.error('[PedidoCliente] Sem ID de cliente');
+          return;
+        }
+
+        const novaEmergencia = {
+          id_cliente: clienteId,
+          endereco_origem: this.endereçoOrigem,
+          endereco_destino: this.endereçoDestino,
+          descricao: this.descricaoEmergencia || '',
+          tipo_pedido: 'emergencia'
+        };
+
+        const resposta = await solicitarEmergencia(novaEmergencia);
+        console.log('[PedidoCliente] Resposta da emergência:', resposta);
+
+        const pedidoData = resposta?.response || resposta;
+        let idExtraido = null;
+
+        if (typeof pedidoData === 'object' && pedidoData !== null) {
+          idExtraido = pedidoData.id || pedidoData.id_pedido || pedidoData.pedidoId;
+        }
+
+        if (idExtraido) {
+          this.idPedidoEmergencia = idExtraido;
+          console.log('[PedidoCliente] ID da emergência:', this.idPedidoEmergencia);
+        } else {
+          console.warn('[PedidoCliente] Não encontrou ID na resposta, usando fallback');
+        }
+
+        this.aguardandoAceite = true;
+        this.iniciarPollingEmergencia();
+      } catch (error) {
+        console.error('[PedidoCliente] Erro ao solicitar emergência:', error);
+        alert('Erro ao solicitar emergência');
+      }
+    },
+
+    iniciarPollingEmergencia() {
+      console.log('[PedidoCliente] Iniciando polling de emergência (intervalo: 3s)');
+      let tentativas = 0;
+      const maxTentativas = 100;
+
+      this.pollingInterval = setInterval(async () => {
+        tentativas++;
+        console.log(`[PedidoCliente] Polling tentativa ${tentativas}/${maxTentativas}`);
+
+        if (tentativas > maxTentativas) {
+          console.log('[PedidoCliente] Timeout atingido (5 minutos)');
+          clearInterval(this.pollingInterval);
+          alert('Tempo de espera excedido. Tente novamente.');
+          this.cancelarEmergencia();
+          return;
+        }
+
+        try {
+          const pedidoAtualizado = await verificarEmergenciaPrestador(this.idPedidoEmergencia);
+          console.log('[PedidoCliente] Status da emergência:', pedidoAtualizado);
+
+          const temPrestador = pedidoAtualizado?.id_prestador &&
+                               pedidoAtualizado.id_prestador !== 0 &&
+                               pedidoAtualizado.id_prestador !== null &&
+                               String(pedidoAtualizado.id_prestador).trim() !== '';
+
+          if (temPrestador) {
+            console.log('[PedidoCliente] ✓ PRESTADOR ACEITOU A EMERGÊNCIA!');
+            clearInterval(this.pollingInterval);
+            this.aguardandoAceite = false;
+            await this.carregarDadosPrestador(pedidoAtualizado.id_prestador);
+            this.currentStep = 2;
+          }
+        } catch (error) {
+          console.error('[PedidoCliente] Erro no polling:', error);
+        }
+      }, 3000);
+    },
+
+    async carregarDadosPrestador(idPrestador) {
+      try {
+        console.log('[PedidoCliente] Carregando dados do prestador:', idPrestador);
+
+        const resposta = await buscarPrestadorPorId(idPrestador);
+        const prestadorData = resposta?.response || resposta;
+
+        console.log('[PedidoCliente] Dados do prestador recebidos:', prestadorData);
+
+        if (prestadorData) {
+          this.driver = {
+            name: prestadorData.nome || prestadorData.nome_prestador || 'Prestador',
+            rating: prestadorData.media_avaliacoes || prestadorData.rating || '4.5',
+            plate: prestadorData.placa || 'ABC-0000',
+            distance: '-- km',
+            eta: 'A caminho...',
+            avatar: prestadorData.img_perfil || prestadorData.foto || prestadorData.profileImage || new URL('../assets/pessoa.jpg', import.meta.url).href
+          };
+          console.log('[PedidoCliente] Dados do driver atualizados:', this.driver);
+        }
+      } catch (error) {
+        console.error('[PedidoCliente] Erro ao carregar dados do prestador:', error);
+      }
+    },
+
+    cancelarEmergencia() {
+      console.log('[PedidoCliente] Cancelando emergência');
+      clearInterval(this.pollingInterval);
+      this.aguardandoAceite = false;
+      this.tipoPedido = 'comum';
+      this.$router.push({ name: 'home-cliente' });
     },
   }
 };
@@ -2153,5 +2330,164 @@ export default {
     padding: 12px 16px;
     font-size: 13px;
   }
+}
+
+/* Emergency Styles */
+.emergency-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.emergency-icon-top {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emergency-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.emergency-waiting {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  align-items: center;
+  text-align: center;
+}
+
+.emergency-waiting-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.emergency-waiting-text {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.emergency-pulse-animation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c41e1e;
+  animation: pulse 1.2s infinite;
+}
+
+.pulse-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.pulse-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+}
+
+.emergency-locations-waiting {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+.emergency-location-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.emergency-location-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.emergency-location-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.emergency-location-text {
+  font-size: 14px;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.emergency-cancel-btn {
+  width: 100%;
+  background: #c41e1e;
+  border: none;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.emergency-cancel-btn:hover {
+  background: #a01818;
+  box-shadow: 0 6px 16px rgba(196, 30, 30, 0.3);
+}
+
+.emergency-cancel-btn:active {
+  background: #8b1414;
+  transform: scale(0.98);
 }
 </style>
