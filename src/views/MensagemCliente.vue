@@ -8,28 +8,19 @@
         <span>Contatos</span>
       </div>
       <div class="mensagem-topbar__spacer"></div>
+      
     </header>
 
     <div class="mensagem-screen">
       <aside class="mensagem-sidebar">
         <div class="mensagem-sidebar__search">
           <img src="../assets/lupa.svg" alt="Pesquisar" class="mensagem-sidebar__icon" />
-          <input
-            type="text"
-            placeholder="Pesquisar Contato"
-            v-model="searchQuery"
-            class="mensagem-sidebar__input"
-          />
+          <input type="text" placeholder="Pesquisar Contato" v-model="searchQuery" class="mensagem-sidebar__input" />
         </div>
 
         <div class="mensagem-sidebar__list">
-          <button
-            v-for="contact in filteredContacts"
-            :key="contact.id"
-            class="mensagem-contact-card"
-            :class="{ active: contact.id === selectedContact.id }"
-            @click="selectContact(contact.id)"
-          >
+          <button v-for="contact in filteredContacts" :key="contact.id" class="mensagem-contact-card"
+            :class="{ active: contact.id === selectedContact.id }" @click="selectContact(contact.id)">
             <img :src="contact.avatar" :alt="contact.name" class="mensagem-contact-card__avatar" />
             <div class="mensagem-contact-card__text">
               <strong>{{ contact.name }}</strong>
@@ -41,11 +32,7 @@
 
       <section class="mensagem-chat">
         <div class="mensagem-chat__body">
-          <div
-            v-for="message in chatMessages"
-            :key="message.id"
-            :class="['mensagem-bubble', message.type]"
-          >
+          <div v-for="message in chatMessages" :key="message.id" :class="['mensagem-bubble', message.type]">
             <div class="mensagem-bubble__content">
               <p>{{ message.text }}</p>
               <template v-if="message.media">
@@ -60,14 +47,10 @@
           <button class="mensagem-icon-button mensagem-attach" type="button" aria-label="Anexar imagem">
             <img src="../assets/image.svg" alt="Anexar imagem" />
           </button>
-          <input
-            type="text"
-            placeholder="Digite a mensagem"
-            v-model="newMessage"
-            @keyup.enter="sendMessage"
-            class="mensagem-input"
-          />
-          <button class="mensagem-icon-button mensagem-send" type="button" @click="sendMessage" aria-label="Enviar mensagem">
+          <input type="text" placeholder="Digite a mensagem" v-model="newMessage" @keyup.enter="sendMessage"
+            class="mensagem-input" />
+          <button class="mensagem-icon-button mensagem-send" type="button" @click="sendMessage"
+            aria-label="Enviar mensagem">
             <img src="../assets/email.svg" alt="Enviar mensagem" />
           </button>
         </div>
@@ -77,165 +60,137 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { io } from 'socket.io-client';
-import { userStorage } from '../utils/userStorage';
+import mensagensData from '../data/mensagens.json';
+import { ref, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
-const pedidoId = Number(route.query.pedidoId) || null;
-const contactId = Number(route.query.contactId) || null;
-const routeContactName = route.query.contactName || 'Prestador';
-const routeContactAvatar = route.query.contactAvatar || 'https://via.placeholder.com/150';
+const router = useRouter();
+const contacts = ref([...mensagensData.contacts]);
+const chats = ref([...mensagensData.chats]);
 
-console.log('[MensagemCliente] Params:', { pedidoId, contactId, routeContactName });
-
-const socket = ref(null);
 const searchQuery = ref('');
-const selectedContactId = ref(contactId || 1);
+const selectedContactId = ref(route.query.contactId ? Number(route.query.contactId) : contacts.value[0]?.id || 1);
 const newMessage = ref('');
-const chatMessagesArray = ref([]);
-
-// Lista de contatos vazia inicialmente - adicionará apenas o contato atual
-const contacts = ref([]);
-
-// Adiciona o contato com quem está conversando
-if (contactId) {
-  contacts.value = [{
-    id: contactId,
-    name: routeContactName || 'Prestador',
-    avatar: routeContactAvatar || 'https://via.placeholder.com/150',
-    subtitle: 'Conversa ativa'
-  }];
-}
 
 const selectedContact = computed(() => {
-  return contacts.value.find((contact) => contact.id === selectedContactId.value) || contacts.value[0];
+  return contacts.value.find((contact) => String(contact.id) === String(selectedContactId.value)) || contacts.value[0] || {};
 });
 
 const filteredContacts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   if (!query) return contacts.value;
+
   return contacts.value.filter((contact) => {
-    return contact.name.toLowerCase().includes(query);
+    return (
+      contact.name.toLowerCase().includes(query) ||
+      contact.subtitle.toLowerCase().includes(query) ||
+      contact.location.toLowerCase().includes(query)
+    );
   });
 });
 
 const chatMessages = computed(() => {
-  return chatMessagesArray.value;
+  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
+  return chat ? chat.messages : [];
 });
 
-function getSocketHost() {
-  const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8080/v1/drivez';
-  return apiBase.replace(/\/v1\/drivez\/?$/, '');
+function selectContact(contactId) {
+  selectedContactId.value = contactId;
 }
 
-function handleIncomingMessage(payload) {
-  console.log('[MensagemCliente] Mensagem recebida:', payload);
-  if (!payload) return;
-  
-  chatMessagesArray.value.push({
-    id: payload.id_mensagem || Date.now(),
-    type: 'incoming',
-    text: payload.texto_mensagem || payload.text || '',
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    media: payload.imagem || null
+function findContactByQuery(query) {
+  if (!query) return null;
+  const contactId = query.contactId;
+  const providerName = query.providerName;
+  const providerEmail = query.providerEmail;
+
+  let contact = contacts.value.find((item) => String(item.id) === String(contactId));
+  if (contact) return contact;
+  if (providerEmail) {
+    contact = contacts.value.find((item) => item.email === providerEmail);
+    if (contact) return contact;
+  }
+  if (providerName) {
+    contact = contacts.value.find((item) => item.name === providerName);
+    if (contact) return contact;
+  }
+  return null;
+}
+
+function createDynamicContact(query) {
+  const nextId = contacts.value.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+  const newContact = {
+    id: nextId,
+    name: query.providerName || 'Prestador',
+    subtitle: 'Conversa iniciada após solicitação de serviço',
+    avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
+    location: '',
+    email: query.providerEmail || ''
+  };
+  contacts.value.push(newContact);
+  chats.value.push({
+    contactId: nextId,
+    messages: [
+      {
+        id: 1,
+        type: 'incoming',
+        text: 'Solicitação de serviço recebida. Vamos conversar pelo chat.',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]
   });
+  return newContact;
 }
 
-function selectContact(id) {
-  selectedContactId.value = id;
-}
+watch(
+  () => route.query,
+  (query) => {
+    if (!query?.contactId) return;
+
+    const contact = findContactByQuery(query);
+    if (contact) {
+      selectedContactId.value = contact.id;
+      return;
+    }
+
+    const newContact = createDynamicContact(query);
+    selectedContactId.value = newContact.id;
+  },
+  { immediate: true }
+);
 
 function sendMessage() {
   const text = newMessage.value.trim();
-  if (!text || !pedidoId || !contactId) {
-    console.warn('[MensagemCliente] Não pode enviar:', { text, pedidoId, contactId });
-    return;
-  }
+  if (!text) return;
 
-  const clienteId = userStorage.getUserId();
-  console.log('[MensagemCliente] Enviando mensagem:', { clienteId, contactId, pedidoId, text });
-  
-  // Adicionar à tela imediatamente
-  chatMessagesArray.value.push({
-    id: Date.now(),
-    type: 'outgoing',
-    text,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  });
-
-  // Enviar via socket
-  if (socket.value) {
-    socket.value.emit('chat-message', {
-      data_envio: new Date().toISOString(),
-      texto_mensagem: text,
-      lida: false,
-      id_pedido: pedidoId,
-      id_prestador: contactId,
-      id_cliente: clienteId,
-      imagem: null
+  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
+  if (chat) {
+    chat.messages.push({
+      id: Date.now(),
+      type: 'outgoing',
+      text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
-    console.log('[MensagemCliente] Mensagem emitida via socket');
-  } else {
-    console.warn('[MensagemCliente] Socket não conectado');
   }
 
   newMessage.value = '';
 }
 
-onMounted(() => {
-  console.log('[MensagemCliente] Montando componente...');
-  
-  if (!pedidoId) {
-    console.warn('[MensagemCliente] Sem pedidoId, não conectando socket');
-    return;
-  }
+function requestService() {
+  const contatoAtivo = selectedContact.value;
 
-  try {
-    const socketHost = getSocketHost();
-    console.log('[MensagemCliente] Conectando socket em:', socketHost);
-    
-    socket.value = io(socketHost, { 
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
-    });
-    
-    socket.value.on('connect', () => {
-      console.log('[MensagemCliente] Socket conectado:', socket.value.id);
-      // Entrar na sala do pedido
-      socket.value.emit('join-pedido', pedidoId);
-      console.log('[MensagemCliente] Emitiu join-pedido para:', pedidoId);
-    });
+  router.push({
+    name: 'configurar-pedido-cliente',
+    query: {
+      contactId: contatoAtivo.id,
+      providerName: contatoAtivo.name,
+      providerEmail: contatoAtivo.email,
+      tipo: 'comum'
+    }
+  });
+}
 
-    socket.value.on('joined-room', (data) => {
-      console.log('[MensagemCliente] Entrou na sala:', data);
-    });
-
-    socket.value.on('chat-message', handleIncomingMessage);
-    
-    socket.value.on('connect_error', (error) => {
-      console.warn('[MensagemCliente] Socket connection error:', error);
-    });
-
-    socket.value.on('disconnect', () => {
-      console.log('[MensagemCliente] Socket desconectado');
-    });
-
-  } catch (error) {
-    console.warn('[MensagemCliente] Erro ao conectar socket:', error);
-  }
-});
-
-onBeforeUnmount(() => {
-  if (socket.value) {
-    socket.value.disconnect();
-    socket.value = null;
-  }
-});
 </script>
 
 <style scoped>
@@ -330,7 +285,7 @@ onBeforeUnmount(() => {
 }
 
 .mensagem-sidebar {
-  background: rgba(250,250,250);
+  background: rgba(250, 250, 250);
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   padding: 24px;
   display: flex;
@@ -549,6 +504,40 @@ onBeforeUnmount(() => {
   font-size: 16px;
   color: #111827;
   background: transparent;
+}
+
+.mensagem-topbar__action {
+  background: #ffffff;
+  color: #d62828;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border: 2px solid #ffffff;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mensagem-topbar__action:hover {
+  background: #f9f6e6;
+  color: #b51a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.mensagem-topbar__action:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 760px) {
+  .mensagem-topbar__action {
+    padding: 8px 14px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
 }
 
 @media (max-width: 1100px) {

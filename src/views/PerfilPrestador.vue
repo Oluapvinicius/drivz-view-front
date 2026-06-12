@@ -17,6 +17,12 @@
     </div>
 
     <div class="profile-screen__content">
+      <div v-if="!dadosCarregados" class="profile-screen__loading">
+        <div class="profile-screen__spinner"></div>
+        <p>Carregando perfil...</p>
+      </div>
+
+      <template v-else>
       <div class="profile-screen__panel profile-screen__panel--left">
         <div class="profile-screen__photo-card">
           <div class="profile-screen__image-wrap" @click="triggerImageInput">
@@ -30,7 +36,7 @@
           </button>
           <div class="profile-screen__name-block">
             <div class="profile-screen__rating-stars">
-              <span v-for="n in 5" :key="n" class="star-icon" :class="{ fill: n <= avaliacao }">★</span>
+              <span v-for="n in 5" :key="n" class="star-icon" :class="{ fill: n <= avaliacaoExibicao }">★</span>
             </div>
             <h3>{{ form.nome }}</h3>
             <p class="profile-screen__categoria">{{ form.categoria }}</p>
@@ -79,7 +85,7 @@
             />
           </div>
 
-          <div class="profile-screen__field profile-screen__field--half">
+          <!-- <div class="profile-screen__field profile-screen__field--half">
             <label class="profile-screen__field-label">Data de Validade</label>
             <input
               type="date"
@@ -89,7 +95,7 @@
             <span v-if="form.data_validade && !dataValidadeValida" class="profile-screen__field-error">
               A CNH está vencida
             </span>
-          </div>
+          </div> -->
 
           <div class="profile-screen__field profile-screen__field--half">
             <label class="profile-screen__field-label">Telefone</label>
@@ -199,6 +205,7 @@
           </div>
         </div>
       </div>
+      </template>
     </div>
 
     <div v-if="temAlteracao" class="profile-screen__confirm-banner" :class="{ 'profile-screen__confirm-banner--shaking': chamarAtencaoCard }">
@@ -221,7 +228,7 @@
 </template>
 
 <script setup>
-import { buscarPrestadorPorId, atualizarPrestador, alterarSenhaPrestador } from '@/requests/buscarUsuarios';
+import { buscarPrestadorPorId, atualizarPrestador, alterarSenhaPrestador, buscarAvaliacaoPrestador } from '@/requests/buscarUsuarios';
 import { userStorage } from '@/utils/userStorage';
 import { computed, onBeforeUnmount, ref, reactive, onMounted } from 'vue';
 import defaultProfile from '@/assets/profile.svg';
@@ -245,7 +252,14 @@ const togglePassword = () => {
   if (!showPassword.value) cancelarAlteracaoSenha();
 };
 
-const dadosIniciais = ref({
+const prestadorId = userStorage.getUserId();
+const userDataStorage = userStorage.getUserData() || {};
+
+const dispatchUserDataUpdated = (updatedData) => {
+  window.dispatchEvent(new CustomEvent('userDataUpdated', { detail: updatedData }));
+};
+
+const estruturaDados = {
   nome:         '',
   categoria:    '',
   documento:    '',
@@ -259,28 +273,10 @@ const dadosIniciais = ref({
   cnh:          '',
   data_validade:'',
   senha:        ''
-});
-
-const prestadorId    = userStorage.getUserId();
-const userDataStorage = userStorage.getUserData() || {};
-
-const localProfileDefaults = {
-  nome:         userDataStorage.nome         || userDataStorage.nome_prestador || '',
-  categoria:    userDataStorage.categoria    || '',
-  documento:    userDataStorage.cpf          || userDataStorage.cnpj || userDataStorage.documento || '',
-  telefone:     userDataStorage.telefone     || '',
-  email:        userDataStorage.email        || userDataStorage.email_prestador || '',
-  descricao:    userDataStorage.descricao    || userDataStorage.descricao_profissional || '',
-  profileImage: userDataStorage.img_perfil   || userDataStorage.foto || userDataStorage.imagem || '',
-  img_perfil:   userDataStorage.img_perfil   || userDataStorage.foto || userDataStorage.imagem || '',
-  cpf:          userDataStorage.cpf          || '',
-  cnpj:         userDataStorage.cnpj         || '',
-  cnh:          userDataStorage.cnh          || '',
-  data_validade:userDataStorage.data_validade || '',
-  senha:        ''
 };
 
-const form = reactive({ ...dadosIniciais.value, ...localProfileDefaults });
+const dadosIniciais = ref({ ...estruturaDados });
+const form = reactive({ ...estruturaDados });
 
 const fileInput         = ref(null);
 const enviandoImagem    = ref(false);
@@ -398,58 +394,80 @@ const mostrarFinalizarCadastro = computed(() =>
 
 
 const dadosCarregados = ref(false);
-const avaliacao       = ref(0);
+const avaliacao       = ref(null);
+const avaliacaoExibicao = computed(() =>
+  avaliacao.value === null ? 5 : avaliacao.value
+);
 
 onMounted(async () => {
   try {
-    dadosIniciais.value = { ...dadosIniciais.value, ...localProfileDefaults };
-    Object.assign(form, dadosIniciais.value);
-
+    // Verificar se tem ID
     if (!prestadorId || prestadorId === 'undefined') {
       console.warn('PerfilPrestador: ID não encontrado no localStorage.');
+      // Usar dados do localStorage como fallback
+      const dados = {
+        nome:         userDataStorage.nome         || userDataStorage.nome_prestador || '',
+        categoria:    userDataStorage.categoria    || '',
+        documento:    userDataStorage.cpf          || userDataStorage.cnpj || '',
+        telefone:     userDataStorage.telefone     || '',
+        email:        userDataStorage.email        || userDataStorage.email_prestador || '',
+        descricao:    userDataStorage.descricao    || userDataStorage.descricao_profissional || '',
+        profileImage: userDataStorage.img_perfil   || userDataStorage.foto || userDataStorage.imagem || '',
+        img_perfil:   userDataStorage.img_perfil   || userDataStorage.foto || userDataStorage.imagem || '',
+        cpf:          userDataStorage.cpf          || '',
+        cnpj:         userDataStorage.cnpj         || '',
+        cnh:          userDataStorage.cnh          || '',
+        data_validade:userDataStorage.data_validade || '',
+        senha:        ''
+      };
+      Object.assign(dadosIniciais.value, dados);
+      Object.assign(form, dados);
       dadosCarregados.value = true;
       return;
     }
 
-    const usuario  = await buscarPrestadorPorId(prestadorId);
+    // Buscar dados da API
+    const usuario = await buscarPrestadorPorId(prestadorId);
     const response = usuario?.response || usuario || {};
 
-    const dadosFormatados = {
-      nome:         response.nome          || response.nome_prestador          || localProfileDefaults.nome         || '',
-      categoria:    response.categoria     || localProfileDefaults.categoria    || '',
-      documento:    response.cpf           || response.cnpj || response.documento || localProfileDefaults.documento || '',
-      telefone:     response.telefone      || localProfileDefaults.telefone     || '',
-      email:        response.email         || response.email_prestador          || localProfileDefaults.email        || '',
-      descricao:    response.descricao     || response.descricao_profissional   || localProfileDefaults.descricao   || '',
-      profileImage: response.img_perfil    || response.foto || response.imagem  || localProfileDefaults.profileImage || '',
-      img_perfil:   response.img_perfil    || response.foto || response.imagem  || localProfileDefaults.img_perfil   || '',
-      cpf:          response.cpf           || localProfileDefaults.cpf          || '',
-      cnpj:         response.cnpj          || localProfileDefaults.cnpj         || '',
-      cnh:          response.cnh           || localProfileDefaults.cnh          || '',
-      data_validade:response.data_validade
-        ? response.data_validade.split('T')[0]
-        : localProfileDefaults.data_validade || '',
-      senha: ''
+    const dadosAPI = {
+      nome:         response.nome          || userDataStorage.nome_prestador || '',
+      categoria:    response.categoria     || userDataStorage.categoria || '',
+      documento:    response.cpf           || response.cnpj || userDataStorage.cpf || userDataStorage.cnpj || '',
+      telefone:     response.telefone      || userDataStorage.telefone || '',
+      email:        response.email         || response.email_prestador || userDataStorage.email_prestador || '',
+      descricao:    response.descricao     || response.descricao_profissional || userDataStorage.descricao_profissional || '',
+      profileImage: response.img_perfil    || response.foto || response.imagem || userDataStorage.img_perfil || userDataStorage.foto || '',
+      img_perfil:   response.img_perfil    || response.foto || response.imagem || userDataStorage.img_perfil || userDataStorage.foto || '',
+      cpf:          response.cpf           || userDataStorage.cpf || '',
+      cnpj:         response.cnpj          || userDataStorage.cnpj || '',
+      cnh:          response.cnh           || userDataStorage.cnh || '',
+      data_validade: response.data_validade 
+        ? response.data_validade.split('T')[0] 
+        : userDataStorage.data_validade || '',
+      senha:        ''
     };
 
-    dadosIniciais.value = { ...dadosIniciais.value, ...dadosFormatados };
-    Object.assign(form, dadosIniciais.value);
-    dadosCarregados.value = true;
+    // Guardar estado inicial
+    Object.assign(dadosIniciais.value, dadosAPI);
+    // Popular form com dados
+    Object.assign(form, dadosAPI);
+    // Atualizar localStorage
+    userStorage.setSession(prestadorId, dadosAPI, 'prestador');
 
-    userStorage.setSession(prestadorId, { ...userDataStorage, ...dadosFormatados }, 'prestador');
-
-
+    // Carregar avaliação
     try {
-      const metrics = await (await import('@/requests/api')).then(m => m.apiFetch(`/avaliacoes/mediaPrestador/${prestadorId}`));
-      if (metrics && (metrics.status_code === 200 || metrics.status === 200) && metrics.response) {
-        avaliacao.value = Math.round(metrics.response.media || 0);
+      const metricsRes = await buscarAvaliacaoPrestador(prestadorId);
+      if (metricsRes.status_code === 200 && metricsRes.response && typeof metricsRes.response.media === 'number') {
+        avaliacao.value = Math.round(metricsRes.response.media);
       }
-    } catch (e) {
-      console.warn('Não foi possível carregar as métricas de avaliação.', e);
+    } catch (error) {
+      console.warn('Não foi possível carregar as métricas de avaliação:', error);
     }
 
   } catch (error) {
     console.error('Falha ao carregar dados do perfil:', error);
+    alert('Erro ao carregar o perfil. Tente novamente.');
   } finally {
     dadosCarregados.value = true;
   }
@@ -505,8 +523,8 @@ const salvarAlteracoes = async () => {
     telefone:     form.telefone.replace(/\D/g, ''),
     descricao:    form.descricao.trim(),
     img_perfil:   form.profileImage || form.img_perfil || dadosIniciais.value.img_perfil || '',
-    cpf:          documentoLimpo.length === 11 ? documentoLimpo : '',
-    cnpj:         documentoLimpo.length === 14 ? documentoLimpo : '',
+    cpf:          documentoLimpo.length === 11 ? documentoLimpo : null,
+    cnpj:         documentoLimpo.length === 14 ? documentoLimpo : null,
     cnh:          form.cnh,
     data_validade:form.data_validade,
     senha:        ''
@@ -516,9 +534,8 @@ const salvarAlteracoes = async () => {
     const resposta = await atualizarPrestador(prestadorId, payload);
     console.log('Resposta do backend:', resposta);
 
-    userStorage.setSession(prestadorId, { ...userDataStorage, ...payload }, 'prestador');
-
-    dadosIniciais.value = {
+    // Atualizar dados iniciais com os dados salvos
+    const dadosSalvos = {
       nome:         form.nome,
       categoria:    form.categoria,
       documento:    form.documento,
@@ -531,11 +548,16 @@ const salvarAlteracoes = async () => {
       cnpj:         form.cnpj,
       cnh:          form.cnh,
       data_validade:form.data_validade,
+      localizacao:  dadosIniciais.value.localizacao || userDataStorage.localizacao || '',
       senha:        ''
     };
 
+    // Sincronizar estado
+    Object.assign(dadosIniciais.value, dadosSalvos);
+    userStorage.setSession(prestadorId, dadosSalvos, 'prestador');
+    dispatchUserDataUpdated(dadosSalvos);
+
     previewLocalImagem.value = '';
-    dadosCarregados.value    = true;
 
     alert('✓ Perfil atualizado com sucesso!');
   } catch (error) {
@@ -730,6 +752,31 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', bolarFecharAba)
   grid-template-columns: 320px 1fr;
   gap: 48px;
   padding: 40px 64px 24px;
+}
+
+.profile-screen__loading {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 400px;
+  color: #666;
+  font-size: 16px;
+}
+
+.profile-screen__spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f0f0f0;
+  border-top-color: #d62828;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .profile-screen__panel {

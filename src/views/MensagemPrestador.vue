@@ -77,165 +77,117 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { userStorage } from '../utils/userStorage';
-import { enviarMensagem, buscarHistoricoMensagens } from '../requests/mensagem.js';
+import { ref, computed } from 'vue';
 
-const route = useRoute();
-const pedidoId = Number(route.query.pedidoId) || null;
-const contactId = Number(route.query.contactId) || null;
-const routeContactName = route.query.contactName || 'Cliente';
-const routeContactAvatar = route.query.contactAvatar || 'https://via.placeholder.com/150';
-
-console.log('[MensagemPrestador] Params:', { pedidoId, contactId, routeContactName });
-
-const socket = ref(null);
 const searchQuery = ref('');
-const selectedContactId = ref(contactId || 1);
+const selectedContactId = ref(1);
 const newMessage = ref('');
-const chatMessagesArray = ref([]);
 
-// Dados mock para sidebar de contatos
-const contacts = ref([]);
+const contacts = [
+  // {
+  //   id: 1,
+  //   name: 'João Silva',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Chegou mais rápido que o esperado',
+  // },
+  // {
+  //   id: 2,
+  //   name: 'Maria Santos',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Você chega em quanto tempo?',
+  // },
+  // {
+  //   id: 3,
+  //   name: 'Carlos Oliveira',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Obrigado pela rapidez!',
+  // },
+  // {
+  //   id: 4,
+  //   name: 'Ana Costa',
+  //   avatar: 'https://via.placeholder.com/150',
+  //   lastMessage: 'Solicitação de um reboque urgente',
+  // }
+];
 
-// Adiciona o contato com quem está conversando
-if (contactId) {
-  contacts.value = [{
-    id: contactId,
-    name: routeContactName || 'Cliente',
-    avatar: routeContactAvatar || 'https://via.placeholder.com/150',
-    lastMessage: 'Conversa ativa'
-  }];
-}
+const chats = [
+  // {
+  //   contactId: 1,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Olá, você consegue fazer um reboque agora?', time: '14:20' },
+  //     { id: 2, type: 'outgoing', text: 'Opa, sim! Já estou saindo para lá', time: '14:22' },
+  //     { id: 3, type: 'incoming', text: 'Perfeito, obrigado!', time: '14:25' },
+  //     { id: 4, type: 'incoming', text: 'Chegou mais rápido que o esperado', time: '14:50' }
+  //   ]
+  // },
+  // {
+  //   contactId: 2,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Oi, preciso de um reboque urgente', time: '16:10' },
+  //     { id: 2, type: 'outgoing', text: 'Qual é a sua localização?', time: '16:11' },
+  //     { id: 3, type: 'incoming', text: 'Estou na Rua Oscar Freire, 500', time: '16:12' },
+  //     { id: 4, type: 'outgoing', text: 'Chegando em 5 minutos', time: '16:13' },
+  //     { id: 5, type: 'incoming', text: 'Você chega em quanto tempo?', time: '16:15' }
+  //   ]
+  // },
+  // {
+  //   contactId: 3,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Olá, tudo bem?', time: '10:30' },
+  //     { id: 2, type: 'outgoing', text: 'Tudo certo! Qual é a necessidade?', time: '10:32' },
+  //     { id: 3, type: 'incoming', text: 'Meu carro pifou na Av. Faria Lima', time: '10:35' },
+  //     { id: 4, type: 'outgoing', text: 'Já estou indo, 10 minutos', time: '10:36' },
+  //     { id: 5, type: 'incoming', text: 'Obrigado pela rapidez!', time: '11:00' }
+  //   ]
+  // },
+  // {
+  //   contactId: 4,
+  //   messages: [
+  //     { id: 1, type: 'incoming', text: 'Oi, você atende reboque na Av. Brasil?', time: '17:00' },
+  //     { id: 2, type: 'outgoing', text: 'Sim, atendo sim! Qual é o endereço exato?', time: '17:01' }
+  //   ]
+  // }
+];
 
 const selectedContact = computed(() => {
-  return contacts.value.find((contact) => contact.id === selectedContactId.value) || contacts.value[0];
+  return contacts.find((contact) => contact.id === selectedContactId.value) || contacts[0];
 });
 
 const filteredContacts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts.value;
-  return contacts.value.filter((contact) => {
-    return contact.name.toLowerCase().includes(query);
+  if (!query) return contacts;
+
+  return contacts.filter((contact) => {
+    return contact.name.toLowerCase().includes(query) ||
+      contact.lastMessage.toLowerCase().includes(query);
   });
 });
 
 const chatMessages = computed(() => {
-  return chatMessagesArray.value;
+  const chat = chats.find((item) => item.contactId === selectedContactId.value);
+  return chat ? chat.messages : [];
 });
 
-function getSocketHost() {
-  const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8080/v1/drivez';
-  return apiBase.replace(/\/v1\/drivez\/?$/, '');
-}
-
-function handleIncomingMessage(payload) {
-  console.log('[MensagemPrestador] Mensagem recebida:', payload);
-  if (!payload) return;
-  
-  chatMessagesArray.value.push({
-    id: payload.id_mensagem || Date.now(),
-    type: 'incoming',
-    text: payload.texto_mensagem || payload.text || '',
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    media: payload.imagem || null
-  });
-}
-
-function selectContact(id) {
-  selectedContactId.value = id;
+function selectContact(contactId) {
+  selectedContactId.value = contactId;
 }
 
 function sendMessage() {
   const text = newMessage.value.trim();
-  if (!text || !pedidoId || !contactId) {
-    console.warn('[MensagemPrestador] Não pode enviar:', { text, pedidoId, contactId });
-    return;
-  }
+  if (!text) return;
 
-  const prestadorId = userStorage.getUserId();
-  console.log('[MensagemPrestador] Enviando mensagem:', { prestadorId, contactId, pedidoId, text });
-
-  // Adicionar à tela imediatamente
-  chatMessagesArray.value.push({
-    id: Date.now(),
-    type: 'outgoing',
-    text,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  });
-
-  // Enviar via socket
-  if (socket.value) {
-    socket.value.emit('chat-message', {
-      data_envio: new Date().toISOString(),
-      texto_mensagem: text,
-      lida: false,
-      id_pedido: pedidoId,
-      id_prestador: prestadorId,
-      id_cliente: contactId,
-      imagem: null
+  const chat = chats.find((item) => item.contactId === selectedContactId.value);
+  if (chat) {
+    chat.messages.push({
+      id: Date.now(),
+      type: 'outgoing',
+      text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
-    console.log('[MensagemPrestador] Mensagem emitida via socket');
-  } else {
-    console.warn('[MensagemPrestador] Socket não conectado');
   }
 
   newMessage.value = '';
 }
-
-onMounted(() => {
-  console.log('[MensagemPrestador] Montando componente...');
-  
-  if (!pedidoId) {
-    console.warn('[MensagemPrestador] Sem pedidoId, não conectando socket');
-    return;
-  }
-
-  try {
-    const socketHost = getSocketHost();
-    console.log('[MensagemPrestador] Conectando socket em:', socketHost);
-    
-    socket.value = io(socketHost, { 
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
-    });
-    
-    socket.value.on('connect', () => {
-      console.log('[MensagemPrestador] Socket conectado:', socket.value.id);
-      // Entrar na sala do pedido
-      socket.value.emit('join-pedido', pedidoId);
-      console.log('[MensagemPrestador] Emitiu join-pedido para:', pedidoId);
-    });
-
-    socket.value.on('joined-room', (data) => {
-      console.log('[MensagemPrestador] Entrou na sala:', data);
-    });
-
-    socket.value.on('chat-message', handleIncomingMessage);
-    
-    socket.value.on('connect_error', (error) => {
-      console.warn('[MensagemPrestador] Socket connection error:', error);
-    });
-
-    socket.value.on('disconnect', () => {
-      console.log('[MensagemPrestador] Socket desconectado');
-    });
-
-  } catch (error) {
-    console.warn('[MensagemPrestador] Erro ao conectar socket:', error);
-  }
-});
-
-onBeforeUnmount(() => {
-  if (socket.value) {
-    socket.value.disconnect();
-    socket.value = null;
-  }
-});
 </script>
 
 <style scoped>

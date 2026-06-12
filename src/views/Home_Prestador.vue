@@ -5,24 +5,39 @@
         <div class="orders-screen__header">
           <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
         </div>
-        <div class="orders-screen__list">
+
+        <div v-if="historyLoading" class="orders-screen__empty">
+          <p>Carregando histórico de pedidos...</p>
+        </div>
+
+        <div v-else-if="orders.length === 0" class="orders-screen__empty">
+          <p>Você ainda não atendeu nenhum pedido.</p>
+          <p>Peça atendimento agora para ver seu histórico aparecer aqui.</p>
+          <button class="orders-screen__cta" @click="activeScreen = 'home'">Voltar para o mapa</button>
+        </div>
+
+        <div v-else class="orders-screen__list">
           <article v-for="order in orders" :key="order.id" class="orders-screen__card">
             <div class="orders-screen__top">
               <div class="orders-screen__provider">
-                <img :src="order.avatar" alt="Avatar" class="orders-screen__avatar" />
-                <div>
-                  <span class="orders-screen__provider-label">Prestador:</span>
-                  <strong class="orders-screen__provider-name">{{ order.provider }}</strong>
+                <img :src="order.clientAvatar" @error="order.clientAvatar = defaultProfileFallback"
+                  alt="Avatar do cliente" class="orders-screen__avatar" />
+                <div class="orders-screen__provider-info">
+                  <span class="orders-screen__provider-label">Cliente:</span>
+                  <strong class="orders-screen__provider-name">{{ order.clientName }}</strong>
                 </div>
               </div>
-              <span class="orders-screen__date">{{ order.date }}</span>
+              <div class="orders-screen__info">
+                <span class="orders-screen__date">{{ order.date }}</span>
+                <span class="orders-screen__status">{{ order.status }}</span>
+              </div>
             </div>
             <div class="orders-screen__route">
               <div class="orders-screen__route-group">
                 <span class="orders-screen__route-title">Origem</span>
                 <span class="orders-screen__route-text">{{ order.origin }}</span>
               </div>
-              <div class="orders-screen__route-arrow">→</div>
+              <div class="orders-screen__route-arrow">↓</div>
               <div class="orders-screen__route-group">
                 <span class="orders-screen__route-title">Destino</span>
                 <span class="orders-screen__route-text">{{ order.destination }}</span>
@@ -49,23 +64,23 @@
 
         <div class="sidebar__divider"></div>
 
-      <nav class="sidebar__menu">
-        <button class="sidebar__item" @click="handleSidebarAction('messages')">
-          <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
-          <span class="sidebar__label">Mensagens</span>
-        </button>
-        <button class="sidebar__item" @click="handleSidebarAction('profile')">
-          <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
-          <span class="sidebar__label">Editar Perfil</span>
-        </button>
-        <button class="sidebar__item" @click="handleSidebarAction('garage')">
-          <img src="../assets/Warehouse.svg" alt="Garagem" class="sidebar__icon">
-          <span class="sidebar__label">Minha Garagem</span>
-        </button>
-      </nav>
+        <nav class="sidebar__menu">
+          <button class="sidebar__item" @click="handleSidebarAction('messages')">
+            <img src="../assets/mensage.svg" alt="Mensagens" class="sidebar__icon">
+            <span class="sidebar__label">Mensagens</span>
+          </button>
+          <button class="sidebar__item" @click="handleSidebarAction('profile')">
+            <img src="../assets/profile.svg" alt="Perfil" class="sidebar__icon">
+            <span class="sidebar__label">Editar Perfil</span>
+          </button>
+          <button class="sidebar__item" @click="handleSidebarAction('garage')">
+            <img src="../assets/Warehouse.svg" alt="Garagem" class="sidebar__icon">
+            <span class="sidebar__label">Minha Garagem</span>
+          </button>
+        </nav>
 
         <div class="sidebar__footer">
-         
+
           <button class="sidebar__settings" @click="orderPopupOpen = !orderPopupOpen">
             <img src="../assets/config.svg" alt="Configurações" class="sidebar__icon">
           </button>
@@ -98,13 +113,13 @@
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-        <div class="header__logo">
-          <img src="../assets/Group 294.svg" alt="Logo">
-        </div>
+          <div class="header__logo">
+            <img src="../assets/Group 294.svg" alt="Logo">
+          </div>
         </header>
         <div class="map-container">
           <div id="map-prestador" class="map-placeholder"></div>
-        <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
+          <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
         </div>
       </main>
 
@@ -123,8 +138,7 @@
                 <circle cx="12" cy="10" r="3" />
               </svg>
             </div>
-            <h2 class="right-sidebar__title">Notificações</h2>
-            <span class="right-sidebar__badge-count">{{ nearbyRequests.length }}</span>
+            <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
           </div>
           <button class="right-sidebar__refresh" @click="refreshRequests">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -134,14 +148,15 @@
         </div>
 
         <div class="right-sidebar__list">
-          <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openChatForRequest(request)">
+          <div v-for="request in nearbyRequests" :key="request.id" class="request-card"
+            @click="irParaMensagem">
             <div class="request-card__top">
               <div class="request-card__avatar">
                 <img :src="request.avatar" :alt="request.name" />
               </div>
               <div class="request-card__header">
                 <h3 class="request-card__name">{{ request.name }}</h3>
-           
+                <p class="request-card__distance">{{ request.message }}</p>
               </div>
             </div>
             <div class="request-card__rating">
@@ -151,83 +166,85 @@
         </div>
       </aside>
 
-    <div v-if="selectedRequest" class="modal-overlay" @click="closeRequestModal">
-      <div class="request-modal" @click.stop>
-        <div class="request-modal__content">
-          <div class="request-modal__header">
-            <div class="request-modal__avatar">
-              <img src="../assets/profile.svg" alt="">
+      <div v-if="selectedRequest" class="modal-overlay" @click="closeRequestModal">
+        <div class="request-modal" @click.stop>
+          <div class="request-modal__content">
+            <div class="request-modal__header">
+              <div class="request-modal__avatar">
+                <img :src="selectedRequest.avatar" alt="Foto do cliente">
+              </div>
+              <h2 class="request-modal__name">{{ selectedRequest.name }}</h2>
+              <div class="request-modal__rating">
+                <span v-for="i in 5" :key="i" class="request-modal__star"
+                  :class="{ filled: i <= selectedRequest.rating }">★</span>
+                <span class="request-modal__rating-value">{{ selectedRequest.rating }}.0</span>
+              </div>
             </div>
-            <h2 class="request-modal__name">{{ selectedRequest.name }}</h2>
-            <div class="request-modal__rating">
-              <span v-for="i in 5" :key="i" class="request-modal__star" :class="{ filled: i <= selectedRequest.rating }">★</span>
-              <span class="request-modal__rating-value">{{ selectedRequest.rating }}.0</span>
+
+            <div class="request-modal__location">
+              <div class="request-modal__location-icon"><img src="../assets/location.png" alt="" class="locationIcon">
+              </div>
+              <span class="request-modal__location-label">LOCAL DE SOLICITAÇÃO</span>
             </div>
-          </div>
+            <p class="request-modal__location-address">{{ selectedRequest.address }}</p>
 
-          <div class="request-modal__location">
-            <div class="request-modal__location-icon"><img src="../assets/location.png" alt="" class="locationIcon"></div>
-            <span class="request-modal__location-label">LOCAL DE SOLICITAÇÃO</span>
-          </div>
-
-          <div class="request-modal__map">
-            <div class="request-modal__map-placeholder">
-         
+            <div class="request-modal__map">
+              <div id="request-card-map" class="request-modal__map-placeholder"></div>
             </div>
-          </div>
 
-          <div class="request-modal__actions">
-            <button class="request-modal__accept-btn" @click="acceptRequest">
-              Aceitar Serviço 
-            </button>
-            <button class="request-modal__ignore-btn" @click="closeRequestModal">
-              Ignorar
-            </button>
+            <div class="request-modal__actions">
+              <button class="request-modal__accept-btn" @click="aceitarPedido">
+                Aceitar Serviço
+              </button>
+              <button class="request-modal__ignore-btn" @click="closeRequestModal">
+                Ignorar
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-if="emergencyPopupOpen" class="modal-overlay" @click="closeEmergencyPopup">
-      <div class="emergency-modal" @click.stop>
-        <div class="emergency-modal__top">
-          <div class="emergency-modal__icon">
-            <img src="../assets/emergencia-cima.svg" alt="Emergência" />
+      <div v-if="emergencyPopupOpen" class="modal-overlay" @click="closeEmergencyPopup">
+        <div class="emergency-modal" @click.stop>
+          <div class="emergency-modal__top">
+            <div class="emergency-modal__icon">
+              <img src="../assets/emergencia-cima.svg" alt="Emergência" />
+            </div>
+            <div class="emergency-modal__title-group">
+              <span class="emergency-modal__title-label">EMERGÊNCIA</span>
+            </div>
+            <button class="emergency-modal__close" @click="closeEmergencyPopup">×</button>
           </div>
-          <div class="emergency-modal__title-group">
-            <span class="emergency-modal__title-label">EMERGÊNCIA</span>
+
+          <div class="emergency-modal__avatar">
+            <img :src="emergencyRequest.avatar" alt="" />
           </div>
-          <button class="emergency-modal__close" @click="closeEmergencyPopup">×</button>
-        </div>
+          <h2 class="emergency-modal__name">{{ emergencyRequest.name }}</h2>
+          <div class="emergency-modal__stars">
+            <span v-for="i in 5" :key="i"
+              :class="['emergency-modal__star', { filled: i <= emergencyRequest.rating }]">★</span>
+          </div>
 
-        <div class="emergency-modal__avatar">
-          <img :src="emergencyRequest.avatar" alt="" />
-        </div>
-        <h2 class="emergency-modal__name">{{ emergencyRequest.name }}</h2>
-        <div class="emergency-modal__stars">
-          <span v-for="i in 5" :key="i" :class="['emergency-modal__star', { filled: i <= emergencyRequest.rating }]">★</span>
-        </div>
-
-        <div class="emergency-modal__locations">
-          <div class="emergency-modal__location-row">
-            <img src="../assets/origem.svg" alt="Origem" class="emergency-modal__location-icon" />
-            <div>
-              <span class="emergency-modal__location-label">ORIGEM</span>
-              <p>{{ emergencyRequest.origin }}</p>
+          <div class="emergency-modal__locations">
+            <div class="emergency-modal__location-row">
+              <img src="../assets/origem.svg" alt="Origem" class="emergency-modal__location-icon" />
+              <div>
+                <span class="emergency-modal__location-label">ORIGEM</span>
+                <p>{{ emergencyRequest.origin }}</p>
+              </div>
+            </div>
+            <div class="emergency-modal__location-row">
+              <img src="../assets/destino.svg" alt="Destino" class="emergency-modal__location-icon" />
+              <div>
+                <span class="emergency-modal__location-label">DESTINO</span>
+                <p>{{ emergencyRequest.destination }}</p>
+              </div>
             </div>
           </div>
-          <div class="emergency-modal__location-row">
-            <img src="../assets/destino.svg" alt="Destino" class="emergency-modal__location-icon" />
-            <div>
-              <span class="emergency-modal__location-label">DESTINO</span>
-              <p>{{ emergencyRequest.destination }}</p>
-            </div>
-          </div>
-        </div>
 
-        <button class="emergency-modal__accept-btn" @click="acceptEmergencyService">Aceitar Serviço</button>
+          <button class="emergency-modal__accept-btn" @click="aceitarPedido">Aceitar Serviço</button>
+        </div>
       </div>
-    </div>
     </template>
   </div>
 </template>
@@ -238,11 +255,13 @@ import { buscarPrestador } from '../requests/buscarUsuarios';
 import { buscarClientePorId } from '../requests/cliente';
 import { userStorage } from '../utils/userStorage';
 import { MapboxService } from '../requests/mapboxService';
+import { ref } from 'vue'
 import { listarPedidos } from '../requests/pedido';
 import { prestadoresGuincho } from '../requests/prestador';
-import { listarMensagensNaoLidas, marcarComoLida } from '../requests/mensagem';
 import defaultProfile from '../assets/profile.svg';
-import { apiFetch } from '../requests/api';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 export default {
   name: 'HomePrestador',
@@ -263,11 +282,13 @@ export default {
         avatar: '../assets/profile.svg'
       },
       orders: [],
+      historyLoading: false,
       mapService: null,
       requestMarkerIds: [],
       presenterLocation: [-46.9015, -23.5255],
+      requestMapService: null,
       nearbyRequests: [],
-
+      defaultProfileFallback: defaultProfile,
       timerConvites: null,
       popupConfirmacaoOpen: false,
       pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' }
@@ -275,8 +296,8 @@ export default {
   },
   computed: {
     userProfileImage() {
-      if (this.user && (this.user.img_perfil || this.user.profileImage || this.user.foto)) {
-        return this.user.img_perfil || this.user.profileImage || this.user.foto;
+      if (this.user && (this.user.profileImage || this.user.img_perfil || this.user.foto)) {
+        return this.user.profileImage || this.user.img_perfil || this.user.foto;
       }
       return defaultProfile;
     }
@@ -288,6 +309,26 @@ export default {
     closeAllPopups() {
       this.sidebarOpen = false;
       this.orderPopupOpen = false;
+    },
+
+    normalizeUserSessionData(userData = {}) {
+      const imagem = userData.profileImage || userData.img_perfil || userData.foto || userData.imagem || '';
+      return {
+        nome: userData.nome || userData.nome_prestador || userData.name || '',
+        telefone: userData.telefone || userData.phone || userData.celular || '',
+        localizacao: userData.localizacao || userData.endereco || '',
+        img_perfil: imagem,
+        profileImage: imagem
+      };
+    },
+
+    loadUserFromStorage(event) {
+      const sourceData = event?.detail || userStorage.getUserData();
+      if (!sourceData) return;
+      this.user = {
+        ...this.user,
+        ...this.normalizeUserSessionData(sourceData)
+      };
     },
 
     handleSidebarAction(action) {
@@ -308,41 +349,59 @@ export default {
 
     async refreshRequests() {
       try {
-        const prestadorId = userStorage.getUserId();
-        if (!prestadorId) {
-          console.warn('Prestador ID não encontrado');
-          return;
-        }
+        const dadosPedidos = await listarPedidos();
 
-        const dadosMensagensNaoLidas = await listarMensagensNaoLidas(prestadorId);
-        
-        let listaMensagens = [];
-        if (Array.isArray(dadosMensagensNaoLidas)) listaMensagens = dadosMensagensNaoLidas;
-        else if (dadosMensagensNaoLidas && Array.isArray(dadosMensagensNaoLidas.response)) listaMensagens = dadosMensagensNaoLidas.response;
-        else if (dadosMensagensNaoLidas && Array.isArray(dadosMensagensNaoLidas.mensagens)) listaMensagens = dadosMensagensNaoLidas.mensagens;
-        else {
-          this.nearbyRequests = [];
-          return;
-        }
+        let listaReal = [];
+        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
+        else if (dadosPedidos && Array.isArray(dadosPedidos.pedidos)) listaReal = dadosPedidos.pedidos;
+        else if (dadosPedidos && Array.isArray(dadosPedidos.response)) listaReal = dadosPedidos.response;
+        else return;
 
-        // Transformar mensagens em notificações
-        this.nearbyRequests = listaMensagens.map((msg) => ({
-          id: msg.id_pedido,
-          name: msg.nome || 'Cliente',
-          avatar: msg.img_perfil || 'https://via.placeholder.com/150',
-          rating: 5,
-          description: msg.texto_mensagem || 'Nova mensagem',
-          address: 'Chat de pedido',
-          clientId: msg.id_cliente,
-          detalhesPedido: msg
-        }));
+        const promessasDePedidos = listaReal.map(async (pedido) => {
+          const clienteId = pedido.id_cliente || pedido.clienteId;
+          let dadosCliente = null;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente.response || resCliente;
+            } catch (err) {
+              console.error(`Erro ao buscar dados do cliente ${clienteId}:`, err);
+            }
+          }
+
+          // 1. Captura a propriedade de imagem que vem da API do cliente
+          const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem;
+
+          // 2. TRATAMENTO DA URL: Se a foto existir, verifica se precisa injetar a URL do backend (http://localhost:8080)
+          let fotoFinal = defaultProfile;
+          if (rawAvatar) {
+            if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:image')) {
+              fotoFinal = rawAvatar;
+            } else {
+              // Ajuste o endereço "http://localhost:8080" se o seu backend rodar em outra porta
+              fotoFinal = `http://localhost:8080/${rawAvatar.replace(/^\//, '')}`;
+            }
+          }
+
+          return {
+            id: pedido.id || pedido.id_pedido,
+            name: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || pedido.clienteNome || 'Cliente',
+            address: pedido.endereco_origem || pedido.endereco || 'Endereço não informado',
+            rating: Number(dadosCliente?.avaliacao || 5),
+            avatar: fotoFinal, // <-- Agora passa a foto com a URL corrigida
+            distance: pedido.distancia_km ? `${pedido.distancia_km} km` : 'Calculando...',
+            detalhesPedido: pedido
+          };
+        });
+
+        this.nearbyRequests = await Promise.all(promessasDePedidos);
 
         if (this.mapService) {
           await this.updateRequestMarkersFromAPI();
         }
       } catch (error) {
-        console.error('Erro ao buscar mensagens não lidas:', error);
-        this.nearbyRequests = [];
+        console.error('Erro na requisição manual de pedidos:', error);
       }
     },
 
@@ -404,16 +463,27 @@ export default {
       }
     },
 
+
+
     async aceitarPedido() {
       try {
-        await apiFetch(`/pedidos/aceitar/${this.pedidoPendente.id}`, { method: 'POST' });
+        // const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
+        // await fetch(url, { method: 'POST' });
 
         this.popupConfirmacaoOpen = false;
-        alert('Você aceitou a solicitação! Ela será incluída na sua rota.');
+        this.$router.push({ name: 'pedido-prestador' });
         await this.refreshRequests();
       } catch (error) {
         console.error("Erro ao aceitar a solicitação direta:", error);
       }
+    },
+    irParaMensagem(){
+      try {
+        this.$router.push({ name: 'mensagens-prestador' })
+      } catch (error) {
+        console.error("Erro ao ir para a mensagem:", error);
+      }
+      
     },
 
     recusarPedido() {
@@ -422,21 +492,68 @@ export default {
     },
 
     async carregarHistoricoDePedidos() {
+      this.historyLoading = true;
       try {
         const prestadorId = userStorage.getUserId();
-        const dados = await apiFetch(`/pedidos/historico/${prestadorId}`);
+        if (!prestadorId) {
+          this.orders = [];
+          return;
+        }
 
-        const listaHistorico = dados.response || dados || [];
-        this.orders = listaHistorico.map(o => ({
-          id: o.id,
-          provider: o.clienteNome || 'Cliente',
-          avatar: o.avatar || 'https://via.placeholder.com/150',
-          date: o.data_solicitacao ? new Date(o.data_solicitacao).toLocaleDateString('pt-BR') : 'Recentemente',
-          origin: o.endereco_origem || 'Origem não gravada',
-          destination: o.endereco_destino || 'Destino não gravado'
+        const dadosPedidos = await listarPedidos();
+        let listaReal = [];
+        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
+        else if (dadosPedidos?.response) listaReal = dadosPedidos.response;
+        else if (dadosPedidos?.pedidos) listaReal = dadosPedidos.pedidos;
+
+        const prestadorIdString = String(prestadorId);
+        const pedidosDoPrestador = listaReal.filter(pedido => {
+          const pedidoPrestadorId = String(pedido.id_prestador || pedido.prestadorId || pedido.idPrestador || pedido.prestador?.id || pedido.prestador_id || '');
+          const pedidoPrestadorEmail = String(pedido.prestadorEmail || pedido.email_prestador || pedido.prestador?.email || pedido.email || '');
+
+          return pedidoPrestadorId === prestadorIdString || pedidoPrestadorEmail === prestadorIdString;
+        });
+
+        const pedidosComCliente = await Promise.all(pedidosDoPrestador.map(async (o) => {
+          const clienteId = o.id_cliente || o.clienteId || o.idCliente || o.cliente?.id || o.cliente_id || '';
+          let dadosCliente = null;
+
+          if (clienteId) {
+            try {
+              const resCliente = await buscarClientePorId(clienteId);
+              dadosCliente = resCliente?.response || resCliente;
+            } catch (err) {
+              console.warn(`[HomePrestador] Falha ao buscar cliente ${clienteId}:`, err);
+            }
+          }
+
+          // Descobre qual propriedade de imagem o cliente possui na resposta da API
+          const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || o.avatar || o.foto_cliente;
+
+          // Se a imagem for uma rota relativa (ex: /uploads/foto.png), você pode concatenar com a URL do seu servidor aqui:
+          // const urlCompleta = rawAvatar && !rawAvatar.startsWith('http') ? `http://localhost:8080${rawAvatar}` : rawAvatar;
+
+          return {
+            id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_prestador}`,
+            clientName: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || o.clienteNome || o.nome_cliente || o.nomeCliente || 'Cliente',
+
+            // Se encontrou o avatar usa ele, se não, usa o defaultProfile importado lá no topo
+            clientAvatar: rawAvatar || defaultProfile,
+
+            status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído',
+            date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ?
+              new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
+            origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
+            destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado'
+          };
         }));
+
+        this.orders = pedidosComCliente;
       } catch (error) {
         console.error("Erro ao carregar histórico:", error);
+        this.orders = [];
+      } finally {
+        this.historyLoading = false;
       }
     },
 
@@ -503,41 +620,58 @@ export default {
       this.requestMarkerIds = [];
     },
 
-    openChatForRequest(request) {
-      if (!request) return;
-      
-      // Marcar como lida (remover notificação)
-      const prestadorId = userStorage.getUserId();
-      if (prestadorId && request.clientId) {
-        marcarComoLida(prestadorId, request.clientId).catch(err => {
-          console.error('Erro ao marcar como lida:', err);
-        });
-      }
-      
-      // Remover da lista de notificações imediatamente
-      this.nearbyRequests = this.nearbyRequests.filter(r => r.id !== request.id);
-      
-      // Navegar para o chat
-      this.$router.push({
-        name: 'mensagens-prestador',
-        query: {
-          contactId: request.clientId || request.id,
-          contactName: request.name,
-          contactAvatar: request.avatar,
-          pedidoId: request.id,
-          lastMessage: request.description || request.address || 'Novo pedido recebido'
-        }
-      });
+    async openRequestModal(request) {
+      this.selectedRequest = request;
+      await this.$nextTick();
+      await this.initRequestCardMap();
     },
 
     closeRequestModal() {
+      if (this.requestMapService) {
+        this.requestMapService.destroyMap();
+        this.requestMapService = null;
+      }
       this.selectedRequest = null;
+    },
+
+    async initRequestCardMap() {
+      if (!this.selectedRequest) return;
+
+      if (this.requestMapService) {
+        this.requestMapService.destroyMap();
+        this.requestMapService = null;
+      }
+
+      this.requestMapService = new MapboxService();
+
+      let coords = null;
+      if (this.selectedRequest.lng != null && this.selectedRequest.lat != null) {
+        coords = [this.selectedRequest.lng, this.selectedRequest.lat];
+      } else if (this.selectedRequest.address) {
+        coords = await this.requestMapService.forwardGeocode(this.selectedRequest.address, this.presenterLocation);
+      }
+
+      if (!coords) {
+        return;
+      }
+
+      this.requestMapService.initPresenterMap('request-card-map', coords);
+      if (this.requestMapService.map) {
+        this.requestMapService.map.on('load', () => {
+          this.requestMapService.addMarker('selected-request', coords[0], coords[1], {
+            color: '#D62828',
+            popupHTML: '<div style="padding: 8px;"><strong>Origem do solicitante</strong></div>'
+          });
+          this.requestMapService.map.flyTo({ center: coords, zoom: 14 });
+        });
+      }
     },
 
     async acceptRequest() {
       if (!this.selectedRequest) return;
       try {
-        await apiFetch(`/pedidos/aceitar/${this.selectedRequest.id}`, { method: 'POST' });
+        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.selectedRequest.id}`;
+        await fetch(url, { method: 'POST' });
         alert('Serviço aceito com sucesso!');
         this.closeRequestModal();
         await this.refreshRequests();
@@ -557,7 +691,8 @@ export default {
 
     async acceptEmergencyService() {
       try {
-        await apiFetch(`/pedidos/aceitar/${this.emergencyRequest.id}`, { method: 'POST' });
+        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.emergencyRequest.id}`;
+        await fetch(url, { method: 'POST' });
         alert('Serviço de emergência aceito!');
         this.closeEmergencyPopup();
         await this.refreshRequests();
@@ -578,6 +713,9 @@ export default {
 
   async mounted() {
 
+    this.loadUserFromStorage();
+    window.addEventListener('userDataUpdated', this.loadUserFromStorage);
+
     this.timerConvites = setInterval(async () => {
       await this.verificarNovosConvitesDePedido();
     }, 5000);
@@ -588,7 +726,7 @@ export default {
         let response = await buscarPrestador(userId);
         const dadosFinais = response.response || response;
         if (dadosFinais) {
-          this.user = { ...this.user, ...dadosFinais };
+          this.user = { ...this.user, ...this.normalizeUserSessionData(dadosFinais) };
           userStorage.setSession(userId, dadosFinais, 'prestador');
         }
       } catch (error) {
@@ -610,6 +748,7 @@ export default {
   },
 
   beforeDestroy() {
+    window.removeEventListener('userDataUpdated', this.loadUserFromStorage);
     if (this.timerConvites) {
       clearInterval(this.timerConvites);
     }
@@ -617,6 +756,10 @@ export default {
     if (this.mapService) this.mapService.destroyMap();
   }
 };
+
+
+
+
 </script>
 
 <style scoped>
@@ -948,7 +1091,7 @@ export default {
   background: transparent;
   border: none;
   cursor: pointer;
-  
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1196,8 +1339,8 @@ export default {
 }
 
 .orders-screen {
-  margin: 18px;
-  padding: 22px;
+  margin: 50px;
+  padding: 32px;
   background: #f5f6f8;
   border-radius: 28px;
   display: flex;
@@ -1210,7 +1353,7 @@ export default {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -1218,20 +1361,62 @@ export default {
   background: #D62828;
   border: none;
   color: white;
-  border-radius: 14px;
-  padding: 12px 20px;
+  border-radius: 12px;
+  padding: 12px 24px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.orders-screen__back:hover {
+  background: #b81f1f;
+  transform: translateY(-1px);
+}
+
+.orders-screen__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 240px;
+  text-align: center;
+  color: #334155;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px 24px;
+  border: 1px dashed #d8d8d8;
+}
+
+.orders-screen__empty p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.orders-screen__cta {
+  background: #D62828;
+  border: none;
+  color: white;
+  padding: 14px 24px;
+  border-radius: 999px;
+  cursor: pointer;
   font-weight: 700;
 }
 
+.orders-screen__cta:hover {
+  background: #b81f1f;
+}
+
 .orders-screen__list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
   overflow-y: auto;
-  padding-right: 6px;
+  padding-right: 8px;
   flex: 1;
+  min-height: 0;
 }
 
 .orders-screen__list::-webkit-scrollbar {
@@ -1266,54 +1451,88 @@ export default {
 .orders-screen__card {
   background: #ffffff;
   border: 1px solid #e8e8e8;
-  border-radius: 24px;
-  padding: 22px 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border-radius: 28px;
+  padding: 28px 32px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  transition: border-color 0.2s ease;
+}
+
+.orders-screen__card:hover {
+  border-color: #D62828;
 }
 
 .orders-screen__top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
 }
 
 .orders-screen__provider {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .orders-screen__avatar {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .orders-screen__provider-label {
   display: block;
-  font-size: 12px;
+  font-size: 20px;
   color: #7f7f7f;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.orders-screen__provider-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .orders-screen__provider-name {
   display: block;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #111111;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .orders-screen__date {
-  font-size: 13px;
-  color: #7f7f7f;
+  font-size: 16px;
+  color: #333333;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.orders-screen__info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
 }
 
 .orders-screen__route {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -1328,18 +1547,20 @@ export default {
   font-weight: 700;
   color: #333333;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .orders-screen__route-text {
-  font-size: 14px;
+  font-size: 15px;
   color: #4a4a4a;
   line-height: 1.5;
+  font-weight: 500;
 }
 
 .orders-screen__route-arrow {
   font-size: 20px;
   color: #b3b3b3;
-  text-align: center;
+  text-align: start;
 }
 
 .modal-overlay {
@@ -1360,6 +1581,7 @@ export default {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1381,6 +1603,7 @@ export default {
     transform: translateY(50px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -1452,7 +1675,16 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+
+.request-modal__location-address {
+  margin: 0 auto 20px;
+  max-width: 90%;
+  font-size: 14px;
+  color: #4a4a4a;
+  text-align: center;
+  line-height: 1.6;
 }
 
 .request-modal__location-icon {
@@ -1701,13 +1933,13 @@ export default {
   border: none;
   color: white;
   padding: 28px 59px;
-  font-size:18px;
+  font-size: 18px;
   font-weight: 700;
   border-radius: 12px;
   cursor: pointer;
   margin: 24px auto 32px;
   display: flex;
-  align-items: center; 
+  align-items: center;
   justify-content: center;
 }
 
@@ -1836,6 +2068,10 @@ export default {
   .right-sidebar__title {
     font-size: 13px;
   }
+
+  .orders-screen__list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1849,7 +2085,41 @@ export default {
     max-width: 340px;
   }
 
+  .orders-screen {
+    margin: 18px;
+    padding: 25px;
+  }
 
+  .orders-screen__grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .orders-screen__card {
+    padding: 20px 24px;
+    gap: 20px;
+  }
+
+  .orders-screen__avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .orders-screen__provider-name {
+    font-size: 14px;
+  }
+
+  .orders-screen__date {
+    font-size: 14px;
+  }
+
+  .orders-screen__route-text {
+    font-size: 14px;
+  }
+
+  .orders-screen__list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1861,9 +2131,41 @@ export default {
   .right-sidebar {
     width: 100%;
   }
+
+  .orders-screen {
+    margin: 12px;
+    padding: 18px;
+  }
+
+  .orders-screen__list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .orders-screen__card {
+    padding: 16px 18px;
+    gap: 16px;
+  }
+
+  .orders-screen__avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .orders-screen__provider-name {
+    font-size: 13px;
+  }
+
+  .orders-screen__date {
+    font-size: 12px;
+  }
+
+  .orders-screen__route-text {
+    font-size: 13px;
+  }
 }
 
-.locationIcon{
+.locationIcon {
   width: 18px;
   height: 18px;
 }
