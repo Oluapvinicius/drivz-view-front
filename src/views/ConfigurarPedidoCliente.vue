@@ -52,6 +52,7 @@ import eletricistaIcon from '../assets/eletricista.svg';
 import borracheiroIcon from '../assets/borracheiro.svg';
 import pneuIcon from '../assets/pneu.svg';
 import { supabase } from '../supabase';
+import { criarPedido } from '../requests/pedido';
 
 // export default {
 //   name: 'ConfigurarPedidoCliente',
@@ -279,40 +280,79 @@ export default {
         this.sugestoesDestino = [];
       }
     },
+    escutarStatusDoPedido(pedidoId) {
+      console.log(`📡 Iniciando escuta em tempo real no Supabase para a solicitação ID: ${pedidoId}`);
+
+      const canalSupabase = supabase
+        .channel(`pedido-${pedidoId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'solicitacoes',
+            filter: `id=eq.${pedidoId}`
+          },
+          (payload) => {
+            const pedidoAtualizado = payload.new;
+            console.log("Mudança detectada no Supabase:", pedidoAtualizado);
+
+            if (pedidoAtualizado.status === 'aceito') {
+              console.log("🚀 O Mobile aceitou o chamado! Prestador ID:", pedidoAtualizado.id_prestador);
+
+              // Remove o canal de escuta para economizar recursos
+              supabase.removeChannel(canalSupabase);
+
+              // Redireciona o Cliente Web para a tela de acompanhamento/mapa
+              this.$router.push({
+                name: 'pedido-cliente',
+                query: {
+                  id_pedido: pedidoId,
+                  tipo: 'emergencia',
+                  status: 'prestador_a_caminho'
+                }
+              });
+            }
+          }
+        )
+        .subscribe();
+    },
     async continuarPedido() {
       const tipoAtual = this.$route.query.tipo || 'comum';
-      const pedidoId = `pedido_${Date.now()}`; // Gera um ID único baseado no tempo atual
 
       if (tipoAtual === 'emergencia') {
+        const novoPedidoSOS = {
+          data_solicitacao: new Date().toISOString(),
+          endereco_origem: this.origem,
+          endereco_destino: this.destino,
+          descricao: this.descricao || "Solicitação de emergência: Guincho e reboque necessário imediatamente.",
+          distancia_km: "0.0",
+          id_cliente: Number(this.$route.query.contactId) || 1,
+          id_prestador: 11,
+          tipo_pedido: "comum",
+          status: "aberto",
+        };
+
         try {
-          // Grava a emergência na tabela do Supabase
-          const { error } = await supabase
-            .from('solicitacoes') // Nome da sua tabela no Supabase
-            .insert([
-              { 
-                id: pedidoId, 
-                status: 'buscando', // O celular do prestador vai filtrar por esse status
-                origem_txt: this.origem,
-                destino_txt: this.destino,
-                origem_lat: this.origemCoords ? this.origemCoords[1] : null,
-                origem_lng: this.origemCoords ? this.origemCoords[0] : null
-              }
-            ]);
+          const respostaBackend = await criarPedido(novoPedidoSOS);
 
-          if (error) throw error;
+          console.log("Resposta bruta da Azure:", respostaBackend);
 
-          // Se gravou com sucesso, vai para a tela do mapa passando o ID do pedido criado
-          this.$router.push({ 
-            name: 'pedido-cliente', 
-            query: { id_pedido: pedidoId, tipo: 'emergencia', ...this.$route.query } 
-          });
+          const idDoPedidoValido = respostaBackend?.id_pedido || respostaBackend?.id;
+
+          if (idDoPedidoValido) {
+            alert("Buscando prestadores de emergência próximos...");
+            this.escutarStatusDoPedido(idDoPedidoValido);
+          } else {
+            throw new Error("ID do pedido não retornado pelo servidor.");
+          }
 
         } catch (err) {
-          console.error("Erro ao salvar emergência no Supabase:", err);
-          alert("Falha ao iniciar pedido de emergência.");
+          console.error("Erro ao iniciar fluxo de emergência unificado:", err);
+          alert("Falha ao enviar solicitação de socorro: Atributo de data inválido ou obrigatório.");
         }
       } else {
-        // Fluxo comum (segue o roteamento normal que você já tinha feito)
+        this.categoryPopupOpen = true;
       }
     },
     closePopup() {

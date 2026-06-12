@@ -632,7 +632,7 @@
 // };
 
 import { supabase } from '../supabase';
-import MapboxService from '../services/MapboxService';
+import { MapboxService } from '@/requests/mapboxService';
 
 export default {
   name: 'PedidoCliente',

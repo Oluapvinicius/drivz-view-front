@@ -1,5 +1,7 @@
+const BASE_URL = "https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/v1/drivez";
+
 export async function inserirCliente(usuario) {
-    const url = "http://localhost:8080/v1/drivez/cliente";
+    const url = `${BASE_URL}/cliente`;
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -11,7 +13,7 @@ export async function inserirCliente(usuario) {
 }
 
 export async function buscarClientePorId(id) {
-    const url = `http://localhost:8080/v1/drivez/cliente/${id}`;
+    const url = `${BASE_URL}/cliente/${id}`;
     const response = await fetch(url, {
         method: "GET",
     });
@@ -19,7 +21,7 @@ export async function buscarClientePorId(id) {
 }
 
 export async function atualizarCliente(id, cliente) {
-    const url = `http://localhost:8080/v1/drivez/cliente/${id}`;
+    const url = `${BASE_URL}/cliente/${id}`;
     const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -31,7 +33,7 @@ export async function atualizarCliente(id, cliente) {
 }
 
 export async function buscarAvaliacaoCliente(id) {
-    const url = `http://localhost:8080/v1/drivez/avaliacoes/mediaCliente/${id}`;
+    const url = `${BASE_URL}/avaliacoes/mediaCliente/${id}`;
     const response = await fetch(url, {
         method: "GET",
     });
@@ -39,7 +41,7 @@ export async function buscarAvaliacaoCliente(id) {
 }
 
 export async function alterarSenhaCliente(id, senhaAtual, novaSenha) {
-    const url = `http://localhost:8080/v1/drivez/cliente/${id}/alterarsenha`;
+    const url = `${BASE_URL}/cliente/${id}/alterarsenha`;
     const response = await fetch(url, {
         method: "PUT",
         headers: {

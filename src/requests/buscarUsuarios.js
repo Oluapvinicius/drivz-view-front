@@ -1,23 +1,25 @@
+const BASE_URL = "https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/v1/drivez";
+
 export async function buscarCliente(id) {
-  const url = `http://localhost:8080/v1/drivez/cliente/${id}`;
+  const url = `${BASE_URL}/cliente/${id}`;
   const response = await fetch(url);
   return response.json();
 }
 
 export async function buscarPrestador(id) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
+  const url = `${BASE_URL}/prestador/${id}`;
   const response = await fetch(url);
   return response.json();
 }
 
 export async function buscarPrestadorPorId(id) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
+  const url = `${BASE_URL}/prestador/${id}`;
   const response = await fetch(url);
   return response.json();
 }
 
 export async function atualizarPrestador(id, dados) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
+  const url = `${BASE_URL}/prestador/${id}`;
   const response = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -27,13 +29,13 @@ export async function atualizarPrestador(id, dados) {
 }
 
 export async function buscarAvaliacaoPrestador(id) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}/avaliacoes`;
+  const url = `${BASE_URL}/prestador/${id}/avaliacoes`;
   const response = await fetch(url);
   return response.json();
 }
 
 export async function alterarSenhaPrestador(id, senhaAtual, novaSenha) {
-  const url = `http://localhost:8080/v1/drivez/prestador/${id}/alterar-senha`;
+  const url = `${BASE_URL}/prestador/${id}/alterar-senha`;
   const response = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

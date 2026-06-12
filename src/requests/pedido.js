@@ -1,5 +1,7 @@
+const BASE_URL = "https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/v1/drivez";
+
 export async function listarPedidos() {
-    const url = "http://localhost:8080/v1/drivez/pedidos";
+    const url = `${BASE_URL}/pedidos`;
     const response = await fetch(url, {
         method: "GET",
     });
@@ -7,7 +9,7 @@ export async function listarPedidos() {
 }
 
 export async function criarPedido(pedido) {
-    const url = "http://localhost:8080/v1/drivez/pedido";
+    const url = `${BASE_URL}/pedido`;
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -19,7 +21,7 @@ export async function criarPedido(pedido) {
 }
 
 export async function atualizarStatusPedido(id, status) {
-    const url = `http://localhost:8080/v1/drivez/pedido/${id}/status`;
+    const url = `${BASE_URL}/pedido/${id}/status`;
     const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -31,7 +33,7 @@ export async function atualizarStatusPedido(id, status) {
 }
 
 export async function buscarPedidoPorId(id) {
-    const url = `http://localhost:8080/v1/drivez/pedido/${id}`;
+    const url = `${BASE_URL}/pedido/${id}`;
     const response = await fetch(url, {
         method: "GET",
     });
