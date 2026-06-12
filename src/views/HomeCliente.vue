@@ -213,7 +213,7 @@
           </p>
           <p class="service-detail-modal__text">{{ selectedService?.description }}</p>
           <div class="service-detail-modal__footer">
-            <button class="service-detail-modal__button">Solicitar Serviço</button>
+            <button class="service-detail-modal__button" @click="solicitarServicoChat">Conversar com Prestador</button>
           </div>
         </div>
       </div>
@@ -393,6 +393,27 @@ irParaPerfil () {
     handleServiceClick(service) {
       this.selectedService = service;
       this.serviceModalOpen = true;
+    },
+    solicitarServicoChat() {
+      if (!this.selectedService) return;
+
+      const contactId = this.selectedService.id;
+      const contactName = this.selectedService.title;
+      const contactAvatar = this.selectedService.image || '';
+      const lastMessage = this.selectedService.description || '';
+      const pedidoId = Date.now(); // Gera ID único para esta conversa
+
+      this.closeAllPopups();
+      this.$router.push({
+        name: 'mensagem-cliente',
+        query: {
+          pedidoId,
+          contactId,
+          contactName,
+          contactAvatar,
+          lastMessage
+        }
+      });
     },
     goToOrderScreen() {
       this.activeScreen = 'orders';

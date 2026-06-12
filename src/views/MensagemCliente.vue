@@ -77,58 +77,165 @@
 </template>
 
 <script setup>
-import mensagensData from '../data/mensagens.json';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { io } from 'socket.io-client';
+import { userStorage } from '../utils/userStorage';
 
-const contacts = mensagensData.contacts;
-const chats = mensagensData.chats;
+const route = useRoute();
+const pedidoId = Number(route.query.pedidoId) || null;
+const contactId = Number(route.query.contactId) || null;
+const routeContactName = route.query.contactName || 'Prestador';
+const routeContactAvatar = route.query.contactAvatar || 'https://via.placeholder.com/150';
 
+console.log('[MensagemCliente] Params:', { pedidoId, contactId, routeContactName });
+
+const socket = ref(null);
 const searchQuery = ref('');
-const selectedContactId = ref(1);
+const selectedContactId = ref(contactId || 1);
 const newMessage = ref('');
+const chatMessagesArray = ref([]);
+
+// Lista de contatos vazia inicialmente - adicionará apenas o contato atual
+const contacts = ref([]);
+
+// Adiciona o contato com quem está conversando
+if (contactId) {
+  contacts.value = [{
+    id: contactId,
+    name: routeContactName || 'Prestador',
+    avatar: routeContactAvatar || 'https://via.placeholder.com/150',
+    subtitle: 'Conversa ativa'
+  }];
+}
 
 const selectedContact = computed(() => {
-  return contacts.find((contact) => contact.id === selectedContactId.value) || contacts[0];
+  return contacts.value.find((contact) => contact.id === selectedContactId.value) || contacts.value[0];
 });
 
 const filteredContacts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts;
-
-  return contacts.filter((contact) => {
-    return (
-      contact.name.toLowerCase().includes(query) ||
-      contact.subtitle.toLowerCase().includes(query) ||
-      contact.location.toLowerCase().includes(query)
-    );
+  if (!query) return contacts.value;
+  return contacts.value.filter((contact) => {
+    return contact.name.toLowerCase().includes(query);
   });
 });
 
 const chatMessages = computed(() => {
-  const chat = chats.find((item) => item.contactId === selectedContactId.value);
-  return chat ? chat.messages : [];
+  return chatMessagesArray.value;
 });
 
-function selectContact(contactId) {
-  selectedContactId.value = contactId;
+function getSocketHost() {
+  const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8080/v1/drivez';
+  return apiBase.replace(/\/v1\/drivez\/?$/, '');
+}
+
+function handleIncomingMessage(payload) {
+  console.log('[MensagemCliente] Mensagem recebida:', payload);
+  if (!payload) return;
+  
+  chatMessagesArray.value.push({
+    id: payload.id_mensagem || Date.now(),
+    type: 'incoming',
+    text: payload.texto_mensagem || payload.text || '',
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    media: payload.imagem || null
+  });
+}
+
+function selectContact(id) {
+  selectedContactId.value = id;
 }
 
 function sendMessage() {
   const text = newMessage.value.trim();
-  if (!text) return;
+  if (!text || !pedidoId || !contactId) {
+    console.warn('[MensagemCliente] Não pode enviar:', { text, pedidoId, contactId });
+    return;
+  }
 
-  const chat = chats.find((item) => item.contactId === selectedContactId.value);
-  if (chat) {
-    chat.messages.push({
-      id: Date.now(),
-      type: 'outgoing',
-      text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const clienteId = userStorage.getUserId();
+  console.log('[MensagemCliente] Enviando mensagem:', { clienteId, contactId, pedidoId, text });
+  
+  // Adicionar à tela imediatamente
+  chatMessagesArray.value.push({
+    id: Date.now(),
+    type: 'outgoing',
+    text,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+
+  // Enviar via socket
+  if (socket.value) {
+    socket.value.emit('chat-message', {
+      data_envio: new Date().toISOString(),
+      texto_mensagem: text,
+      lida: false,
+      id_pedido: pedidoId,
+      id_prestador: contactId,
+      id_cliente: clienteId,
+      imagem: null
     });
+    console.log('[MensagemCliente] Mensagem emitida via socket');
+  } else {
+    console.warn('[MensagemCliente] Socket não conectado');
   }
 
   newMessage.value = '';
 }
+
+onMounted(() => {
+  console.log('[MensagemCliente] Montando componente...');
+  
+  if (!pedidoId) {
+    console.warn('[MensagemCliente] Sem pedidoId, não conectando socket');
+    return;
+  }
+
+  try {
+    const socketHost = getSocketHost();
+    console.log('[MensagemCliente] Conectando socket em:', socketHost);
+    
+    socket.value = io(socketHost, { 
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
+    
+    socket.value.on('connect', () => {
+      console.log('[MensagemCliente] Socket conectado:', socket.value.id);
+      // Entrar na sala do pedido
+      socket.value.emit('join-pedido', pedidoId);
+      console.log('[MensagemCliente] Emitiu join-pedido para:', pedidoId);
+    });
+
+    socket.value.on('joined-room', (data) => {
+      console.log('[MensagemCliente] Entrou na sala:', data);
+    });
+
+    socket.value.on('chat-message', handleIncomingMessage);
+    
+    socket.value.on('connect_error', (error) => {
+      console.warn('[MensagemCliente] Socket connection error:', error);
+    });
+
+    socket.value.on('disconnect', () => {
+      console.log('[MensagemCliente] Socket desconectado');
+    });
+
+  } catch (error) {
+    console.warn('[MensagemCliente] Erro ao conectar socket:', error);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (socket.value) {
+    socket.value.disconnect();
+    socket.value = null;
+  }
+});
 </script>
 
 <style scoped>

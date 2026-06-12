@@ -123,7 +123,8 @@
                 <circle cx="12" cy="10" r="3" />
               </svg>
             </div>
-            <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
+            <h2 class="right-sidebar__title">Notificações</h2>
+            <span class="right-sidebar__badge-count">{{ nearbyRequests.length }}</span>
           </div>
           <button class="right-sidebar__refresh" @click="refreshRequests">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -133,14 +134,14 @@
         </div>
 
         <div class="right-sidebar__list">
-          <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openRequestModal(request)">
+          <div v-for="request in nearbyRequests" :key="request.id" class="request-card" @click="openChatForRequest(request)">
             <div class="request-card__top">
               <div class="request-card__avatar">
                 <img :src="request.avatar" :alt="request.name" />
               </div>
               <div class="request-card__header">
                 <h3 class="request-card__name">{{ request.name }}</h3>
-                <p class="request-card__distance">{{ request.distance }}</p>
+           
               </div>
             </div>
             <div class="request-card__rating">
@@ -239,6 +240,7 @@ import { userStorage } from '../utils/userStorage';
 import { MapboxService } from '../requests/mapboxService';
 import { listarPedidos } from '../requests/pedido';
 import { prestadoresGuincho } from '../requests/prestador';
+import { listarMensagensNaoLidas, marcarComoLida } from '../requests/mensagem';
 import defaultProfile from '../assets/profile.svg';
 import { apiFetch } from '../requests/api';
 
@@ -306,45 +308,41 @@ export default {
 
     async refreshRequests() {
       try {
-        const dadosPedidos = await listarPedidos();
+        const prestadorId = userStorage.getUserId();
+        if (!prestadorId) {
+          console.warn('Prestador ID não encontrado');
+          return;
+        }
 
-        let listaReal = [];
-        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
-        else if (dadosPedidos && Array.isArray(dadosPedidos.pedidos)) listaReal = dadosPedidos.pedidos;
-        else if (dadosPedidos && Array.isArray(dadosPedidos.response)) listaReal = dadosPedidos.response;
-        else return;
+        const dadosMensagensNaoLidas = await listarMensagensNaoLidas(prestadorId);
+        
+        let listaMensagens = [];
+        if (Array.isArray(dadosMensagensNaoLidas)) listaMensagens = dadosMensagensNaoLidas;
+        else if (dadosMensagensNaoLidas && Array.isArray(dadosMensagensNaoLidas.response)) listaMensagens = dadosMensagensNaoLidas.response;
+        else if (dadosMensagensNaoLidas && Array.isArray(dadosMensagensNaoLidas.mensagens)) listaMensagens = dadosMensagensNaoLidas.mensagens;
+        else {
+          this.nearbyRequests = [];
+          return;
+        }
 
-        const promessasDePedidos = listaReal.map(async (pedido) => {
-          const clienteId = pedido.id_cliente || pedido.clienteId;
-          let dadosCliente = null;
-
-          if (clienteId) {
-            try {
-              const resCliente = await buscarClientePorId(clienteId);
-              dadosCliente = resCliente.response || resCliente;
-            } catch (err) {
-              console.error(`Erro ao buscar dados do cliente ${clienteId}:`, err);
-            }
-          }
-
-          return {
-            id: pedido.id || pedido.id_pedido,
-            name: dadosCliente?.nome || pedido.clienteNome || 'Cliente',
-            address: pedido.endereco_origem || pedido.endereco || 'Endereço não informado',
-            rating: Number(dadosCliente?.avaliacao || 5),
-            avatar: dadosCliente?.avatar || 'https://via.placeholder.com/150',
-            distance: pedido.distancia_km ? `${pedido.distancia_km} km` : 'Calculando...',
-            detalhesPedido: pedido
-          };
-        });
-
-        this.nearbyRequests = await Promise.all(promessasDePedidos);
+        // Transformar mensagens em notificações
+        this.nearbyRequests = listaMensagens.map((msg) => ({
+          id: msg.id_pedido,
+          name: msg.nome || 'Cliente',
+          avatar: msg.img_perfil || 'https://via.placeholder.com/150',
+          rating: 5,
+          description: msg.texto_mensagem || 'Nova mensagem',
+          address: 'Chat de pedido',
+          clientId: msg.id_cliente,
+          detalhesPedido: msg
+        }));
 
         if (this.mapService) {
           await this.updateRequestMarkersFromAPI();
         }
       } catch (error) {
-        console.error('Erro na requisição manual de pedidos:', error);
+        console.error('Erro ao buscar mensagens não lidas:', error);
+        this.nearbyRequests = [];
       }
     },
 
@@ -505,8 +503,31 @@ export default {
       this.requestMarkerIds = [];
     },
 
-    openRequestModal(request) {
-      this.selectedRequest = request;
+    openChatForRequest(request) {
+      if (!request) return;
+      
+      // Marcar como lida (remover notificação)
+      const prestadorId = userStorage.getUserId();
+      if (prestadorId && request.clientId) {
+        marcarComoLida(prestadorId, request.clientId).catch(err => {
+          console.error('Erro ao marcar como lida:', err);
+        });
+      }
+      
+      // Remover da lista de notificações imediatamente
+      this.nearbyRequests = this.nearbyRequests.filter(r => r.id !== request.id);
+      
+      // Navegar para o chat
+      this.$router.push({
+        name: 'mensagens-prestador',
+        query: {
+          contactId: request.clientId || request.id,
+          contactName: request.name,
+          contactAvatar: request.avatar,
+          pedidoId: request.id,
+          lastMessage: request.description || request.address || 'Novo pedido recebido'
+        }
+      });
     },
 
     closeRequestModal() {
