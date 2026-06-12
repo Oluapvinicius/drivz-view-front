@@ -8,9 +8,7 @@
         <span>Contatos</span>
       </div>
       <div class="mensagem-topbar__spacer"></div>
-      <button type="button" class="mensagem-topbar__action" @click="requestService">
-        Solicitar Serviço
-      </button>
+      
     </header>
 
     <div class="mensagem-screen">
