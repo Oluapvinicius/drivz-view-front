@@ -303,6 +303,9 @@ export default {
 
           txtOrigem: this.origem,
           txtDestino: tipoAtual === 'emergencia' ? this.destino : 'Não informado (Atendimento Comum)',
+          
+          tipo: tipoAtual,
+          descricao: this.descricao,
 
           contactId: this.$route.query.contactId || '123'
         }

@@ -119,7 +119,7 @@
         </header>
         <div class="map-container">
           <div id="map-prestador" class="map-placeholder"></div>
-          <button class="emergency-test-btn" @click="showEmergencyPopup">Testar Emergência</button>
+          <button class="emergency-test-btn" @click="testMockEmergency">🧪 Testar Emergência (Mock)</button>
         </div>
       </main>
 
@@ -256,7 +256,7 @@ import { buscarClientePorId } from '../requests/cliente';
 import { userStorage } from '../utils/userStorage';
 import { MapboxService } from '../requests/mapboxService';
 import { ref } from 'vue'
-import { listarPedidos } from '../requests/pedido';
+import { listarPedidos, listarEmergenciasPendentes, aceitarEmergencia } from '../requests/pedido';
 import { prestadoresGuincho } from '../requests/prestador';
 import defaultProfile from '../assets/profile.svg';
 import { useRouter } from 'vue-router';
@@ -417,18 +417,12 @@ export default {
         const listaGuinchos = dadosGuinchoRaw?.response || dadosGuinchoRaw || [];
         const guinchoIds = listaGuinchos.map(p => String(p.id_prestador || p.id || p.prestadorId || p.id_prestador));
 
-        // Buscar pedidos e filtrar apenas emergências não atendidas
-        const dadosGerais = await listarPedidos();
-        let todosPedidos = [];
-        if (Array.isArray(dadosGerais)) todosPedidos = dadosGerais;
-        else if (dadosGerais?.response) todosPedidos = dadosGerais.response;
-        else if (dadosGerais?.pedidos) todosPedidos = dadosGerais.pedidos;
-
-        const emergenciasPendentes = todosPedidos.filter(p => {
-          const tipo = (p.tipo_pedido || p.tipo || '').toString().toLowerCase();
-          const semPrestador = !p.id_prestador && !p.prestadorId;
-          return tipo === 'emergencia' && semPrestador;
-        });
+        // Buscar diretamente emergências pendentes via endpoint dedicado
+        const dadosGerais = await listarEmergenciasPendentes();
+        let emergenciasPendentes = [];
+        if (Array.isArray(dadosGerais)) emergenciasPendentes = dadosGerais;
+        else if (dadosGerais?.response) emergenciasPendentes = dadosGerais.response;
+        else if (dadosGerais?.emergencias) emergenciasPendentes = dadosGerais.emergencias;
 
         if (emergenciasPendentes.length === 0) {
           // limpa lista se não houver emergências
@@ -488,15 +482,111 @@ export default {
       }
     },
 
+    async handleMockEmergency(event) {
+      try {
+        console.log('[Home_Prestador] handleMockEmergency chamado com event:', event);
+        const pedido = event?.detail;
+        console.log('[Home_Prestador] Pedido recebido:', pedido);
+        if (!pedido) {
+          console.warn('[Home_Prestador] Pedido vazio, retornando');
+          return;
+        }
+
+        const prestadorLogadoId = userStorage.getUserId();
+        console.log('[Home_Prestador] Prestador logado:', prestadorLogadoId);
+        if (!prestadorLogadoId) {
+          console.warn('[Home_Prestador] Sem prestador logado');
+          return;
+        }
+
+        // NOTA: Removido filtro de categoria "guincho" - qualquer prestador pode receber emergências
+        // Se necessário, adicionar lógica de categoria depois
+        console.log('[Home_Prestador] Aceitando emergência para qualquer prestador (sem filtro de categoria)');
+
+        // Busca dados do cliente (se houver)
+        const clienteId = pedido.id_cliente || pedido.clienteId || pedido.idCliente;
+        let dadosCliente = null;
+        if (clienteId) {
+          try {
+            const resCliente = await buscarClientePorId(clienteId);
+            dadosCliente = resCliente.response || resCliente;
+          } catch (err) {
+            console.error('Erro ao buscar cliente no mock:', err);
+          }
+        }
+
+        const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem;
+        let fotoFinal = this.defaultProfileFallback || '../assets/profile.svg';
+        if (rawAvatar) {
+          if (String(rawAvatar).startsWith('http') || String(rawAvatar).startsWith('data:image')) fotoFinal = rawAvatar;
+          else fotoFinal = `http://localhost:8080/${String(rawAvatar).replace(/^\//, '')}`;
+        }
+
+        const pedidoId = pedido.id || pedido.id_pedido || `${pedido.id || Date.now()}`;
+
+        // Preencher o objeto usado pelo modal de emergência já existente
+        this.emergencyRequest = {
+          id: pedidoId,
+          name: dadosCliente?.nome || dadosCliente?.nome_cliente || pedido.clienteNome || 'Cliente',
+          origin: pedido.endereco_origem || pedido.endereco || 'Origem não informada',
+          destination: pedido.endereco_destino || pedido.endereco || '',
+          rating: Number(dadosCliente?.avaliacao || 5),
+          avatar: fotoFinal,
+          detalhesPedido: pedido
+        };
+
+        // Atualiza pedidoPendente para compatibilidade com outras ações
+        this.pedidoPendente = {
+          id: pedidoId,
+          name: this.emergencyRequest.name,
+          origin: this.emergencyRequest.origin,
+          destination: this.emergencyRequest.destination,
+          description: pedido.descricao || ''
+        };
+
+        // Abre o modal/card de emergência existente
+        this.emergencyPopupOpen = true;
+        console.log('[Home_Prestador] ✅ Modal de emergência aberto!', this.emergencyRequest);
+      } catch (error) {
+        console.error('[Home_Prestador] Erro ao processar mock-emergency:', error);
+      }
+    },
+
 
 
     async aceitarPedido() {
       try {
-        // const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.pedidoPendente.id}`;
-        // await fetch(url, { method: 'POST' });
+        const pedidoId = this.pedidoPendente.id || (this.selectedRequest && this.selectedRequest.id);
+        if (!pedidoId) {
+          console.warn('Nenhum pedido selecionado para aceitar');
+          return;
+        }
 
         this.popupConfirmacaoOpen = false;
-        this.$router.push({ name: 'pedido-prestador' });
+
+        let prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
+        try {
+          // Preferir usar o endpoint especializado
+          await aceitarEmergencia(pedidoId, prestadorId);
+          console.log('[Home_Prestador] aceitarEmergencia OK', pedidoId, prestadorId);
+        } catch (err) {
+          console.warn('[Home_Prestador] aceitarEmergencia falhou, emitindo mock-accept fallback', err);
+        }
+
+        // Emite sinal cross-tab para garantir que o cliente receba o aceite (fallback/mocks)
+        try {
+          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
+          window.dispatchEvent(ev);
+        } catch (e) { console.warn('erro dispatchEvent mock-accept', e); }
+        try { localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, timestamp: Date.now() })); } catch (e) { }
+        try { const bc = new BroadcastChannel('drivez-channel'); bc.postMessage({ type: 'mock-accept', payload: { pedidoId, prestadorId } }); bc.close(); } catch (e) { }
+
+        // Após aceitar, abre a tela de acompanhamento do prestador
+        const detalhes = this.selectedRequest?.detalhesPedido || this.pedidoPendente || {};
+        const txtOrigem = this.selectedRequest?.origin || this.pedidoPendente.origin || this.selectedRequest?.address || '';
+        const txtDestino = this.selectedRequest?.destination || this.pedidoPendente.destination || '';
+
+        await this.prepareAndOpenPedido(detalhes, txtOrigem, txtDestino);
         await this.refreshRequests();
       } catch (error) {
         console.error("Erro ao aceitar a solicitação direta:", error);
@@ -602,6 +692,75 @@ export default {
       }
     },
 
+    async prepareAndOpenPedido(detalhesPedido = {}, txtOrigem = '', txtDestino = '') {
+      // Tentativa de extrair coordenadas do objeto do pedido em várias formas comuns
+      const d = detalhesPedido || {};
+
+      const getNumber = (v) => (v !== undefined && v !== null && v !== '' ? Number(v) : null);
+
+      const tryKeys = (o, keys) => {
+        for (const k of keys) {
+          if (o[k] !== undefined && o[k] !== null) return o[k];
+        }
+        return null;
+      };
+
+      let origemLng = tryKeys(d, ['origemLng','origem_lng','originLng','origin_lng','lng_origem','longitude_origem','longitudeOrigem','longitude']);
+      let origemLat = tryKeys(d, ['origemLat','origem_lat','originLat','origin_lat','lat_origem','latitude_origem','latitudeOrigem','latitude']);
+      let destinoLng = tryKeys(d, ['destinoLng','destino_lng','destinationLng','destination_lng','lng_destino','longitude_destino','longitudeDestino']);
+      let destinoLat = tryKeys(d, ['destinoLat','destino_lat','destinationLat','destination_lat','lat_destino','latitude_destino','latitudeDestino']);
+
+      origemLng = getNumber(origemLng);
+      origemLat = getNumber(origemLat);
+      destinoLng = getNumber(destinoLng);
+      destinoLat = getNumber(destinoLat);
+
+      // Se não temos coordenadas, tentar geocodificar com Mapbox
+      const mapSvc = this.mapService || new MapboxService();
+
+      if ((!origemLng || !origemLat) && txtOrigem) {
+        try {
+          const coords = await mapSvc.forwardGeocode(txtOrigem, this.presenterLocation);
+          if (coords) {
+            origemLng = coords[0]; origemLat = coords[1];
+          }
+        } catch (e) { console.warn('Erro ao geocodificar origem:', e); }
+      }
+
+      if ((!destinoLng || !destinoLat) && txtDestino) {
+        try {
+          const coords = await mapSvc.forwardGeocode(txtDestino, this.presenterLocation);
+          if (coords) {
+            destinoLng = coords[0]; destinoLat = coords[1];
+          }
+        } catch (e) { console.warn('Erro ao geocodificar destino:', e); }
+      }
+
+      // Navegar para a tela do pedido do prestador passando as coordenadas e textos
+      const query = {
+        origemLng: origemLng != null ? String(origemLng) : '',
+        origemLat: origemLat != null ? String(origemLat) : '',
+        destinoLng: destinoLng != null ? String(destinoLng) : '',
+        destinoLat: destinoLat != null ? String(destinoLat) : '',
+        txtOrigem: txtOrigem || '',
+        txtDestino: txtDestino || ''
+      };
+
+      // Try to include client info if available on detalhesPedido
+      try {
+        const clienteNome = detalhesPedido?.clienteNome || detalhesPedido?.nome || detalhesPedido?.nome_cliente || detalhesPedido?.customerName || detalhesPedido?.name || null;
+        const clienteRating = detalhesPedido?.clienteRating || detalhesPedido?.rating || detalhesPedido?.avaliacao || detalhesPedido?.cliente_avaliacao || null;
+        const clienteFoto = detalhesPedido?.clienteFoto || detalhesPedido?.foto || detalhesPedido?.avatar || detalhesPedido?.avatarUrl || null;
+        if (clienteNome) query.clientName = String(clienteNome);
+        if (clienteRating !== undefined && clienteRating !== null) query.clientRating = String(clienteRating);
+        if (clienteFoto) query.clientPhoto = String(clienteFoto);
+        const clientePlaca = detalhesPedido?.placa || detalhesPedido?.plate || detalhesPedido?.placa_veiculo || null;
+        if (clientePlaca) query.clientPlate = String(clientePlaca);
+      } catch (e) { /* ignore */ }
+
+      this.$router.push({ name: 'pedido-prestador', query });
+    },
+
     async updateRequestMarkersFromAPI() {
       this.clearRequestMarkers();
       const coordinatesToFit = [this.presenterLocation];
@@ -695,22 +854,27 @@ export default {
     async acceptRequest() {
       if (!this.selectedRequest) return;
       try {
-        // Try backend accept; if fails or is mock id, emit mock accept so client transitions
+        // Try backend accept; prefer the dedicated aceitarEmergencia() wrapper
         const pedidoId = this.selectedRequest.id;
         try {
           if (String(pedidoId).startsWith('mock-')) throw new Error('mock');
-          const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${pedidoId}`;
-          await fetch(url, { method: 'POST' });
-        }
-        catch (err) {
-          // Emit mock accept for frontend-only flow
+          const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
+          await aceitarEmergencia(pedidoId, prestadorId);
+        } catch (err) {
           const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
           const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
           window.dispatchEvent(ev);
+          try {
+            localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, timestamp: Date.now() }));
+          } catch (e) { }
         }
 
         alert('Serviço aceito com sucesso!');
         this.closeRequestModal();
+        const detalhes = this.selectedRequest?.detalhesPedido || this.selectedRequest || {};
+        const txtOrigem = this.selectedRequest?.origin || this.selectedRequest?.address || '';
+        const txtDestino = this.selectedRequest?.destination || '';
+        await this.prepareAndOpenPedido(detalhes, txtOrigem, txtDestino);
         await this.refreshRequests();
       } catch (error) {
         console.error('Erro ao aceitar serviço:', error);
@@ -728,10 +892,25 @@ export default {
 
     async acceptEmergencyService() {
       try {
-        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.emergencyRequest.id}`;
-        await fetch(url, { method: 'POST' });
+        const pedidoId = this.emergencyRequest.id;
+        try {
+          const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
+          await aceitarEmergencia(pedidoId, prestadorId);
+        } catch (err) {
+          const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
+          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
+          window.dispatchEvent(ev);
+          try {
+            localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, timestamp: Date.now() }));
+          } catch (e) { }
+        }
+
         alert('Serviço de emergência aceito!');
         this.closeEmergencyPopup();
+        const detalhes = this.emergencyRequest?.detalhesPedido || this.emergencyRequest || {};
+        const txtOrigem = this.emergencyRequest?.origin || '';
+        const txtDestino = this.emergencyRequest?.destination || '';
+        await this.prepareAndOpenPedido(detalhes, txtOrigem, txtDestino);
         await this.refreshRequests();
       } catch (error) {
         console.error('Erro ao aceitar serviço de emergência:', error);
@@ -745,6 +924,24 @@ export default {
         sessionStorage.clear();
         this.$router.push('/');
       }
+    },
+
+    testMockEmergency() {
+      console.log('[Home_Prestador] 🧪 Disparando teste de mock-emergency');
+      const mockEvent = new CustomEvent('drivez:mock-emergency', {
+        detail: {
+          id: `test-mock-${Date.now()}`,
+          id_pedido: `test-mock-${Date.now()}`,
+          id_cliente: userStorage.getUserId() || 'cliente-teste',
+          endereco_origem: 'Rua Teste, 123 - São Paulo, Brasil',
+          endereco_destino: 'Av. Teste, 456 - São Paulo, Brasil',
+          descricao: 'Teste de emergência',
+          clienteNome: 'Cliente Teste',
+          data_solicitacao: new Date().toISOString(),
+          tipo_pedido: 'emergencia'
+        }
+      });
+      window.dispatchEvent(mockEvent);
     }
   },
 
@@ -752,6 +949,27 @@ export default {
 
     this.loadUserFromStorage();
     window.addEventListener('userDataUpdated', this.loadUserFromStorage);
+    
+    // Escuta eventos de emergência mock emitidos pelo cliente (frontend-only)
+    // Usar arrow function para preservar 'this'
+    this._mockEmergencyListener = (event) => this.handleMockEmergency(event);
+    window.addEventListener('drivez:mock-emergency', this._mockEmergencyListener);
+    console.log('[Home_Prestador] Listener de mock-emergency registrado');
+    
+    // Fallback: escuta mudanças no localStorage (funciona entre abas)
+    this._storageListener = (event) => {
+      if (event?.key === 'drivez:mock-emergency' && event?.newValue) {
+        try {
+          const mockData = JSON.parse(event.newValue);
+          console.log('[Home_Prestador] 📱 Mock-emergency recebido via localStorage:', mockData);
+          this.handleMockEmergency({ detail: mockData });
+        } catch (e) {
+          console.error('[Home_Prestador] Erro ao processar localStorage:', e);
+        }
+      }
+    };
+    window.addEventListener('storage', this._storageListener);
+    console.log('[Home_Prestador] Listener de storage registrado');
 
     this.timerConvites = setInterval(async () => {
       await this.verificarNovosConvitesDePedido();
@@ -785,9 +1003,15 @@ export default {
   },
 
   beforeDestroy() {
-    window.removeEventListener('userDataUpdated', this.loadUserFromStorage);
-    if (this.timerConvites) {
+    try {
       clearInterval(this.timerConvites);
+    } catch (e) {}
+    window.removeEventListener('userDataUpdated', this.loadUserFromStorage);
+    if (this._mockEmergencyListener) {
+      window.removeEventListener('drivez:mock-emergency', this._mockEmergencyListener);
+    }
+    if (this._storageListener) {
+      window.removeEventListener('storage', this._storageListener);
     }
     this.clearRequestMarkers();
     if (this.mapService) this.mapService.destroyMap();

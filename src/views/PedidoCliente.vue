@@ -478,45 +478,7 @@
         </div>
       </template>
 
-      <template v-if="currentStep === 1">
-        <div v-if="tipoPedido === 'emergencia' && aguardandoAceite" class="emergency-container">
-          <div class="emergency-icon-top">
-            <img src="../assets/emergencia-cima.svg" alt="Emergência" class="emergency-icon-img" />
-          </div>
-
-          <div class="emergency-waiting">
-            <h2 class="emergency-waiting-title">⏳ Aguardando Prestador</h2>
-            <p class="emergency-waiting-text">Sua solicitação foi enviada para os prestadores disponíveis</p>
-
-            <div class="emergency-pulse-animation">
-              <div class="pulse-dot"></div>
-              <div class="pulse-dot"></div>
-              <div class="pulse-dot"></div>
-            </div>
-
-            <div class="emergency-locations-waiting">
-              <div class="emergency-location-item">
-                <img src="../assets/origem.svg" alt="Origem" class="emergency-location-icon" />
-                <div>
-                  <span class="emergency-location-label">ORIGEM</span>
-                  <p class="emergency-location-text">{{ endereçoOrigem }}</p>
-                </div>
-              </div>
-              <div class="emergency-location-item">
-                <img src="../assets/destino.svg" alt="Destino" class="emergency-location-icon" />
-                <div>
-                  <span class="emergency-location-label">DESTINO</span>
-                  <p class="emergency-location-text">{{ endereçoDestino }}</p>
-                </div>
-              </div>
-            </div>
-
-            <button class="emergency-cancel-btn" @click="cancelarEmergencia">
-              Cancelar Solicitação
-            </button>
-          </div>
-        </div>
-      </template>
+    
 
       <template v-if="currentStep === 2">
         <div class="step2-Container">
@@ -746,11 +708,12 @@ export default {
     };
   },
   async mounted() {
-    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId, tipo } = this.$route.query;
+    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino, contactId, tipo, descricao } = this.$route.query;
 
     this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
     this.endereçoDestino = txtDestino || 'Não informado';
     this.tipoPedido = tipo === 'emergencia' ? 'emergencia' : 'comum';
+    this.descricaoEmergencia = descricao || '';
 
     const origin = [parseFloat(origemLng), parseFloat(origemLat)];
     const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
@@ -785,6 +748,33 @@ export default {
 
     // Inscrever-se para eventos mock de aceite (quando usamos modo frontend-only)
     window.addEventListener('drivez:mock-accept', this.handleMockAccept);
+    // Também escutar mudanças no localStorage para receber aceitações de outras abas
+    this._storageListener = (event) => {
+      if (event?.key === 'drivez:mock-accept' && event?.newValue) {
+        try {
+          const parsed = JSON.parse(event.newValue);
+          this.handleMockAccept({ detail: { pedidoId: parsed.pedidoId, prestadorId: parsed.prestadorId } });
+        } catch (e) {
+          console.warn('Erro ao processar drivez:mock-accept via storage:', e);
+        }
+      }
+    };
+    window.addEventListener('storage', this._storageListener);
+    // BroadcastChannel listener (fallback mais robusto entre abas/janelas same-origin)
+    try {
+      this._bc = new BroadcastChannel('drivez-channel');
+      this._bc.onmessage = (ev) => {
+        try {
+          if (ev?.data?.type === 'mock-accept') {
+            this.handleMockAccept({ detail: ev.data.payload });
+          }
+        } catch (e) {
+          console.warn('Erro ao processar BroadcastChannel message:', e);
+        }
+      };
+    } catch (e) {
+      // BroadcastChannel não suportado
+    }
   },
   beforeDestroy() {
     if (this.mapboxService) this.mapboxService.destroyMap();
@@ -792,6 +782,11 @@ export default {
     clearInterval(this.simulationInterval);
     clearInterval(this.pollingInterval);
     window.removeEventListener('drivez:mock-accept', this.handleMockAccept);
+    if (this._storageListener) window.removeEventListener('storage', this._storageListener);
+    if (this._bc) {
+      try { this._bc.close(); } catch (e) {}
+      this._bc = null;
+    }
   },
   methods: {
     iniciarLoadingBusca() {
@@ -801,7 +796,7 @@ export default {
         if (this.searchProgress >= 100) {
           clearInterval(this.searchInterval);
 
-          this.currentStep = 2;
+          
           this.iniciarDeslocamentoLento();
           return;
         }
@@ -911,20 +906,50 @@ export default {
           endereco_origem: this.endereçoOrigem,
           endereco_destino: this.endereçoDestino,
           descricao: this.descricaoEmergencia || '',
+          data_solicitacao: new Date().toISOString(),
           tipo_pedido: 'emergencia'
         };
 
         let resposta = null;
+        let timeoutId = null;
+        
         try {
-          resposta = await solicitarEmergencia(novaEmergencia);
+          // Adiciona timeout de 5 segundos para requisição
+          const promiseAPI = solicitarEmergencia(novaEmergencia);
+          const promiseTimeout = new Promise((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error('Timeout na API')), 5000);
+          });
+          
+          resposta = await Promise.race([promiseAPI, promiseTimeout]);
+          if (timeoutId) clearTimeout(timeoutId);
           console.log('[PedidoCliente] Resposta da emergência:', resposta);
         } catch (err) {
-          console.warn('[PedidoCliente] Falha ao criar emergência no backend, caindo para mock:', err);
+          if (timeoutId) clearTimeout(timeoutId);
+          console.warn('[PedidoCliente] ⚠️ Falha ao criar emergência no backend:', err?.message || err);
+          
           // Criar um ID local e emitir evento mock para prestadores
           const mockId = `mock-${Date.now()}`;
           novaEmergencia.id_pedido = mockId;
+          novaEmergencia.id = mockId;
+          
+          console.log('[PedidoCliente] 📢 DISPARANDO EVENTO MOCK COM PAYLOAD:', novaEmergencia);
+          
           // Emite evento global para prestadores na mesma sessão
-          emitMockEmergency({ ...novaEmergencia, id_pedido: mockId, id: mockId });
+          try {
+            emitMockEmergency({ ...novaEmergencia, id_pedido: mockId, id: mockId });
+            console.log('[PedidoCliente] ✅ Evento mock disparado com sucesso');
+          } catch (emitErr) {
+            console.error('[PedidoCliente] ❌ Erro ao emitir mock-emergency:', emitErr);
+          }
+          
+          // Fallback: também dispara via localStorage (funciona entre abas)
+          try {
+            localStorage.setItem('drivez:mock-emergency', JSON.stringify({ ...novaEmergencia, id_pedido: mockId, id: mockId, timestamp: Date.now() }));
+            console.log('[PedidoCliente] 📱 Fallback localStorage ativado');
+          } catch (e) {
+            console.error('[PedidoCliente] Erro no fallback localStorage:', e);
+          }
+          
           resposta = { response: novaEmergencia };
         }
 
@@ -933,6 +958,34 @@ export default {
 
         if (typeof pedidoData === 'object' && pedidoData !== null) {
           idExtraido = pedidoData.id || pedidoData.id_pedido || pedidoData.pedidoId;
+        }
+
+        // Se não conseguiu extrair ID válido, ativa fallback mock
+        if (!idExtraido) {
+          console.warn('[PedidoCliente] ⚠️ Resposta inválida da API, ativando fallback mock');
+          console.log('[PedidoCliente] Resposta recebida:', resposta);
+          
+          const mockId = `mock-${Date.now()}`;
+          novaEmergencia.id_pedido = mockId;
+          novaEmergencia.id = mockId;
+          
+          console.log('[PedidoCliente] 📢 DISPARANDO EVENTO MOCK (Fallback) COM PAYLOAD:', novaEmergencia);
+          
+          try {
+            emitMockEmergency({ ...novaEmergencia, id_pedido: mockId, id: mockId });
+            console.log('[PedidoCliente] ✅ Evento mock disparado com sucesso (fallback)');
+          } catch (emitErr) {
+            console.error('[PedidoCliente] ❌ Erro ao emitir mock-emergency:', emitErr);
+          }
+          
+          try {
+            localStorage.setItem('drivez:mock-emergency', JSON.stringify({ ...novaEmergencia, id_pedido: mockId, id: mockId, timestamp: Date.now() }));
+            console.log('[PedidoCliente] 📱 Fallback localStorage ativado');
+          } catch (e) {
+            console.error('[PedidoCliente] Erro no fallback localStorage:', e);
+          }
+          
+          idExtraido = mockId;
         }
 
         if (idExtraido) {
@@ -960,6 +1013,7 @@ export default {
       let tentativas = 0;
       const maxTentativas = 100;
 
+      // Aumenta polling para verificar aceitação (de 3s para 6s)
       this.pollingInterval = setInterval(async () => {
         tentativas++;
         console.log(`[PedidoCliente] Polling tentativa ${tentativas}/${maxTentativas}`);
@@ -991,24 +1045,51 @@ export default {
         } catch (error) {
           console.error('[PedidoCliente] Erro no polling:', error);
         }
-      }, 3000);
+      }, 6000);
     },
 
     // Listener para aceite em modo mock
-    handleMockAccept(event) {
+    async handleMockAccept(event) {
       const detail = event?.detail || {};
-      const pedidoId = detail.pedidoId;
-      const idPrestador = detail.prestadorId;
+      const pedidoId = detail.pedidoId || detail.id_pedido || detail.idPedido || detail.pedidoId;
+      const idPrestador = detail.prestadorId || detail.prestador_id || detail.id_prestador || detail.prestador?.id || detail.prestadorId;
+      console.log('[PedidoCliente] handleMockAccept chamado — detail:', detail, 'this.idPedidoEmergencia:', this.idPedidoEmergencia);
       if (!pedidoId) return;
 
-      if (String(pedidoId) === String(this.idPedidoEmergencia) || String(this.idPedidoEmergencia).startsWith('mock-')) {
-        console.log('[PedidoCliente] Recebeu mock-accept para pedido', pedidoId, 'prestador', idPrestador);
-        this.aguardandoAceite = false;
-        // carregar dados do prestador (mock)
-        this.carregarDadosPrestador(idPrestador).catch(() => {});
+      const matches = String(pedidoId) === String(this.idPedidoEmergencia) || (this.idPedidoEmergencia && String(this.idPedidoEmergencia).startsWith('mock-'));
+      console.log('[PedidoCliente] aceitar? matches=', matches);
+      if (!matches) return;
+
+      console.log('[PedidoCliente] Recebeu mock-accept para pedido', pedidoId, 'prestador', idPrestador);
+      this.aguardandoAceite = false;
+
+      // Se o evento já vier com os dados do prestador, usa diretamente
+      const prestadorObj = detail.prestador || detail.prestadorData || detail.prestador_info || detail.prestadorDetails;
+      if (prestadorObj && typeof prestadorObj === 'object') {
+        this.driver = {
+          name: prestadorObj.nome || prestadorObj.name || prestadorObj.nome_prestador || 'Prestador',
+          rating: prestadorObj.media_avaliacoes || prestadorObj.rating || prestadorObj.avaliacao || '4.5',
+          plate: prestadorObj.placa || prestadorObj.plate || prestadorObj.placa_veiculo || '---',
+          distance: prestadorObj.distance || prestadorObj.distancia || '-- km',
+          eta: prestadorObj.eta || prestadorObj.tempo || 'A caminho',
+          avatar: prestadorObj.img_perfil || prestadorObj.foto || prestadorObj.profileImage || new URL('../assets/pessoa.jpg', import.meta.url).href
+        };
         this.currentStep = 2;
         clearInterval(this.pollingInterval);
+        return;
       }
+
+      // Caso contrário, busca via API usando id do prestador
+      if (idPrestador) {
+        try {
+          await this.carregarDadosPrestador(idPrestador);
+        } catch (e) {
+          console.warn('[PedidoCliente] falha ao carregar prestador por id:', e);
+        }
+      }
+
+      this.currentStep = 2;
+      clearInterval(this.pollingInterval);
     },
 
     async carregarDadosPrestador(idPrestador) {
@@ -2375,7 +2456,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 0px;
   width: 100%;
 }
 
