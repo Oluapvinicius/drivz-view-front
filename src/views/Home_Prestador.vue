@@ -412,50 +412,75 @@ export default {
         const prestadorLogadoId = userStorage.getUserId();
         if (!prestadorLogadoId) return;
 
+        // Buscar todos os prestadores da categoria 'guincho'
         const dadosGuinchoRaw = await prestadoresGuincho();
+        const listaGuinchos = dadosGuinchoRaw?.response || dadosGuinchoRaw || [];
+        const guinchoIds = listaGuinchos.map(p => String(p.id_prestador || p.id || p.prestadorId || p.id_prestador));
 
-        const listaGuinchos = dadosGuinchoRaw?.response || [];
-        if (listaGuinchos.length === 0) return;
-
-        const perfilPrestadorApi = listaGuinchos[0];
-
+        // Buscar pedidos e filtrar apenas emergências não atendidas
         const dadosGerais = await listarPedidos();
         let todosPedidos = [];
         if (Array.isArray(dadosGerais)) todosPedidos = dadosGerais;
         else if (dadosGerais?.response) todosPedidos = dadosGerais.response;
         else if (dadosGerais?.pedidos) todosPedidos = dadosGerais.pedidos;
 
-        if (todosPedidos.length === 0) return;
-
-        const pedidoEmergencia = todosPedidos.find(pedido => {
-          const ehParaEstePrestador = String(pedido.id_prestador) === String(perfilPrestadorApi.id_prestador);
-          const ehDesteUsuarioLogado = String(pedido.id_prestador) === String(prestadorLogadoId);
-
-          return ehParaEstePrestador && ehDesteUsuarioLogado;
+        const emergenciasPendentes = todosPedidos.filter(p => {
+          const tipo = (p.tipo_pedido || p.tipo || '').toString().toLowerCase();
+          const semPrestador = !p.id_prestador && !p.prestadorId;
+          return tipo === 'emergencia' && semPrestador;
         });
 
-        if (pedidoEmergencia) {
+        if (emergenciasPendentes.length === 0) {
+          // limpa lista se não houver emergências
+          this.nearbyRequests = [];
+          return;
+        }
+
+        // Mapear emergências para objetos de UI exibíveis para prestadores guincho
+        const promessas = emergenciasPendentes.map(async (pedido) => {
+          const clienteId = pedido.id_cliente || pedido.clienteId || pedido.idCliente;
           let dadosCliente = null;
-          const clienteId = pedidoEmergencia.id_cliente;
 
           if (clienteId) {
             try {
               const resCliente = await buscarClientePorId(clienteId);
               dadosCliente = resCliente.response || resCliente;
             } catch (err) {
-              console.error(`Erro ao buscar cliente da emergência:`, err);
+              console.error(`Erro ao buscar dados do cliente ${clienteId}:`, err);
             }
           }
 
-          this.pedidoPendente = {
-            id: pedidoEmergencia.id || pedidoEmergencia.id_pedido,
-            name: dadosCliente?.nome || pedidoEmergencia.clienteNome,
-            origin: pedidoEmergencia.endereco_origem,
-            destination: pedidoEmergencia.endereco_destino,
-            description: pedidoEmergencia.descricao
-          };
+          const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem;
+          let fotoFinal = defaultProfile;
+          if (rawAvatar) {
+            if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:image')) fotoFinal = rawAvatar;
+            else fotoFinal = `http://localhost:8080/${String(rawAvatar).replace(/^\//, '')}`;
+          }
 
-          this.popupConfirmacaoOpen = true;
+          return {
+            id: pedido.id || pedido.id_pedido || `${pedido.id || Date.now()}`,
+            name: dadosCliente?.nome || dadosCliente?.nome_cliente || pedido.clienteNome || 'Cliente',
+            address: pedido.endereco_origem || pedido.endereco || 'Origem não informada',
+            origin: pedido.endereco_origem || '',
+            destination: pedido.endereco_destino || pedido.endereco_destino || pedido.endereco || '',
+            message: pedido.descricao || 'Solicitação de emergência',
+            rating: Number(dadosCliente?.avaliacao || 5),
+            avatar: fotoFinal,
+            detalhesPedido: pedido
+          };
+        });
+
+        const requests = await Promise.all(promessas);
+
+        // Apenas mostrar casos de emergência para prestadores da categoria guincho (inclui o usuário logado se for guincho)
+        // Se o prestador logado não for guincho, ele não verá esses cards.
+        const meuIdStr = String(prestadorLogadoId);
+        const souGuincho = guinchoIds.includes(meuIdStr);
+
+        if (souGuincho) {
+          this.nearbyRequests = requests;
+        } else {
+          this.nearbyRequests = [];
         }
 
       } catch (error) {
