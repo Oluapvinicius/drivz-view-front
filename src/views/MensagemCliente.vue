@@ -60,14 +60,14 @@
 </template>
 
 <script setup>
-import mensagensData from '../data/mensagens.json';
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
 const router = useRouter();
-const contacts = ref([...mensagensData.contacts]);
-const chats = ref([...mensagensData.chats]);
+// Using runtime data (API or dynamic creation). Start with empty lists.
+const contacts = ref([]);
+const chats = ref([]);
 
 const searchQuery = ref('');
 const selectedContactId = ref(route.query.contactId ? Number(route.query.contactId) : contacts.value[0]?.id || 1);
