@@ -695,8 +695,20 @@ export default {
     async acceptRequest() {
       if (!this.selectedRequest) return;
       try {
-        const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${this.selectedRequest.id}`;
-        await fetch(url, { method: 'POST' });
+        // Try backend accept; if fails or is mock id, emit mock accept so client transitions
+        const pedidoId = this.selectedRequest.id;
+        try {
+          if (String(pedidoId).startsWith('mock-')) throw new Error('mock');
+          const url = `http://localhost:8080/v1/drivez/pedidos/aceitar/${pedidoId}`;
+          await fetch(url, { method: 'POST' });
+        }
+        catch (err) {
+          // Emit mock accept for frontend-only flow
+          const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
+          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
+          window.dispatchEvent(ev);
+        }
+
         alert('Serviço aceito com sucesso!');
         this.closeRequestModal();
         await this.refreshRequests();

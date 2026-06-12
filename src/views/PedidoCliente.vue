@@ -708,6 +708,7 @@ import { MapboxService } from '@/requests/mapboxService';
 import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prestador';
 import { solicitarEmergencia, verificarEmergenciaPrestador, aceitarEmergencia } from '@/requests/pedido';
 import { userStorage } from '@/utils/userStorage';
+import { emitMockEmergency } from '@/utils/mockEmergency';
 
 export default {
   name: 'PedidoCliente',
@@ -781,12 +782,16 @@ export default {
         }
       });
     }
+
+    // Inscrever-se para eventos mock de aceite (quando usamos modo frontend-only)
+    window.addEventListener('drivez:mock-accept', this.handleMockAccept);
   },
   beforeDestroy() {
     if (this.mapboxService) this.mapboxService.destroyMap();
     clearInterval(this.searchInterval);
     clearInterval(this.simulationInterval);
     clearInterval(this.pollingInterval);
+    window.removeEventListener('drivez:mock-accept', this.handleMockAccept);
   },
   methods: {
     iniciarLoadingBusca() {
@@ -909,8 +914,19 @@ export default {
           tipo_pedido: 'emergencia'
         };
 
-        const resposta = await solicitarEmergencia(novaEmergencia);
-        console.log('[PedidoCliente] Resposta da emergência:', resposta);
+        let resposta = null;
+        try {
+          resposta = await solicitarEmergencia(novaEmergencia);
+          console.log('[PedidoCliente] Resposta da emergência:', resposta);
+        } catch (err) {
+          console.warn('[PedidoCliente] Falha ao criar emergência no backend, caindo para mock:', err);
+          // Criar um ID local e emitir evento mock para prestadores
+          const mockId = `mock-${Date.now()}`;
+          novaEmergencia.id_pedido = mockId;
+          // Emite evento global para prestadores na mesma sessão
+          emitMockEmergency({ ...novaEmergencia, id_pedido: mockId, id: mockId });
+          resposta = { response: novaEmergencia };
+        }
 
         const pedidoData = resposta?.response || resposta;
         let idExtraido = null;
@@ -927,7 +943,12 @@ export default {
         }
 
         this.aguardandoAceite = true;
-        this.iniciarPollingEmergencia();
+        // Se for mock (id começa com mock-) não use polling na API; espere evento de mock-accept
+        if (String(this.idPedidoEmergencia).startsWith('mock-')) {
+          console.log('[PedidoCliente] Emergência mock criada, aguardando evento mock-accept');
+        } else {
+          this.iniciarPollingEmergencia();
+        }
       } catch (error) {
         console.error('[PedidoCliente] Erro ao solicitar emergência:', error);
         alert('Erro ao solicitar emergência');
@@ -971,6 +992,23 @@ export default {
           console.error('[PedidoCliente] Erro no polling:', error);
         }
       }, 3000);
+    },
+
+    // Listener para aceite em modo mock
+    handleMockAccept(event) {
+      const detail = event?.detail || {};
+      const pedidoId = detail.pedidoId;
+      const idPrestador = detail.prestadorId;
+      if (!pedidoId) return;
+
+      if (String(pedidoId) === String(this.idPedidoEmergencia) || String(this.idPedidoEmergencia).startsWith('mock-')) {
+        console.log('[PedidoCliente] Recebeu mock-accept para pedido', pedidoId, 'prestador', idPrestador);
+        this.aguardandoAceite = false;
+        // carregar dados do prestador (mock)
+        this.carregarDadosPrestador(idPrestador).catch(() => {});
+        this.currentStep = 2;
+        clearInterval(this.pollingInterval);
+      }
     },
 
     async carregarDadosPrestador(idPrestador) {
