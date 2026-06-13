@@ -208,8 +208,11 @@ confirmaSenha.onChange = () => {
       </section>
 
       <section class="cadastro-panel cadastro-panel--hero">
-        <div class="hero-bg"></div>
-        <img :src="imagemRetangulo" alt="Imagem de fundo" class="hero-image" />
+        <img src="../assets/logo-sem-texto.png" alt="" class="hero-bg-img" />
+        <div class="hero-content">
+          <span class="hero-subtitle">A EXCELÊNCIA EM MOVIMENTO</span>
+          <h1 class="hero-headline">Drive<span class="red">Z:</span><br>A sua<br>jornada<br>começa<br>aqui<span class="red">.</span></h1>
+        </div>
       </section>
     </div>
   </div>
@@ -220,10 +223,13 @@ confirmaSenha.onChange = () => {
   font-family: 'Roboto', sans-serif;
 }
 
+:global(html),
 :global(body) {
+  height: 100%;
   margin: 0;
-  min-height: 100%;
-  background: #e9edf4;
+  padding: 0;
+  overflow: hidden;
+  background: #0d2746;
 }
 
 * {
@@ -231,10 +237,9 @@ confirmaSenha.onChange = () => {
 }
 
 .cadastro-page {
-  min-height: 100vh;
+  height: 100vh;
   width: 100vw;
-  display: grid;
-  grid-template-columns: 1fr;
+  overflow: hidden;
   margin: 0;
   padding: 0;
   background: #0d2746;
@@ -242,7 +247,7 @@ confirmaSenha.onChange = () => {
 
 .cadastro-card {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   overflow: hidden;
@@ -386,113 +391,132 @@ confirmaSenha.onChange = () => {
 
 .cadastro-panel--hero {
   position: relative;
-  background: #0d2746;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #0d0d0d;
   overflow: hidden;
 }
 
-.hero-bg {
+.hero-bg-img {
   position: absolute;
   inset: 0;
-  background: #1B2D45;
-}
-
-.hero-image {
-  position: relative;
-  max-width: 100%;
-  max-height: 100%;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
-.hero-shape {
-  position: absolute;
-  width: 180%;
-  height: 180%;
-  pointer-events: none;
-}
-
-.hero-shape--top {
-  top: -60%;
-  left: -40%;
-  background: linear-gradient(140deg, rgba(248, 24, 31, 0.9), rgba(248, 24, 31, 0.1));
-  transform: rotate(25deg);
-}
-
-.hero-shape--middle {
-  top: 12%;
-  right: -30%;
-  width: 120%;
-  height: 54%;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), transparent 70%);
-  transform: rotate(18deg);
-}
-
-.hero-shape--bottom {
-  bottom: -50%;
-  left: -10%;
-  width: 140%;
-  height: 70%;
-  background: linear-gradient(220deg, rgba(216, 8, 13, 0.95), rgba(216, 8, 13, 0.12));
-  transform: rotate(-20deg);
-}
-
-.hero-logo {
+.hero-content {
   position: relative;
-  z-index: 1;
-  font-size: clamp(5rem, 8vw, 8rem);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
+  width: 100%;
+  padding: clamp(60px, 10vh, 120px) clamp(24px, 3.5vw, 48px) 0;
+  gap: clamp(8px, 1.2vh, 16px);
+}
+
+.hero-subtitle {
+  color: #555555;
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(9px, 0.85vw, 12px);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.hero-headline {
+  color: #111111;
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(2rem, 4vw, 4.8rem);
+  line-height: 1.05;
   font-weight: 800;
-  letter-spacing: -0.08em;
-  color: #ff2f33;
-  text-align: center;
+  margin: 0;
 }
 
-.hero-logo strong {
-  color: #ffffff;
+.hero-headline .red {
+  color: #b5080d;
 }
 
-@media (max-width: 1120px) {
+/* --- Telas médias --- */
+@media (max-width: 1200px) {
+  .cadastro-card { grid-template-columns: 1.3fr 1fr; }
+}
+
+@media (max-width: 1024px) {
+  .cadastro-card { grid-template-columns: 1.5fr 1fr; }
+  .cadastro-panel--form { padding: 64px 40px 40px; }
+  .cadastro-title { font-size: 30px; margin-bottom: 28px; }
+  .cadastro-switch { height: 80px; margin-bottom: 28px; }
+  .cadastro-fields { gap: 16px; margin-bottom: 28px; }
+  .cadastro-fields input { height: 58px; }
+  .cadastro-button { height: 58px; font-size: 17px; }
+}
+
+/* --- Tablet / empilha verticalmente --- */
+@media (max-width: 768px) {
+  :global(html),
+  :global(body) { overflow-y: auto; height: auto; }
+
+  .cadastro-page { height: auto; min-height: 100vh; overflow: visible; }
+
   .cadastro-card {
     grid-template-columns: 1fr;
-    min-height: auto;
+    grid-template-rows: 38vh auto;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
+
+  .cadastro-panel--hero { order: -1; min-height: 38vh; }
+
+  .hero-content { padding: clamp(20px, 5vw, 36px); gap: 10px; }
+  .hero-headline { font-size: clamp(1.8rem, 6vw, 3rem); }
 
   .cadastro-panel--form {
-    padding: 48px 32px;
+    order: 1;
+    padding: 52px 28px 40px;
+    overflow-y: auto;
   }
 
-  .cadastro-panel--hero {
-    min-height: 420px;
-  }
+  .cadastro-box { max-width: 100%; }
+  .cadastro-title { font-size: 28px; margin-bottom: 24px; }
+  .cadastro-switch { height: 80px; margin-bottom: 24px; }
+  .cadastro-fields { gap: 14px; margin-bottom: 24px; }
+  .cadastro-fields input { height: 58px; }
+  .cadastro-button { height: 56px; font-size: 17px; }
 }
 
-@media (max-width: 720px) {
-  .cadastro-page {
-    padding: 16px;
-  }
+/* --- Mobile pequeno --- */
+@media (max-width: 480px) {
+  .cadastro-card { grid-template-rows: 32vh auto; }
+  .cadastro-panel--hero { min-height: 32vh; }
+  .hero-content { padding: 18px 20px 0; gap: 8px; }
+  .hero-headline { font-size: clamp(1.6rem, 7vw, 2.4rem); }
+  .cadastro-panel--form { padding: 44px 16px 32px; }
+  .cadastro-title { font-size: 24px; }
+  .cadastro-switch { height: 72px; border-radius: 20px; margin-bottom: 20px; }
+  .cadastro-switch__label { font-size: 15px; }
+  .cadastro-switch__sublabel { font-size: 12px; }
+  .cadastro-fields input { height: 52px; font-size: 15px; }
+  .cadastro-button { height: 52px; font-size: 16px; }
+}
 
-  .cadastro-title {
-    font-size: 32px;
-  }
-
-  .cadastro-switch {
-    grid-template-columns: 1fr;
-  }
-
-  .cadastro-switch__item {
-    min-height: auto;
-  }
-
-  .cadastro-fields input {
-    height: 58px;
-  }
-
-  .cadastro-button {
-    height: 58px;
-  }
+/* --- Telas grandes (2K/4K) --- */
+@media (min-width: 2560px) {
+  .hero-content { padding: clamp(100px, 12vh, 160px) clamp(48px, 4vw, 80px) 0; gap: 24px; }
+  .hero-subtitle { font-size: 15px; }
+  .hero-headline { font-size: clamp(4rem, 5vw, 7rem); }
+  .cadastro-panel--form { padding: 120px 96px 80px; }
+  .cadastro-box { max-width: 640px; }
+  .cadastro-title { font-size: 52px; margin-bottom: 56px; }
+  .cadastro-switch { height: 130px; margin-bottom: 56px; }
+  .cadastro-switch__label { font-size: 24px; }
+  .cadastro-switch__sublabel { font-size: 18px; }
+  .cadastro-fields { gap: 32px; margin-bottom: 56px; }
+  .cadastro-fields input { height: 96px; font-size: 22px; padding: 0 28px; }
+  .cadastro-button { height: 90px; font-size: 24px; }
 }
 
 .erro-campo {

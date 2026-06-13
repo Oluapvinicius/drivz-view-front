@@ -130,7 +130,13 @@
         <!-- Orders preview removed — history now shows only when 'Registro de Pedidos' is clicked in the sidebar -->
 
         <button class="call-button" @click="handleCallButtonClick">
-          <span>SOCORRO</span>
+          <div class="call-button__pulse"></div>
+          <div class="call-button__icon-wrap">
+            <img src="../assets/emergencia-cima.svg" alt="" class="call-button__icon" />
+          </div>
+          <div class="call-button__text">
+            <span class="call-button__label">Guincho de Emergência</span>
+          </div>
         </button>
       </template>
 
@@ -275,7 +281,12 @@ export default {
       });
     },
     visibleServices() {
-      const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 6) : this.maxVisibleServices;
+      let limit;
+      const w = this.windowWidth;
+      if (w >= 1440) limit = 8;
+      else if (w >= 1024) limit = 6;
+      else if (w >= 768) limit = 4;
+      else limit = 4;
       return this.filteredServices.slice(0, limit);
     },
     visibleOrders() {
@@ -1150,10 +1161,9 @@ body {
 
 .main-content {
   flex: 1;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   width: 100%;
   overflow: hidden;
 }
@@ -1320,13 +1330,21 @@ body {
 
 .services {
   flex: 1;
-  padding: 24px 18px 16px;
-  overflow: visible;
+  padding: 24px 18px 0;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .services__container {
   max-width: 1520px;
   margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 8px;
 }
 
 
@@ -1443,33 +1461,79 @@ body {
 
 .call-button {
   position: relative;
-  width: min(420px, calc(100% - 180px));
-  min-height: 91px;
-  padding: 0 36px;
-  margin: 24px auto 32px;
+  flex-shrink: 0;
+  width: min(460px, calc(100% - 48px));
+  min-height: 88px;
+  padding: 0 28px;
+  margin: 16px auto 24px;
   background: #D62828;
   color: white;
   border: none;
-  border-radius: 9px;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   cursor: pointer;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 8px 24px rgba(214, 40, 40, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .call-button:hover {
   transform: scale(1.02);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 12px 32px rgba(214, 40, 40, 0.55);
 }
 
 .call-button:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+}
+
+.call-button__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  animation: pulse-ring 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-ring {
+  0%   { opacity: 0.6; transform: scale(1); }
+  70%  { opacity: 0;   transform: scale(1.04); }
+  100% { opacity: 0;   transform: scale(1.04); }
+}
+
+.call-button__icon-wrap {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.call-button__icon {
+  width: 26px;
+  height: 26px;
+}
+
+.call-button__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.call-button__label {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .services-screen {
@@ -1663,17 +1727,7 @@ body {
 }
 
 @media (max-width: 1024px) {
-  .main-content {
-    overflow: hidden;
-  }
-
-  .services {
-    overflow: hidden;
-  }
-
   .services__container {
-    max-height: calc(100vh - 300px);
-    overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
     -webkit-overflow-scrolling: touch;
@@ -1702,17 +1756,6 @@ body {
   }
 }
 
-@media (max-width: 768px) {
-  .services__container {
-    max-height: calc(100vh - 280px);
-  }
-}
-
-@media (max-width: 480px) {
-  .services__container {
-    max-height: calc(100vh - 260px);
-  }
-}
 
 @media (max-width: 768px) {
   .sidebar {
@@ -1747,7 +1790,7 @@ body {
   }
 
   .services {
-    padding: 20px 16px 200px;
+    padding: 20px 16px 0;
   }
 
   .services__grid {
@@ -1769,10 +1812,16 @@ body {
 
   .call-button {
     width: calc(100% - 32px);
-    min-height: 72px;
-    padding: 0 26px;
-    margin: 0 auto 28px;
+    min-height: 76px;
+    padding: 0 20px;
+    gap: 14px;
+    margin: 12px auto 16px;
   }
+
+  .call-button__icon-wrap { width: 46px; height: 46px; }
+  .call-button__icon { width: 22px; height: 22px; }
+  .call-button__label { font-size: 22px; }
+  .call-button__sub { font-size: 12px; }
 
   .services-screen {
     margin: 18px;
@@ -1840,7 +1889,7 @@ body {
   }
 
   .services {
-    padding: 16px 12px 180px;
+    padding: 16px 12px 0;
   }
 
   .services__grid {
@@ -1871,11 +1920,16 @@ body {
 
   .call-button {
     width: calc(100% - 24px);
-    min-height: 64px;
-    font-size: 22px;
-    padding: 0 20px;
-    margin: 0 auto 24px;
+    min-height: 68px;
+    padding: 0 16px;
+    gap: 12px;
+    margin: 10px auto 14px;
   }
+
+  .call-button__icon-wrap { width: 40px; height: 40px; }
+  .call-button__icon { width: 20px; height: 20px; }
+  .call-button__label { font-size: 20px; letter-spacing: 1.5px; }
+  .call-button__sub { font-size: 11px; }
 }
 
 .services__loading {

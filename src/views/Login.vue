@@ -89,10 +89,10 @@ const validarCampos = async () => {
     <div class="conteinerAll">
 
       <div class="containerLeft">
-        <div class="left-overlay"></div>
-        <div class="left-text">
-          <span class="subtitle">A EXCELÊNCIA EM MOVIMENTO</span>
-          <h1 class="headline">DriveZ: A sua<br>jornada começa<br>aqui</h1>
+        <img src="../assets/logo-sem-texto.png" alt="" class="left-bg-img" />
+        <div class="left-content">
+          <span class="left-subtitle">A EXCELÊNCIA EM MOVIMENTO</span>
+          <h1 class="left-headline">Drive<span class="red">Z:</span><br>A sua<br>jornada<br>começa<br>aqui<span class="red">.</span></h1>
         </div>
       </div>
 
@@ -164,13 +164,12 @@ const validarCampos = async () => {
   font-family: 'Roboto', sans-serif;
 }
 
+:global(html),
 :global(body) {
-  min-height: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
-}
-
-:global(body) {
+  overflow: hidden;
   background: #8d0f11;
 }
 
@@ -180,117 +179,161 @@ const validarCampos = async () => {
 
 .conteinerAll {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   width: 100%;
-  justify-content: flex-end;
-  align-items: stretch;
+  overflow: hidden;
   background: #ffffff;
 }
 
 .containerLeft {
   position: relative;
-  width: 38%;
-  min-height: 100vh;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 0 0 0 56px;
-  background: #8a0d11;
+  width: 45%;
+  height: 100%;
+  flex-shrink: 0;
+  background: #0d0d0d;
   overflow: hidden;
 }
 
-.containerLeft::before {
-  content: "";
+.left-bg-img {
   position: absolute;
   inset: 0;
-  background: url("../assets/carro.png") center/cover no-repeat;
-  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
-.left-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(175, 16, 26, 1), rgba(26, 28, 30, 1));
-  opacity: 0.6;
-  z-index: 2;
-}
-
-.left-text {
+.left-content {
   position: relative;
-  z-index: 3;
-  max-width: 70%;
-  padding: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
+  padding: clamp(60px, 10vh, 120px) clamp(24px, 3.5vw, 48px) 0;
+  gap: clamp(8px, 1.2vh, 16px);
 }
 
-.subtitle {
-  display: inline-block;
-  color: rgba(242, 212, 213, 0.95);
-  font-size: 14px;
-  letter-spacing: 0.35em;
+.left-subtitle {
+  color: #555555;
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(9px, 0.85vw, 12px);
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  margin-bottom: 18px;
+  font-weight: 500;
 }
 
-.headline {
-  color: #ffffff;
-  font-size: clamp(2.4rem, 4.5vw, 5rem);
-  line-height: 1.02;
-  font-weight: 700;
+.left-headline {
+  color: #111111;
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(2rem, 4vw, 4.8rem);
+  line-height: 1.05;
+  font-weight: 800;
   margin: 0;
 }
 
+.left-headline .red {
+  color: #b5080d;
+}
+
 .containerRight {
-  width: 62%;
-  min-height: 100vh;
+  flex: 1;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow-y: auto;
   background: #ffffff;
 }
 
+/* --- Telas médias --- */
 @media (max-width: 1200px) {
-  .containerLeft {
-    width: 42%;
-    padding-left: 36px;
+  .containerLeft { width: 42%; }
+}
+
+@media (max-width: 1024px) {
+  .containerLeft { width: 38%; }
+  .box_place { padding: 40px 32px; gap: 22px; }
+  .titulo_login { font-size: 34px; }
+}
+
+/* --- Tablet / empilha verticalmente --- */
+@media (max-width: 768px) {
+  :global(html),
+  :global(body) { overflow-y: auto; height: auto; }
+
+  .conteinerAll {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
+
+  .containerLeft {
+    width: 100%;
+    height: 40vh;
+    flex-shrink: 0;
+  }
+
+  .left-content {
+    padding: clamp(20px, 5vw, 36px);
+    gap: 10px;
+  }
+
+  .left-headline { font-size: clamp(1.8rem, 6vw, 3rem); }
 
   .containerRight {
-    width: 58%;
-  }
-}
-
-@media (max-width: 900px) {
-  .subtitle {
-    font-size: 12px;
-  }
-
-  .headline {
-    font-size: 2.2rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .subtitle {
-    font-size: 12px;
-    letter-spacing: 0.3em;
-  }
-
-  .headline {
-    font-size: 2.4rem;
+    flex: 1;
+    height: auto;
+    overflow-y: visible;
   }
 
   .box_place {
-    padding: 28px 18px;
+    max-width: 100%;
+    padding: 36px 28px;
+    gap: 20px;
   }
 
-  .button-entrar {
-    height: 52px;
-    font-size: 16px;
+  .titulo_login { font-size: 32px; }
+  .esqueceu-senha { font-size: 17px; }
+  .cadastroH1 { font-size: 18px; }
+}
+
+/* --- Mobile pequeno --- */
+@media (max-width: 480px) {
+  .containerLeft { height: 34vh; }
+
+  .left-content { padding: 18px 20px 0; gap: 8px; }
+  .left-headline { font-size: clamp(1.8rem, 7vw, 2.4rem); }
+
+  .box_place { padding: 24px 16px; gap: 16px; }
+  .titulo_login { font-size: 26px; }
+  .campos input { height: 54px; font-size: 15px; }
+  .button-entrar { height: 52px; font-size: 16px; }
+  .esqueceu-senha { font-size: 15px; }
+  .cadastroH1 { font-size: 16px; }
+}
+
+/* --- Telas grandes (2K/4K) --- */
+@media (min-width: 2560px) {
+  .containerLeft { width: 45%; }
+
+  .left-content {
+    padding: clamp(100px, 12vh, 160px) clamp(48px, 4vw, 80px) 0;
+    gap: 24px;
   }
 
-  .campos input {
-    height: 54px;
-  }
+  .left-subtitle { font-size: 15px; }
+  .left-headline { font-size: clamp(4rem, 5vw, 7rem); }
+
+  .box_place { max-width: 800px; padding: 80px 64px; gap: 36px; }
+  .titulo_login { font-size: 52px; }
+  .campos input { height: 88px; padding: 0 28px; font-size: 20px; }
+  .button-entrar { height: 80px; font-size: 24px; }
+  .esqueceu-senha { font-size: 24px; }
+  .cadastroH1 { font-size: 26px; }
+  .link-destaque { font-size: 26px; }
 }
 
 .box_place {
@@ -412,49 +455,3 @@ const validarCampos = async () => {
   height: 24px;
 }
 </style>
-
-@media (min-width: 2560px) {
-.containerLeft {
-padding-left: 80px;
-  .subtitle {
-    font-size: 18px;
-    margin-bottom: 24px;
-  }
-
-  .headline {
-    font-size: 6rem;
-  }
-
-  .box_place {
-    max-width: 800px;
-    padding: 80px 64px;
-    gap: 36px;
-  }
-
-  .titulo_login {
-    font-size: 52px;
-  }
-
-  .campos input {
-    height: 88px;
-    padding: 0 28px;
-    font-size: 20px;
-  }
-
-  .button-entrar {
-    height: 80px;
-    font-size: 24px;
-  }
-
-  .esqueceu-senha {
-    font-size: 24px;
-  }
-
-  .cadastroH1 {
-    font-size: 26px;
-  }
-
-  .link-destaque {
-    font-size: 26px;
-  }
-}
