@@ -581,12 +581,20 @@ export default {
         }
 
         // Emite sinal cross-tab para garantir que o cliente receba o aceite (fallback/mocks)
+        const _rawPd = userStorage.getUserData() || {};
+        const _pd = _rawPd?.response || _rawPd?.user || _rawPd || {};
+        const prestador = {
+          nome: _pd.nome || _pd.nome_prestador || _pd.name || 'Prestador',
+          img_perfil: _pd.img_perfil || _pd.foto || _pd.profileImage || null,
+          media_avaliacoes: _pd.media_avaliacoes || _pd.rating || '4.5',
+          placa: _pd.placa || _pd.placa_veiculo || _pd.plate || '---',
+        };
         try {
-          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
+          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId, prestador } });
           window.dispatchEvent(ev);
         } catch (e) { console.warn('erro dispatchEvent mock-accept', e); }
-        try { localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, timestamp: Date.now() })); } catch (e) { }
-        try { const bc = new BroadcastChannel('drivez-channel'); bc.postMessage({ type: 'mock-accept', payload: { pedidoId, prestadorId } }); bc.close(); } catch (e) { }
+        try { localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, prestador, timestamp: Date.now() })); } catch (e) { }
+        try { const bc = new BroadcastChannel('drivez-channel'); bc.postMessage({ type: 'mock-accept', payload: { pedidoId, prestadorId, prestador } }); bc.close(); } catch (e) { }
 
         // Após aceitar, abre a tela de acompanhamento do prestador
         const detalhes = this.selectedRequest?.detalhesPedido || this.pedidoPendente || {};
@@ -954,10 +962,18 @@ export default {
           await aceitarEmergencia(pedidoId, prestadorId);
         } catch (err) {
           const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
-          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
+          const _rawPd2 = userStorage.getUserData() || {};
+          const _pd2 = _rawPd2?.response || _rawPd2?.user || _rawPd2 || {};
+          const prestador2 = {
+            nome: _pd2.nome || _pd2.nome_prestador || _pd2.name || 'Prestador',
+            img_perfil: _pd2.img_perfil || _pd2.foto || _pd2.profileImage || null,
+            media_avaliacoes: _pd2.media_avaliacoes || _pd2.rating || '4.5',
+            placa: _pd2.placa || _pd2.placa_veiculo || _pd2.plate || '---',
+          };
+          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId, prestador: prestador2 } });
           window.dispatchEvent(ev);
           try {
-            localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, timestamp: Date.now() }));
+            localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, prestador: prestador2, timestamp: Date.now() }));
           } catch (e) { }
         }
 
@@ -990,10 +1006,18 @@ export default {
           await aceitarEmergencia(pedidoId, prestadorId);
         } catch (err) {
           const prestadorId = userStorage.getUserId() || `mock-prestador-${Date.now()}`;
-          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
+          const _rawPd3 = userStorage.getUserData() || {};
+          const _pd3 = _rawPd3?.response || _rawPd3?.user || _rawPd3 || {};
+          const prestador3 = {
+            nome: _pd3.nome || _pd3.nome_prestador || _pd3.name || 'Prestador',
+            img_perfil: _pd3.img_perfil || _pd3.foto || _pd3.profileImage || null,
+            media_avaliacoes: _pd3.media_avaliacoes || _pd3.rating || '4.5',
+            placa: _pd3.placa || _pd3.placa_veiculo || _pd3.plate || '---',
+          };
+          const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId, prestador: prestador3 } });
           window.dispatchEvent(ev);
           try {
-            localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, timestamp: Date.now() }));
+            localStorage.setItem('drivez:mock-accept', JSON.stringify({ pedidoId, prestadorId, prestador: prestador3, timestamp: Date.now() }));
           } catch (e) { }
         }
 

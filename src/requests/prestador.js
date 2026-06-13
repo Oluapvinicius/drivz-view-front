@@ -30,6 +30,14 @@ export async function buscarPrestadorPorId(id) {
     return response.json();
 }
 
+export async function buscarEnderecosPrestador(id) {
+    const url = `http://localhost:8080/v1/drivez/prestador-endereco/prestador/${id}`;
+    const response = await fetch(url, {
+        method: "GET",
+    });
+    return response.json();
+}
+
 export async function atualizarPrestador(id, prestador) {
     const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
     const response = await fetch(url, {

@@ -511,7 +511,7 @@ onBeforeUnmount(() => {
   }
 
   .mensagem-sidebar {
-    max-height: 280px;
+    min-height: 280px;
   }
 }
 
@@ -521,8 +521,7 @@ onBeforeUnmount(() => {
   }
 
   .mensagem-screen {
-    display: flex;
-    flex-direction: column;
+    display: block;
   }
 
   .mensagem-sidebar,
