@@ -27,7 +27,7 @@ coverage
 *.tsbuildinfo
 
 .eslintcache
-
+.env
 # Cypress
 /cypress/videos/
 /cypress/screenshots/
@@ -38,3 +38,4 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 
+.env
