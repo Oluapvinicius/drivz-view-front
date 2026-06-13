@@ -59,44 +59,85 @@
   </div>
 </template>
 
+
+
+
+
+
+
+
 <script setup>
-import { ref, computed, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRoute } from 'vue-router';
+import { db } from '@/firebase/firebase';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 const route = useRoute();
-const router = useRouter();
-// Using runtime data (API or dynamic creation). Start with empty lists.
-const contacts = ref([]);
-const chats = ref([]);
+const pedidoId = Number(route.query.pedidoId) || null;
+const contactId = Number(route.query.contactId) || null;
+const routeContactName = route.query.contactName || 'Prestador';
+const routeContactAvatar =
+  route.query.contactAvatar || 'https://via.placeholder.com/150';
 
+const currentUser = 'customer';
 const searchQuery = ref('');
 const selectedContactId = ref(route.query.contactId ? Number(route.query.contactId) : contacts.value[0]?.id || 1);
 const newMessage = ref('');
+const chatMessages = ref([]);
+const contacts = ref([]);
+let unsubscribeMessages = null;
+
+if (contactId) {
+  contacts.value = [
+    {
+      id: contactId,
+      name: routeContactName || 'Prestador',
+      avatar: routeContactAvatar,
+      subtitle: 'Conversa ativa',
+    },
+  ];
+}
 
 const selectedContact = computed(() => {
-  return contacts.value.find((contact) => String(contact.id) === String(selectedContactId.value)) || contacts.value[0] || {};
+  return (
+    contacts.value.find((contact) => contact.id === selectedContactId.value) ||
+    contacts.value[0]
+  );
 });
 
 const filteredContacts = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts.value;
-
+  const queryText = searchQuery.value.trim().toLowerCase();
+  if (!queryText) return contacts.value;
   return contacts.value.filter((contact) => {
-    return (
-      contact.name.toLowerCase().includes(query) ||
-      contact.subtitle.toLowerCase().includes(query) ||
-      contact.location.toLowerCase().includes(query)
-    );
+    return contact.name.toLowerCase().includes(queryText);
   });
 });
 
-const chatMessages = computed(() => {
-  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
-  return chat ? chat.messages : [];
-});
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
 
-function selectContact(contactId) {
-  selectedContactId.value = contactId;
+function mapDocToMessage(doc) {
+  const data = doc.data() || {};
+  const sender = data.sender || '';
+  return {
+    id: doc.id,
+    text: data.text || '',
+    time: formatTimestamp(data.createdAt),
+    type: sender === currentUser ? 'sent' : 'received',
+    sender,
+  };
 }
 
 function findContactByQuery(query) {
@@ -105,93 +146,54 @@ function findContactByQuery(query) {
   const providerName = query.providerName;
   const providerEmail = query.providerEmail;
 
-  let contact = contacts.value.find((item) => String(item.id) === String(contactId));
-  if (contact) return contact;
-  if (providerEmail) {
-    contact = contacts.value.find((item) => item.email === providerEmail);
-    if (contact) return contact;
-  }
-  if (providerName) {
-    contact = contacts.value.find((item) => item.name === providerName);
-    if (contact) return contact;
-  }
-  return null;
-}
-
-function createDynamicContact(query) {
-  const nextId = contacts.value.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
-  const newContact = {
-    id: nextId,
-    name: query.providerName || 'Prestador',
-    subtitle: 'Conversa iniciada após solicitação de serviço',
-    avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
-    location: '',
-    email: query.providerEmail || ''
-  };
-  contacts.value.push(newContact);
-  chats.value.push({
-    contactId: nextId,
-    messages: [
-      {
-        id: 1,
-        type: 'incoming',
-        text: 'Solicitação de serviço recebida. Vamos conversar pelo chat.',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]
-  });
-  return newContact;
-}
-
-watch(
-  () => route.query,
-  (query) => {
-    if (!query?.contactId) return;
-
-    const contact = findContactByQuery(query);
-    if (contact) {
-      selectedContactId.value = contact.id;
-      return;
-    }
-
-    const newContact = createDynamicContact(query);
-    selectedContactId.value = newContact.id;
-  },
-  { immediate: true }
-);
-
-function sendMessage() {
+async function sendMessage() {
   const text = newMessage.value.trim();
   if (!text) return;
 
-  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
-  if (chat) {
-    chat.messages.push({
-      id: Date.now(),
-      type: 'outgoing',
+  try {
+    await addDoc(collection(db, 'message'), {
+      sender: currentUser,
       text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      createdAt: serverTimestamp(),
     });
+    newMessage.value = '';
+  } catch (error) {
+    console.error('Erro ao enviar mensagem:', error);
   }
-
-  newMessage.value = '';
 }
 
-function requestService() {
-  const contatoAtivo = selectedContact.value;
+onMounted(() => {
+  const messagesRef = collection(db, 'message');
+  const messagesQuery = query(messagesRef, orderBy('createdAt'));
 
-  router.push({
-    name: 'configurar-pedido-cliente',
-    query: {
-      contactId: contatoAtivo.id,
-      providerName: contatoAtivo.name,
-      providerEmail: contatoAtivo.email,
-      tipo: 'comum'
+  unsubscribeMessages = onSnapshot(
+    messagesQuery,
+    (snapshot) => {
+      chatMessages.value = snapshot.docs.map(mapDocToMessage);
+    },
+    (error) => {
+      console.error('Erro no listener Firestore:', error);
     }
-  });
-}
+  );
+});
+
+onBeforeUnmount(() => {
+  if (typeof unsubscribeMessages === 'function') {
+    unsubscribeMessages();
+  }
+});
 
 </script>
+
+
+
+
+
+
+
+
+
+
 
 <style scoped>
 * {
