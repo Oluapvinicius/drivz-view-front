@@ -7,8 +7,30 @@ export function emitMockEmergency(emergency) {
 }
 
 export function emitMockAccept(pedidoId, prestadorId) {
-  const ev = new CustomEvent('drivez:mock-accept', { detail: { pedidoId, prestadorId } });
-  window.dispatchEvent(ev);
+  const payload = { pedidoId, prestadorId, timestamp: Date.now() };
+  const ev = new CustomEvent('drivez:mock-accept', { detail: payload });
+  try {
+    window.dispatchEvent(ev);
+    console.log('[mockEmergency] ✅ Evento drivez:mock-accept dispatchEvent', payload);
+  } catch (e) {
+    console.warn('[mockEmergency] Erro dispatchEvent mock-accept', e);
+  }
+
+  try {
+    localStorage.setItem('drivez:mock-accept', JSON.stringify(payload));
+    console.log('[mockEmergency] ✅ Gravado drivez:mock-accept no localStorage');
+  } catch (e) {
+    console.warn('[mockEmergency] Não foi possível gravar mock-accept no localStorage', e);
+  }
+
+  try {
+    const bc = new BroadcastChannel('drivez-channel');
+    bc.postMessage({ type: 'mock-accept', payload });
+    bc.close();
+    console.log('[mockEmergency] ✅ BroadcastChannel mock-accept enviado');
+  } catch (e) {
+    console.warn('[mockEmergency] BroadcastChannel não disponível para mock-accept', e);
+  }
 }
 
 export default {

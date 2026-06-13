@@ -667,7 +667,7 @@
 // };
 
 import { MapboxService } from '@/requests/mapboxService';
-import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prestador';
+import { buscarPrestadorPorId, buscarAvaliacaoPrestador, buscarEnderecosPrestador } from '@/requests/prestador';
 import { solicitarEmergencia, verificarEmergenciaPrestador, aceitarEmergencia } from '@/requests/pedido';
 import { userStorage } from '@/utils/userStorage';
 import { emitMockEmergency } from '@/utils/mockEmergency';
@@ -1056,12 +1056,39 @@ export default {
       console.log('[PedidoCliente] handleMockAccept chamado — detail:', detail, 'this.idPedidoEmergencia:', this.idPedidoEmergencia);
       if (!pedidoId) return;
 
-      const matches = String(pedidoId) === String(this.idPedidoEmergencia) || (this.idPedidoEmergencia && String(this.idPedidoEmergencia).startsWith('mock-'));
+      // Aceita match se:
+      // - IDs iguais; ou
+      // - idPedidoEmergencia é mock-*; ou
+      // - estamos aguardando aceite e o pedido emitido for mock-* (fallback mais tolerante entre abas)
+      const matches =
+        String(pedidoId) === String(this.idPedidoEmergencia) ||
+        (this.idPedidoEmergencia && String(this.idPedidoEmergencia).startsWith('mock-')) ||
+        (this.aguardandoAceite && String(pedidoId || '').startsWith('mock-'));
       console.log('[PedidoCliente] aceitar? matches=', matches);
       if (!matches) return;
 
       console.log('[PedidoCliente] Recebeu mock-accept para pedido', pedidoId, 'prestador', idPrestador);
       this.aguardandoAceite = false;
+
+      // Tentar recuperar dados do pedido (origem/destino) a partir do localStorage
+      try {
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('drivez:mock-emergency');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            const storedId = parsed?.id_pedido || parsed?.id || parsed?.pedidoId || parsed?.pedido_id;
+            if (storedId && (String(storedId) === String(pedidoId) || (this.idPedidoEmergencia && String(this.idPedidoEmergencia).startsWith('mock-')))) {
+              // usa os campos que existem no payload salvo
+              if (parsed.endereco_origem) this.endereçoOrigem = parsed.endereco_origem;
+              if (parsed.endereco_destino) this.endereçoDestino = parsed.endereco_destino;
+              if (parsed.endereco) this.endereçoOrigem = this.endereçoOrigem || parsed.endereco;
+              console.log('[PedidoCliente] Preenchendo origem/destino a partir do localStorage:', this.endereçoOrigem, this.endereçoDestino);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[PedidoCliente] Erro ao recuperar emergency do localStorage:', e);
+      }
 
       // Se o evento já vier com os dados do prestador, usa diretamente
       const prestadorObj = detail.prestador || detail.prestadorData || detail.prestador_info || detail.prestadorDetails;
@@ -1075,6 +1102,8 @@ export default {
           avatar: prestadorObj.img_perfil || prestadorObj.foto || prestadorObj.profileImage || new URL('../assets/pessoa.jpg', import.meta.url).href
         };
         this.currentStep = 2;
+        // calcular rota e métricas como no prestador
+        this.calcularRotaPrestador();
         clearInterval(this.pollingInterval);
         return;
       }
@@ -1086,6 +1115,13 @@ export default {
         } catch (e) {
           console.warn('[PedidoCliente] falha ao carregar prestador por id:', e);
         }
+      }
+
+      // Se já temos origem/destino preenchidos, calcula rota como o prestador faz
+      try {
+        await this.calcularRotaPrestador();
+      } catch (e) {
+        /* ignore */
       }
 
       this.currentStep = 2;
@@ -1106,11 +1142,39 @@ export default {
             name: prestadorData.nome || prestadorData.nome_prestador || 'Prestador',
             rating: prestadorData.media_avaliacoes || prestadorData.rating || '4.5',
             plate: prestadorData.placa || 'ABC-0000',
-            distance: '-- km',
-            eta: 'A caminho...',
+            distance: prestadorData.distance || prestadorData.distancia || '-- km',
+            eta: prestadorData.eta || prestadorData.tempo || 'A caminho',
             avatar: prestadorData.img_perfil || prestadorData.foto || prestadorData.profileImage || new URL('../assets/pessoa.jpg', import.meta.url).href
           };
           console.log('[PedidoCliente] Dados do driver atualizados:', this.driver);
+        }
+        // Buscar endereços vinculados ao prestador e preencher origem/destino
+        try {
+          const endResp = await buscarEnderecosPrestador(idPrestador);
+          const enderecos = endResp?.response?.enderecos || endResp?.enderecos || [];
+          if (Array.isArray(enderecos) && enderecos.length > 0) {
+            const formatEndereco = (e) => {
+              if (!e) return '';
+              const parts = [];
+              if (e.logradouro) parts.push(e.logradouro);
+              if (e.bairro) parts.push(e.bairro);
+              if (e.cidade) parts.push(e.cidade);
+              if (e.uf) parts.push(e.uf);
+              return parts.join(', ');
+            };
+
+            this.endereçoOrigem = formatEndereco(enderecos[0]);
+            if (enderecos.length > 1) this.endereçoDestino = formatEndereco(enderecos[1]);
+            console.log('[PedidoCliente] Endereços do prestador:', this.endereçoOrigem, this.endereçoDestino);
+            // Calcular rota/tempo/distância após definir endereços
+            try {
+              await this.calcularRotaPrestador();
+            } catch (e) {
+              console.warn('[PedidoCliente] Erro ao calcular rota do prestador:', e);
+            }
+          }
+        } catch (e) {
+          console.warn('[PedidoCliente] Não foi possível carregar endereços do prestador:', e);
         }
       } catch (error) {
         console.error('[PedidoCliente] Erro ao carregar dados do prestador:', error);
