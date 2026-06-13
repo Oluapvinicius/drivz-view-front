@@ -61,58 +61,47 @@
 
       <template v-if="currentStep === 2">
         <div class="evaluation-container">
-          <div class="client-profile small">
-            <div class="client-photo">
-              <img :src="client.photo || photoFallback" alt="Cliente" />
-            </div>
-            <div class="client-center-content">
-              <div class="client-top">
-                <h3 class="client-name">{{ client.name }}</h3>
-                <span class="rating-inline">★ {{ client.rating }}</span>
+          <template v-if="!avaliacaoEnviada">
+            <h2 class="evaluation-title">A solicitação foi finalizada, avalie o serviço!</h2>
+            <div class="evaluation-profile">
+              <div class="eval-driver-photo">
+                <img :src="client.photo || photoFallback" alt="Cliente" />
               </div>
-              <div class="client-sub">{{ endereçoOrigem }} → {{ endereçoDestino }}</div>
-              <div class="plate-badge small">{{ client.plate }}</div>
+              <h3 class="eval-driver-name">{{ client.name }}</h3>
+              <span class="eval-driver-role">Cliente</span>
             </div>
-            <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
-              <img src="../assets/icon.svg" alt="Chat" />
-            </button>
-          </div>
-          <div class="metrics-section">
-            <div class="metric-item">
-              <span class="metric-label">DISTÂNCIA</span>
-              <span class="metric-value">{{ client.distance || '-- km' }}</span>
+
+            <div class="rating-stars">
+              <span
+                v-for="star in 5"
+                :key="star"
+                class="star"
+                :class="{ filled: star <= userRating }"
+                @click="userRating = star"
+              >
+                ★
+              </span>
             </div>
-            <div class="metric-divider"></div>
-            <div class="metric-item">
-              <span class="metric-label">CHEGADA EM</span>
-              <span class="metric-value">{{ client.eta || 'Calculando...' }}</span>
+
+            <div class="comment-section">
+              <label class="comment-label">Fazer comentário (Opcional)</label>
+              <textarea
+                v-model="userComment"
+                class="comment-input"
+                placeholder="Cliente prestativo e educado!"
+              ></textarea>
             </div>
-          </div>
 
-          <h2 class="evaluation-title">Avalie o serviço do cliente!</h2>
+            <button class="submit-button" @click="submitEvaluation">Enviar</button>
+          </template>
 
-          <div class="rating-stars">
-            <span 
-              v-for="star in 5" 
-              :key="star"
-              class="star"
-              :class="{ filled: star <= userRating }"
-              @click="userRating = star"
-            >
-              ★
-            </span>
-          </div>
-
-          <div class="comment-section">
-            <label class="comment-label">Fazer comentário (Opcional)</label>
-            <textarea 
-              v-model="userComment" 
-              class="comment-input" 
-              placeholder="Cliente prestativo e educado!"
-            ></textarea>
-          </div>
-
-          <button class="submit-button" @click="submitEvaluation">Enviar</button>
+          <template v-else>
+            <div class="obrigado-box">
+              <div class="obrigado-icon">✓</div>
+              <h2 class="obrigado-titulo">Obrigado por avaliar!</h2>
+              <p class="obrigado-texto">Sua avaliação foi enviada com sucesso.</p>
+            </div>
+          </template>
         </div>
       </template>
     </div>
@@ -122,7 +111,7 @@
       <div class="chat-modal" @click.stop>
         <div class="chat-header">
           <div class="chat-client-info">
-            <img src="/driver-default.svg" alt="Cliente" class="chat-client-photo" />
+            <img :src="client.photo || photoFallback || '/driver-default.svg'" alt="Cliente" class="chat-client-photo" />
             <div class="chat-client-details">
               <h3 class="chat-client-name">{{ client.name }}</h3>
               <span class="chat-client-role">★ {{ client.rating }} • Cliente</span>
@@ -134,35 +123,19 @@
         </div>
 
         <div class="chat-messages">
-          <div class="message-group client-message">
-            <div class="message-bubble">Oi! Já estou no local aguardando!</div>
-            <span class="message-time">14:30</span>
+          <div v-for="msg in chatMessages" :key="msg.id"
+            :class="['message-group', msg.tipo === 'provider' ? 'provider-message' : 'client-message']">
+            <div class="message-bubble">{{ msg.texto }}</div>
+            <span class="message-time">{{ msg.hora }}</span>
           </div>
-
-          <div class="message-group provider-message">
-            <div class="message-bubble">Perfeito! Estou chegando em aproximadamente 5 minutos.</div>
-            <span class="message-time">14:31</span>
-          </div>
-
-          <div class="message-group client-message">
-            <div class="message-bubble">Ótimo! Fico na porta de entrada.</div>
-            <span class="message-time">14:31</span>
-          </div>
+          <p v-if="chatMessages.length === 0" class="chat-empty">Nenhuma mensagem ainda.</p>
         </div>
 
         <div class="chat-input-area">
-          <button class="chat-icon-button">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="1"></circle>
-              <circle cx="19" cy="12" r="1"></circle>
-              <circle cx="5" cy="12" r="1"></circle>
-            </svg>
-          </button>
-          <input type="text" class="chat-input" placeholder="Mensagem" />
-          <button class="chat-send-button">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16346272 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4325843 C0.994623095,2.10604706 0.837654326,3.0486314 1.15159189,3.99621575 L3.03521743,10.4371816 C3.03521743,10.5942791 3.19218622,10.7513764 3.50612381,10.7513764 L16.6915026,11.5368634 C16.6915026,11.5368634 17.1624089,11.5368634 17.1624089,12.0081556 C17.1624089,12.4744748 16.6915026,12.4744748 16.6915026,12.4744748 Z"></path>
-            </svg>
+          <input type="text" class="chat-input" placeholder="Mensagem" v-model="novaMensagem"
+            @keyup.enter="enviarMensagem" />
+          <button class="chat-send-button" @click="enviarMensagem">
+            ➤
           </button>
         </div>
       </div>
@@ -174,6 +147,8 @@
 import { MapboxService } from '@/requests/mapboxService';
 import { userStorage } from '@/utils/userStorage';
 import { buscarPrestadorPorId } from '@/requests/prestador';
+import { db } from '@/firebase/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 export default {
   name: 'PedidoPrestador',
   data() {
@@ -191,10 +166,15 @@ export default {
         plate: null
       },
       showChatModal: false,
+      novaMensagem: '',
+      chatMessages: [],
+      _unsubChat: null,
+      _unsubRoomDoc: null,
       currentStep: 1,
       userRating: 0,
       userComment: '',
-
+      simulationInterval: null,
+      avaliacaoEnviada: false,
     }
   },
   async mounted() {
@@ -202,6 +182,9 @@ export default {
 
     this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
     this.endereçoDestino = txtDestino || 'Não informado';
+
+    const prestadorId = userStorage.getUserId();
+    if (prestadorId) this.subscribeToPedidoChat(prestadorId);
 
     const origin = origemLng && origemLat ? [parseFloat(origemLng), parseFloat(origemLat)] : null;
     const destination = destinoLng && destinoLat ? [parseFloat(destinoLng), parseFloat(destinoLat)] : null;
@@ -216,12 +199,14 @@ export default {
           if (dadosCalculados && dadosCalculados.distancia) this.client.distance = dadosCalculados.distancia;
           if (dadosCalculados && dadosCalculados.tempo) this.client.eta = dadosCalculados.tempo;
         } catch (e) { console.warn('Erro ao aplicar dados calculados do mapa:', e); }
+        this.iniciarDeslocamentoLento();
       });
     } else if (origin) {
       // Sem destino informado — mostra apenas o ponto de origem do cliente
       this.mapboxService.initMapApenasOrigem('map', origin, () => {
         this.client.distance = this.client.distance || '-- km';
         this.client.eta = this.client.eta || 'Calculando...';
+        this.iniciarDeslocamentoLento();
       });
     }
 
@@ -251,46 +236,109 @@ export default {
       this.client.plate = `${randLetters}-${randNumbers}`;
     }
 
-    // Tentar preencher com os dados do prestador logado (userStorage) ou buscar pela API
-    try {
-      const stored = userStorage.getUserData();
-      const prestadorId = userStorage.getUserId();
-      if (stored && (stored.nome || stored.name || stored.foto || stored.placa)) {
-        this.client.name = stored.nome || stored.name || this.client.name;
-        this.client.rating = stored.media_avaliacoes || stored.rating || this.client.rating;
-        this.client.photo = this.client.photo || stored.foto || stored.img_perfil || stored.profileImage || this.client.photo;
-        this.client.plate = this.client.plate || stored.placa || stored.plate || this.client.plate;
-      } else if (prestadorId) {
-        try {
-          const resp = await buscarPrestadorPorId(prestadorId);
-          if (resp) {
-            this.client.name = resp.nome || resp.name || this.client.name;
-            this.client.rating = resp.media_avaliacoes || resp.rating || this.client.rating;
-            this.client.photo = this.client.photo || resp.foto || resp.img_perfil || this.client.photo;
-            this.client.plate = this.client.plate || resp.placa || resp.plate || this.client.plate;
-          }
-        } catch (e) { console.warn('Erro ao buscar prestador por id:', e); }
-      }
-    } catch (e) {
-      console.warn('Erro ao obter dados do prestador:', e);
+    // Se não há foto do cliente, gera avatar placeholder com o nome
+    if (!this.client.photo) {
+      this.photoFallback = `https://i.pravatar.cc/150?u=${encodeURIComponent(this.client.name)}`;
     }
   },
   beforeDestroy() {
     if (this.mapboxService) this.mapboxService.destroyMap();
+    clearInterval(this.simulationInterval);
+    if (typeof this._unsubChat === 'function') this._unsubChat();
+    if (typeof this._unsubRoomDoc === 'function') this._unsubRoomDoc();
   },
   methods: {
+    iniciarDeslocamentoLento() {
+      let distanciaAtual = parseFloat(this.client.distance) || 6.2;
+      let tempoAtual = parseInt(this.client.eta && this.client.eta.includes('h') ? (parseInt(this.client.eta.split('h')[0]) * 60 + parseInt(this.client.eta.split('h')[1])) : this.client.eta) || 15;
+
+      this.simulationInterval = setInterval(() => {
+        if (distanciaAtual <= 0.2 || tempoAtual <= 1) {
+          clearInterval(this.simulationInterval);
+          this.client.distance = '0 km';
+          this.client.eta = 'Chegou';
+          setTimeout(() => { this.currentStep = 2; }, 1500);
+          return;
+        }
+        distanciaAtual = (distanciaAtual - 0.4).toFixed(1);
+        tempoAtual = tempoAtual - 1;
+        this.client.distance = `${Math.max(0, distanciaAtual)} km`;
+        this.client.eta = this.formatarTempo(Math.max(1, tempoAtual));
+      }, 4000);
+    },
+    formatarTempo(minutosTotais) {
+      if (minutosTotais >= 60) {
+        const horas = Math.floor(minutosTotais / 60);
+        const minutosRestantes = minutosTotais % 60;
+        const minFormatado = minutosRestantes < 10 ? `0${minutosRestantes}` : minutosRestantes;
+        return `${horas}h ${minFormatado}min`;
+      }
+      return `${minutosTotais} min`;
+    },
+    subscribeToPedidoChat(roomId) {
+      if (typeof this._unsubChat === 'function') this._unsubChat();
+      if (typeof this._unsubRoomDoc === 'function') this._unsubRoomDoc();
+
+      // Ouve o documento da sala para puxar o nome real do cliente
+      this._unsubRoomDoc = onSnapshot(doc(db, 'rooms', String(roomId)), snapshot => {
+        const data = snapshot.data() || {};
+        if (data.clientName && data.clientName !== 'Cliente') {
+          this.client.name = data.clientName;
+          if (!this.client.photo) {
+            this.photoFallback = `https://i.pravatar.cc/150?u=${encodeURIComponent(data.clientName)}`;
+          }
+        }
+      }, () => {});
+
+      const q = query(collection(db, 'rooms', String(roomId), 'messages'), orderBy('createdAt'));
+      this._unsubChat = onSnapshot(q, snapshot => {
+        this.chatMessages = snapshot.docs.map(doc => {
+          const d = doc.data();
+          const ts = d.createdAt;
+          let hora = '';
+          if (ts) {
+            const dt = ts.toDate ? ts.toDate() : new Date(ts);
+            hora = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+          }
+          return { id: doc.id, tipo: d.sender === 'prestador' ? 'client' : 'provider', texto: d.text || '', hora };
+        });
+        // Atualiza o nome do cliente a partir do senderName se ainda não temos um nome real
+        if (this.client.name === 'Cliente') {
+          const clientMsg = snapshot.docs.find(d => d.data().sender === 'cliente' && d.data().senderName && d.data().senderName !== 'Cliente');
+          if (clientMsg) {
+            this.client.name = clientMsg.data().senderName;
+            if (!this.client.photo) {
+              this.photoFallback = `https://i.pravatar.cc/150?u=${encodeURIComponent(this.client.name)}`;
+            }
+          }
+        }
+      }, err => console.error('Erro chat pedido prestador:', err));
+    },
+    async enviarMensagem() {
+      const texto = this.novaMensagem.trim();
+      if (!texto) return;
+      const roomId = userStorage.getUserId();
+      if (!roomId) return;
+      try {
+        await addDoc(collection(db, 'rooms', String(roomId), 'messages'), {
+          sender: 'prestador',
+          text: texto,
+          createdAt: serverTimestamp(),
+        });
+        this.novaMensagem = '';
+      } catch (err) {
+        console.error('Erro ao enviar mensagem:', err);
+      }
+    },
     toggleChatModal() {
       this.showChatModal = !this.showChatModal;
     },
     submitEvaluation() {
-      console.log('Avaliação enviada:', {
-        rating: this.userRating,
-        comment: this.userComment
-      });
-      alert(`Avaliação enviada! Rating: ${this.userRating} estrelas`);
-      this.userRating = 0;
-      this.userComment = '';
-      this.currentStep = 1;
+      if (this.userRating === 0) return;
+      this.avaliacaoEnviada = true;
+      setTimeout(() => {
+        this.$router.push({ name: 'home-prestador' });
+      }, 2500);
     }
   }
 }
@@ -656,6 +704,7 @@ export default {
   border-radius: 24px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
   animation: slideUp 0.3s ease;
 }
@@ -733,17 +782,19 @@ export default {
 
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  background: #f7f4f0;
 }
 
 .message-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .provider-message {
@@ -755,57 +806,49 @@ export default {
 }
 
 .message-bubble {
-  max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 16px;
+  max-width: 72%;
+  padding: 10px 14px;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
 .provider-message .message-bubble {
-  background: #e8e8e8;
+  background: #ffffff;
   color: #1a1a1a;
+  border-radius: 18px 18px 18px 4px;
 }
 
 .client-message .message-bubble {
   background: #c41e1e;
   color: #ffffff;
+  border-radius: 18px 18px 4px 18px;
 }
 
 .message-time {
   font-size: 11px;
   color: #999;
-  padding: 0 8px;
+  padding: 0 6px;
+}
+
+.chat-empty {
+  text-align: center;
+  color: #aaa;
+  font-size: 14px;
+  margin: auto;
 }
 
 .chat-input-area {
   display: flex;
   align-items: center;
-  justify-content: center;
-  align-self: center;
-  gap: 12px;
-  padding: 10px 10px;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 12px 16px 16px;
   border-radius: 50px;
-  border: 1px solid #dba59e6e;
-  height: 70px;
-  width: 90%;
-  margin-bottom: 20px;
-}
-
-.chat-icon-button {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-icon-button:hover {
-  color: #1a1a1a;
+  background: #ffffff;
+  border: 1.5px solid #e8e0dc;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .chat-input {
@@ -813,9 +856,9 @@ export default {
   border: none;
   outline: none;
   font-size: 14px;
-  border-radius: 20px;
-  padding: 0;
   background: transparent;
+  color: #1a1a1a;
+  padding: 6px 4px;
 }
 
 .chat-input::placeholder {
@@ -826,14 +869,16 @@ export default {
   background: #c41e1e;
   border: none;
   color: white;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .chat-send-button:hover {
@@ -842,7 +887,7 @@ export default {
 }
 
 .chat-send-button:active {
-  transform: scale(0.95);
+  transform: scale(0.93);
 }
 
 .back-arrow {
@@ -916,7 +961,7 @@ export default {
   gap: 12px;
 }
 
-.eval-client-photo {
+.eval-driver-photo {
   width: 90px;
   height: 90px;
   border-radius: 50%;
@@ -927,20 +972,20 @@ export default {
   overflow: hidden;
 }
 
-.eval-client-photo img {
+.eval-driver-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.eval-client-name {
+.eval-driver-name {
   font-size: 20px;
   font-weight: 800;
   color: #1a1a1a;
   margin: 0;
 }
 
-.eval-client-role {
+.eval-driver-role {
   font-size: 12px;
   color: #888;
   font-weight: 500;
@@ -999,6 +1044,49 @@ export default {
   background: #ccc;
   cursor: not-allowed;
   transform: none;
+}
+
+.obrigado-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 48px 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.obrigado-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 36px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.obrigado-titulo {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.obrigado-texto {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
 }
 
 @media (max-width: 768px) {
@@ -1081,12 +1169,12 @@ export default {
     font-size: 16px;
   }
 
-  .eval-client-photo {
+  .eval-driver-photo {
     width: 80px;
     height: 80px;
   }
 
-  .eval-client-name {
+  .eval-driver-name {
     font-size: 18px;
   }
 
@@ -1187,12 +1275,12 @@ export default {
     font-size: 14px;
   }
 
-  .eval-client-photo {
+  .eval-driver-photo {
     width: 70px;
     height: 70px;
   }
 
-  .eval-client-name {
+  .eval-driver-name {
     font-size: 16px;
   }
 

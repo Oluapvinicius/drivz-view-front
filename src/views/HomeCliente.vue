@@ -548,9 +548,9 @@ export default {
 
         if (dadosFinais) {
           this.user = { ...this.user, ...dadosFinais };
-
-
           userStorage.setSession(clienteId, dadosFinais, 'cliente');
+          const nomeCliente = dadosFinais.nome || dadosFinais.nome_cliente || dadosFinais.name || '';
+          if (nomeCliente) localStorage.setItem('clienteNome', nomeCliente);
         }
       })
       .catch(error => {

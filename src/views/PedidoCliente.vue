@@ -54,7 +54,7 @@
           </div>
 
           <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
+            <div class="progress-fill" :style="{ width: searchProgress + '%', transition: searchTransition ? 'width 0.14s linear' : 'none' }"></div>
           </div>
 
           <button class="action-button cancel" @click="showCancelModal = true">Cancelar Solicitação</button>
@@ -268,7 +268,7 @@
           </div>
 
           <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
+            <div class="progress-fill" :style="{ width: searchProgress + '%', transition: searchTransition ? 'width 0.14s linear' : 'none' }"></div>
           </div>
 
           <div class="tip-box">
@@ -468,7 +468,7 @@
           </div>
 
           <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: searchProgress + '%' }"></div>
+            <div class="progress-fill" :style="{ width: searchProgress + '%', transition: searchTransition ? 'width 0.14s linear' : 'none' }"></div>
           </div>
 
           <div class="tip-box">
@@ -532,31 +532,41 @@
 
       <template v-if="currentStep === 3">
         <div class="evaluation-container">
-          <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
-          <div class="evaluation-profile">
-            <div class="eval-driver-photo">
-              <img :src="driver.avatar" :alt="driver.name" />
+          <template v-if="!avaliacaoEnviada">
+            <h2 class="evaluation-title">A solicitação foi finalizada, avalie o seu serviço!</h2>
+            <div class="evaluation-profile">
+              <div class="eval-driver-photo">
+                <img :src="driver.avatar" :alt="driver.name" />
+              </div>
+              <h3 class="eval-driver-name">{{ driver.name }}</h3>
+              <span class="eval-driver-role">Prestador</span>
             </div>
-            <h3 class="eval-driver-name">{{ driver.name }}</h3>
-            <span class="eval-driver-role">Prestador</span>
-          </div>
-          <div class="rating-stars">
-            <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= userRating }"
-              @click="userRating = star">
-              ★
-            </span>
-          </div>
+            <div class="rating-stars">
+              <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= userRating }"
+                @click="userRating = star">
+                ★
+              </span>
+            </div>
 
-          <div v-if="erroAvaliacao" class="error-message-box">
-            {{ erroAvaliacao }}
-          </div>
+            <div v-if="erroAvaliacao" class="error-message-box">
+              {{ erroAvaliacao }}
+            </div>
 
-          <div class="comment-section">
-            <label class="comment-label">Fazer comentário (Opcional)</label>
-            <textarea v-model="userComment" class="comment-input"
-              placeholder="Serviço de altissima qualidade!"></textarea>
-          </div>
-          <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
+            <div class="comment-section">
+              <label class="comment-label">Fazer comentário (Opcional)</label>
+              <textarea v-model="userComment" class="comment-input"
+                placeholder="Serviço de altissima qualidade!"></textarea>
+            </div>
+            <button class="submit-button" @click="submitEvaluation">Enviar ➤</button>
+          </template>
+
+          <template v-else>
+            <div class="obrigado-box">
+              <div class="obrigado-icon">✓</div>
+              <h2 class="obrigado-titulo">Obrigado por avaliar!</h2>
+              <p class="obrigado-texto">Sua avaliação foi enviada com sucesso.</p>
+            </div>
+          </template>
         </div>
       </template>
       <div v-if="currentStep !== 3" class="cancel-button-wrapper">
@@ -592,12 +602,13 @@
           </div>
         </div>
 
-        <div class="chat-messages">
-          <div v-for="msg in mensagensChat" :key="msg.id"
+        <div class="chat-messages" ref="chatScroll">
+          <div v-for="msg in chatMessages" :key="msg.id"
             :class="['message-group', msg.tipo === 'driver' ? 'driver-message' : 'client-message']">
             <div class="message-bubble">{{ msg.texto }}</div>
             <span class="message-time">{{ msg.hora }}</span>
           </div>
+          <p v-if="chatMessages.length === 0" class="chat-empty">Nenhuma mensagem ainda.</p>
         </div>
 
         <div class="chat-input-area">
@@ -671,6 +682,8 @@ import { buscarPrestadorPorId, buscarAvaliacaoPrestador } from '@/requests/prest
 import { solicitarEmergencia, verificarEmergenciaPrestador, aceitarEmergencia } from '@/requests/pedido';
 import { userStorage } from '@/utils/userStorage';
 import { emitMockEmergency } from '@/utils/mockEmergency';
+import { db } from '@/firebase/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 
 export default {
   name: 'PedidoCliente',
@@ -685,7 +698,9 @@ export default {
       userRating: 0,
       userComment: '',
       erroAvaliacao: '',
+      avaliacaoEnviada: false,
       searchProgress: 0,
+      searchTransition: true,
       searchInterval: null,
       simulationInterval: null,
       tipoPedido: 'comum',
@@ -702,9 +717,9 @@ export default {
         avatar: new URL('../assets/pessoa.jpg', import.meta.url).href
       },
       novaMensagem: '',
-      mensagensChat: [
-        { id: 1, tipo: 'driver', texto: 'Olá! Já recebi seu pedido.', hora: '14:31' },
-      ]
+      chatMessages: [],
+      chatRoomId: null,
+      _unsubChat: null
     };
   },
   async mounted() {
@@ -714,6 +729,8 @@ export default {
     this.endereçoDestino = txtDestino || 'Não informado';
     this.tipoPedido = tipo === 'emergencia' ? 'emergencia' : 'comum';
     this.descricaoEmergencia = descricao || '';
+
+    if (contactId) this.subscribeToPedidoChat(contactId);
 
     const origin = [parseFloat(origemLng), parseFloat(origemLat)];
     const temDestino = destinoLng && destinoLat && destinoLng !== 'null' && destinoLat !== 'null';
@@ -787,20 +804,27 @@ export default {
       try { this._bc.close(); } catch (e) {}
       this._bc = null;
     }
+    if (typeof this._unsubChat === 'function') this._unsubChat();
   },
   methods: {
     iniciarLoadingBusca() {
       this.searchProgress = 0;
+      this.searchTransition = true;
+      let cycles = 0;
 
       this.searchInterval = setInterval(() => {
         if (this.searchProgress >= 100) {
-          clearInterval(this.searchInterval);
+          cycles++;
+          this.searchTransition = false;
+          this.searchProgress = 0;
+          this.$nextTick(() => { this.searchTransition = true; });
 
-          
-          this.iniciarDeslocamentoLento();
+          if (this.tipoPedido !== 'emergencia' && cycles >= 2) {
+            clearInterval(this.searchInterval);
+            this.iniciarDeslocamentoLento();
+          }
           return;
         }
-
         this.searchProgress += 2;
       }, 140);
     },
@@ -860,32 +884,60 @@ export default {
       };
 
       console.log('Avaliação enviada com sucesso:', dadosAvaliacao);
-      this.$router.push({ name: 'home-cliente' });
-    },
-    enviarMensagem() {
-      const textoFormatado = this.novaMensagem.trim();
-      if (!textoFormatado) return;
-
-      const agora = new Date();
-      const horaFormatada = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      this.mensagensChat.push({
-        id: Date.now(),
-        tipo: 'client',
-        texto: textoFormatado,
-        hora: horaFormatada
-      });
-
-      this.novaMensagem = '';
-
+      this.avaliacaoEnviada = true;
       setTimeout(() => {
-        this.mensagensChat.push({
-          id: Date.now() + 1,
-          tipo: 'driver',
-          texto: 'Combinado! Estou chegando.',
-          hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        this.$router.push({ name: 'home-cliente' });
+      }, 2500);
+    },
+    subscribeToPedidoChat(roomId) {
+      if (typeof this._unsubChat === 'function') this._unsubChat();
+      this.chatRoomId = String(roomId);
+      const q = query(collection(db, 'rooms', String(roomId), 'messages'), orderBy('createdAt'));
+      this._unsubChat = onSnapshot(q, snapshot => {
+        this.chatMessages = snapshot.docs.map(doc => {
+          const d = doc.data();
+          const ts = d.createdAt;
+          let hora = '';
+          if (ts) {
+            const dt = ts.toDate ? ts.toDate() : new Date(ts);
+            hora = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+          }
+          return { id: doc.id, tipo: d.sender === 'cliente' ? 'client' : 'driver', texto: d.text || '', hora };
         });
-      }, 1500);
+      }, err => console.error('Erro chat pedido cliente:', err));
+    },
+    getClienteNome() {
+      const simples = localStorage.getItem('clienteNome');
+      if (simples && simples.trim()) return simples.trim();
+      try {
+        const raw = JSON.parse(localStorage.getItem('userData') || '{}');
+        for (const src of [raw?.response, raw?.user, raw]) {
+          if (!src || typeof src !== 'object') continue;
+          const n = src.nome || src.nome_cliente || src.nome_usuario || src.name;
+          if (n && typeof n === 'string' && n.trim()) return n.trim();
+        }
+      } catch {}
+      return 'Cliente';
+    },
+    async enviarMensagem() {
+      const texto = this.novaMensagem.trim();
+      if (!texto) return;
+      const roomId = this.chatRoomId || this.$route.query.contactId;
+      if (!roomId) return;
+      const nome = this.getClienteNome();
+      try {
+        setDoc(doc(db, 'rooms', String(roomId)), { clientName: nome, updatedAt: serverTimestamp() }, { merge: true })
+          .catch(() => {});
+        await addDoc(collection(db, 'rooms', String(roomId), 'messages'), {
+          sender: 'cliente',
+          senderName: nome,
+          text: texto,
+          createdAt: serverTimestamp(),
+        });
+        this.novaMensagem = '';
+      } catch (err) {
+        console.error('Erro ao enviar mensagem:', err);
+      }
     },
 
     async solicitarEmergencia() {
@@ -996,6 +1048,7 @@ export default {
         }
 
         this.aguardandoAceite = true;
+        this.iniciarLoadingBusca();
         // Se for mock (id começa com mock-) não use polling na API; espere evento de mock-accept
         if (String(this.idPedidoEmergencia).startsWith('mock-')) {
           console.log('[PedidoCliente] Emergência mock criada, aguardando evento mock-accept');
@@ -1041,6 +1094,7 @@ export default {
             this.aguardandoAceite = false;
             await this.carregarDadosPrestador(pedidoAtualizado.id_prestador);
             this.currentStep = 2;
+            this.iniciarDeslocamentoLento();
           }
         } catch (error) {
           console.error('[PedidoCliente] Erro no polling:', error);
@@ -1070,12 +1124,14 @@ export default {
           name: prestadorObj.nome || prestadorObj.name || prestadorObj.nome_prestador || 'Prestador',
           rating: prestadorObj.media_avaliacoes || prestadorObj.rating || prestadorObj.avaliacao || '4.5',
           plate: prestadorObj.placa || prestadorObj.plate || prestadorObj.placa_veiculo || '---',
-          distance: prestadorObj.distance || prestadorObj.distancia || '-- km',
-          eta: prestadorObj.eta || prestadorObj.tempo || 'A caminho',
+          distance: prestadorObj.distance || prestadorObj.distancia || this.driver.distance || '-- km',
+          eta: prestadorObj.eta || prestadorObj.tempo || this.driver.eta || 'A caminho',
           avatar: prestadorObj.img_perfil || prestadorObj.foto || prestadorObj.profileImage || new URL('../assets/pessoa.jpg', import.meta.url).href
         };
+        if (idPrestador) this.subscribeToPedidoChat(idPrestador);
         this.currentStep = 2;
         clearInterval(this.pollingInterval);
+        this.iniciarDeslocamentoLento();
         return;
       }
 
@@ -1088,8 +1144,10 @@ export default {
         }
       }
 
+      if (idPrestador) this.subscribeToPedidoChat(idPrestador);
       this.currentStep = 2;
       clearInterval(this.pollingInterval);
+      this.iniciarDeslocamentoLento();
     },
 
     async carregarDadosPrestador(idPrestador) {
@@ -1106,8 +1164,8 @@ export default {
             name: prestadorData.nome || prestadorData.nome_prestador || 'Prestador',
             rating: prestadorData.media_avaliacoes || prestadorData.rating || '4.5',
             plate: prestadorData.placa || 'ABC-0000',
-            distance: '-- km',
-            eta: 'A caminho...',
+            distance: this.driver.distance || '-- km',
+            eta: this.driver.eta || 'A caminho...',
             avatar: prestadorData.img_perfil || prestadorData.foto || prestadorData.profileImage || new URL('../assets/pessoa.jpg', import.meta.url).href
           };
           console.log('[PedidoCliente] Dados do driver atualizados:', this.driver);
@@ -1538,7 +1596,6 @@ export default {
   height: 100%;
   background: #c41e1e;
   border-radius: 3px;
-  transition: width 0.3s linear;
 }
 
 .tip-box {
@@ -1893,6 +1950,7 @@ export default {
   border-radius: 24px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
   animation: slideUp 0.3s ease;
 }
@@ -1971,17 +2029,19 @@ export default {
 
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  background: #f7f4f0;
 }
 
 .message-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .driver-message {
@@ -1993,58 +2053,49 @@ export default {
 }
 
 .message-bubble {
-  max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 16px;
+  max-width: 72%;
+  padding: 10px 14px;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
 .driver-message .message-bubble {
-  background: #e8e8e8;
+  background: #ffffff;
   color: #1a1a1a;
+  border-radius: 18px 18px 18px 4px;
 }
 
 .client-message .message-bubble {
   background: #c41e1e;
   color: #ffffff;
+  border-radius: 18px 18px 4px 18px;
+}
+
+.chat-empty {
+  text-align: center;
+  color: #aaa;
+  font-size: 14px;
+  margin: auto;
 }
 
 .message-time {
   font-size: 11px;
   color: #999;
-  padding: 0 8px;
+  padding: 0 6px;
 }
 
 .chat-input-area {
   display: flex;
   align-items: center;
-  justify-content: center;
-  align-self: center;
-  gap: 12px;
-  padding: 10px 10px;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 12px 16px 16px;
   border-radius: 50px;
-  border: 1px solid #dba59e6e;
-
-  height: 70px;
-  width: 90%;
-  margin-bottom: 20px;
-}
-
-.chat-icon-button {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-icon-button:hover {
-  color: #1a1a1a;
+  background: #ffffff;
+  border: 1.5px solid #e8e0dc;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .chat-input {
@@ -2052,9 +2103,9 @@ export default {
   border: none;
   outline: none;
   font-size: 14px;
-  border-radius: 20px;
-  padding: 0;
   background: transparent;
+  color: #1a1a1a;
+  padding: 6px 4px;
 }
 
 .chat-input::placeholder {
@@ -2065,14 +2116,16 @@ export default {
   background: #c41e1e;
   border: none;
   color: white;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .chat-send-button:hover {
@@ -2081,7 +2134,7 @@ export default {
 }
 
 .chat-send-button:active {
-  transform: scale(0.95);
+  transform: scale(0.93);
 }
 
 @media (max-width: 768px) {
@@ -2449,6 +2502,49 @@ export default {
     padding: 12px 16px;
     font-size: 13px;
   }
+}
+
+.obrigado-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 48px 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.obrigado-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 36px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.obrigado-titulo {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.obrigado-texto {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* Emergency Styles */

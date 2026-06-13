@@ -132,36 +132,39 @@
         <div class="right-sidebar__header">
           <div class="right-sidebar__title-group">
             <div class="right-sidebar__badge">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
                 class="right-sidebar__icon">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                <circle cx="12" cy="10" r="3" />
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
               </svg>
             </div>
-            <h2 class="right-sidebar__title">Mostrando solicitações próximas</h2>
+            <h2 class="right-sidebar__title">Mensagens</h2>
           </div>
-          <button class="right-sidebar__refresh" @click="refreshRequests">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36" />
-            </svg>
-          </button>
         </div>
 
         <div class="right-sidebar__list">
-          <div v-for="request in nearbyRequests" :key="request.id" class="request-card"
-            @click="irParaMensagem">
-            <div class="request-card__top">
-              <div class="request-card__avatar">
-                <img :src="request.avatar" :alt="request.name" />
-              </div>
-              <div class="request-card__header">
-                <h3 class="request-card__name">{{ request.name }}</h3>
-                <p class="request-card__distance">{{ request.message }}</p>
-              </div>
+          <div v-if="messageNotifications.length === 0" class="msg-empty">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1.5">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
+            <p>Nenhuma mensagem ainda.</p>
+          </div>
+          <div
+            v-for="notif in messageNotifications"
+            :key="notif.roomId"
+            class="msg-notif-card"
+            @click="irParaMensagem(notif)"
+          >
+            <div class="msg-notif-card__avatar">
+              <img :src="defaultProfileFallback" :alt="notif.name" />
             </div>
-            <div class="request-card__rating">
-              <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= request.rating }">★</span>
+            <div class="msg-notif-card__body">
+              <div class="msg-notif-card__header">
+                <span class="msg-notif-card__name">{{ notif.name }}</span>
+                <span class="msg-notif-card__time">{{ notif.time }}</span>
+              </div>
+              <p class="msg-notif-card__preview">{{ notif.lastMessage }}</p>
             </div>
+            <span v-if="notif.unread > 0" class="msg-notif-card__badge">{{ notif.unread }}</span>
           </div>
         </div>
       </aside>
@@ -260,6 +263,8 @@ import { listarPedidos, listarEmergenciasPendentes, aceitarEmergencia } from '..
 import { prestadoresGuincho } from '../requests/prestador';
 import defaultProfile from '../assets/profile.svg';
 import { useRouter } from 'vue-router';
+import { db } from '@/firebase/firebase';
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 
 const router = useRouter();
 
@@ -291,7 +296,9 @@ export default {
       defaultProfileFallback: defaultProfile,
       timerConvites: null,
       popupConfirmacaoOpen: false,
-      pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' }
+      pedidoPendente: { id: null, name: '', origin: '', destination: '', description: '' },
+      messageNotifications: [],
+      _firestoreUnsubs: [],
     };
   },
   computed: {
@@ -592,13 +599,98 @@ export default {
         console.error("Erro ao aceitar a solicitação direta:", error);
       }
     },
-    irParaMensagem(){
+    irParaMensagem(notif) {
       try {
-        this.$router.push({ name: 'mensagens-prestador' })
+        this.$router.push({
+          name: 'mensagens-prestador',
+          query: {
+            contactId: notif.roomId,
+            contactName: notif.name,
+          }
+        });
       } catch (error) {
         console.error("Erro ao ir para a mensagem:", error);
       }
-      
+    },
+
+    formatNotifTime(timestamp) {
+      if (!timestamp) return '';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const diff = Date.now() - date.getTime();
+      if (diff < 60000) return 'agora';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+      return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+    },
+
+    setupMessageListeners() {
+      this._firestoreUnsubs.forEach(u => u());
+      this._firestoreUnsubs = [];
+
+      const prestadorId = userStorage.getUserId();
+      if (!prestadorId) return;
+
+      let trackedRooms = [];
+      try { trackedRooms = JSON.parse(localStorage.getItem('drivez_prestador_rooms') || '[]'); } catch {}
+
+      const allRoomIds = [...new Set([Number(prestadorId), ...trackedRooms].filter(Boolean))];
+
+      allRoomIds.forEach(roomId => {
+        // Listener no documento da sala — fonte primária do nome do cliente
+        const roomDocUnsub = onSnapshot(doc(db, 'rooms', String(roomId)), snapshot => {
+          const data = snapshot.data() || {};
+          if (!data.clientName) return;
+          const idx = this.messageNotifications.findIndex(n => n.roomId === roomId);
+          if (idx >= 0) {
+            this.messageNotifications[idx].name = data.clientName;
+          }
+          // Guarda o nome para quando as mensagens chegarem
+          if (!this._roomNames) this._roomNames = {};
+          this._roomNames[roomId] = data.clientName;
+        }, err => console.error('[HomePrestador] room doc error:', err));
+        this._firestoreUnsubs.push(roomDocUnsub);
+
+        // Listener nas mensagens — prévia e contagem
+        const q = query(
+          collection(db, 'rooms', String(roomId), 'messages'),
+          orderBy('createdAt')
+        );
+        const unsub = onSnapshot(q, snapshot => {
+          const clientDocs = snapshot.docs.filter(d => d.data().sender === 'cliente');
+          if (clientDocs.length === 0) return;
+
+          const lastDoc = clientDocs[clientDocs.length - 1];
+          const lastData = lastDoc.data();
+
+          // Busca o melhor nome disponível
+          const bestSenderName = clientDocs
+            .map(d => d.data().senderName)
+            .find(n => n && n.trim() && n.trim() !== 'Cliente') || '';
+
+          if (!this._roomNames) this._roomNames = {};
+          const resolvedName =
+            this._roomNames[roomId] ||
+            bestSenderName ||
+            this.messageNotifications.find(n => n.roomId === roomId)?.name ||
+            'Cliente';
+
+          const notif = {
+            roomId,
+            name: resolvedName,
+            lastMessage: lastData.text || '',
+            time: this.formatNotifTime(lastData.createdAt),
+            unread: clientDocs.length,
+          };
+
+          const idx = this.messageNotifications.findIndex(n => n.roomId === roomId);
+          if (idx >= 0) {
+            this.messageNotifications.splice(idx, 1, notif);
+          } else {
+            this.messageNotifications.push(notif);
+          }
+        }, err => console.error('[HomePrestador] Firestore listener error:', err));
+
+        this._firestoreUnsubs.push(unsub);
+      });
     },
 
     recusarPedido() {
@@ -949,6 +1041,7 @@ export default {
 
     this.loadUserFromStorage();
     window.addEventListener('userDataUpdated', this.loadUserFromStorage);
+    this.setupMessageListeners();
     
     // Escuta eventos de emergência mock emitidos pelo cliente (frontend-only)
     // Usar arrow function para preservar 'this'
@@ -1003,16 +1096,11 @@ export default {
   },
 
   beforeDestroy() {
-    try {
-      clearInterval(this.timerConvites);
-    } catch (e) {}
+    try { clearInterval(this.timerConvites); } catch (e) {}
     window.removeEventListener('userDataUpdated', this.loadUserFromStorage);
-    if (this._mockEmergencyListener) {
-      window.removeEventListener('drivez:mock-emergency', this._mockEmergencyListener);
-    }
-    if (this._storageListener) {
-      window.removeEventListener('storage', this._storageListener);
-    }
+    if (this._mockEmergencyListener) window.removeEventListener('drivez:mock-emergency', this._mockEmergencyListener);
+    if (this._storageListener) window.removeEventListener('storage', this._storageListener);
+    this._firestoreUnsubs.forEach(u => u());
     this.clearRequestMarkers();
     if (this.mapService) this.mapService.destroyMap();
   }
@@ -2429,5 +2517,106 @@ export default {
 .locationIcon {
   width: 18px;
   height: 18px;
+}
+
+/* ─── Notificações de mensagem ─── */
+.msg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 140px;
+  color: #ccc;
+  font-size: 13px;
+  text-align: center;
+}
+
+.msg-notif-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.msg-notif-card:hover {
+  border-color: #D62828;
+  box-shadow: 0 4px 16px rgba(214, 40, 40, 0.12);
+  transform: translateY(-1px);
+}
+
+.msg-notif-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f0f0f0;
+  border: 2px solid #f5e5e5;
+}
+
+.msg-notif-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msg-notif-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.msg-notif-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.msg-notif-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg-notif-card__time {
+  font-size: 11px;
+  color: #bbb;
+  flex-shrink: 0;
+}
+
+.msg-notif-card__preview {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg-notif-card__badge {
+  min-width: 22px;
+  height: 22px;
+  background: #D62828;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(214, 40, 40, 0.35);
 }
 </style>

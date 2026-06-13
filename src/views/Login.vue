@@ -32,6 +32,14 @@ const irParaHome = (respostaCompleta) => {
 
   userStorage.setSession(identificador, usuario, tipoUsuario);
 
+  // Salva o nome do cliente em chave simples para uso no chat
+  const dadosUsuario = usuario?.response || usuario;
+  const nomeEncontrado = dadosUsuario?.nome || dadosUsuario?.nome_cliente || dadosUsuario?.name || '';
+  const tipo = tipoUsuario.toLowerCase();
+  if (nomeEncontrado && (tipo === 'cliente' || tipo === 'client')) {
+    localStorage.setItem('clienteNome', nomeEncontrado);
+  }
+
   if (userStorage.getUserData().type === 'prestador') {
     router.push({ name: 'home-prestador' });
   } else {

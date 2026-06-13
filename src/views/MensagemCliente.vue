@@ -60,137 +60,178 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { db } from '@/firebase/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 
 const route = useRoute();
 const router = useRouter();
-// Using runtime data (API or dynamic creation). Start with empty lists.
-const contacts = ref([]);
-const chats = ref([]);
 
+const CONTACTS_KEY = 'drivez_cliente_contacts';
+const SELECTED_KEY = 'drivez_cliente_selected';
+
+const currentUser = 'cliente';
+
+function loadSaved(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; }
+  catch { return fallback; }
+}
+
+const contacts = ref(loadSaved(CONTACTS_KEY, []));
 const searchQuery = ref('');
-const selectedContactId = ref(route.query.contactId ? Number(route.query.contactId) : contacts.value[0]?.id || 1);
+const selectedContactId = ref(loadSaved(SELECTED_KEY, null));
 const newMessage = ref('');
+const chatMessages = ref([]);
+let unsubscribeMessages = null;
 
-const selectedContact = computed(() => {
-  return contacts.value.find((contact) => String(contact.id) === String(selectedContactId.value)) || contacts.value[0] || {};
-});
+const selectedContact = computed(() =>
+  contacts.value.find(c => String(c.id) === String(selectedContactId.value)) || contacts.value[0] || {}
+);
 
 const filteredContacts = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts.value;
-
-  return contacts.value.filter((contact) => {
-    return (
-      contact.name.toLowerCase().includes(query) ||
-      contact.subtitle.toLowerCase().includes(query) ||
-      contact.location.toLowerCase().includes(query)
-    );
-  });
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return contacts.value;
+  return contacts.value.filter(c =>
+    c.name.toLowerCase().includes(q) ||
+    (c.subtitle || '').toLowerCase().includes(q)
+  );
 });
 
-const chatMessages = computed(() => {
-  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
-  return chat ? chat.messages : [];
-});
+watch(contacts, val => localStorage.setItem(CONTACTS_KEY, JSON.stringify(val)), { deep: true });
+watch(selectedContactId, val => { if (val != null) localStorage.setItem(SELECTED_KEY, String(val)); });
 
-function selectContact(contactId) {
-  selectedContactId.value = contactId;
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-function findContactByQuery(query) {
-  if (!query) return null;
-  const contactId = query.contactId;
-  const providerName = query.providerName;
-  const providerEmail = query.providerEmail;
-
-  let contact = contacts.value.find((item) => String(item.id) === String(contactId));
-  if (contact) return contact;
-  if (providerEmail) {
-    contact = contacts.value.find((item) => item.email === providerEmail);
-    if (contact) return contact;
-  }
-  if (providerName) {
-    contact = contacts.value.find((item) => item.name === providerName);
-    if (contact) return contact;
-  }
-  return null;
-}
-
-function createDynamicContact(query) {
-  const nextId = contacts.value.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
-  const newContact = {
-    id: nextId,
-    name: query.providerName || 'Prestador',
-    subtitle: 'Conversa iniciada após solicitação de serviço',
-    avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
-    location: '',
-    email: query.providerEmail || ''
+function mapDocToMessage(doc) {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    text: data.text || '',
+    time: formatTimestamp(data.createdAt),
+    type: data.sender === currentUser ? 'outgoing' : 'incoming',
+    sender: data.sender || '',
   };
-  contacts.value.push(newContact);
-  chats.value.push({
-    contactId: nextId,
-    messages: [
-      {
-        id: 1,
-        type: 'incoming',
-        text: 'Solicitação de serviço recebida. Vamos conversar pelo chat.',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]
-  });
-  return newContact;
 }
+
+function selectContact(id) {
+  selectedContactId.value = id;
+  writeRoomMetadata(id);
+}
+
+function subscribeToMessages(roomId) {
+  if (unsubscribeMessages) unsubscribeMessages();
+  chatMessages.value = [];
+  if (!roomId) return;
+
+  const messagesRef = collection(db, 'rooms', String(roomId), 'messages');
+  const messagesQuery = query(messagesRef, orderBy('createdAt'));
+
+  unsubscribeMessages = onSnapshot(
+    messagesQuery,
+    snapshot => { chatMessages.value = snapshot.docs.map(mapDocToMessage); },
+    error => { console.error('Erro no listener Firestore:', error); }
+  );
+}
+
+watch(selectedContactId, (newId) => {
+  subscribeToMessages(newId);
+  if (newId) writeRoomMetadata(newId);
+}, { immediate: true });
 
 watch(
   () => route.query,
-  (query) => {
-    if (!query?.contactId) return;
+  (q) => {
+    if (!q?.contactId) return;
+    const id = Number(q.contactId);
 
-    const contact = findContactByQuery(query);
-    if (contact) {
-      selectedContactId.value = contact.id;
+    const existing = contacts.value.find(c => c.id === id);
+    if (existing) {
+      selectedContactId.value = existing.id;
+      writeRoomMetadata(id);
       return;
     }
 
-    const newContact = createDynamicContact(query);
+    const newContact = {
+      id,
+      name: q.providerName || 'Prestador',
+      subtitle: 'Conversa iniciada após solicitação de serviço',
+      avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
+      email: q.providerEmail || '',
+    };
+    contacts.value.push(newContact);
     selectedContactId.value = newContact.id;
+    writeRoomMetadata(id);
   },
   { immediate: true }
 );
 
-function sendMessage() {
+function getClienteName() {
+  // 1. Chave simples gravada pelo HomeCliente ao carregar o perfil (mais confiável)
+  const simples = localStorage.getItem('clienteNome');
+  if (simples && simples.trim()) return simples.trim();
+
+  // 2. Tenta userData em todas as estruturas possíveis
+  try {
+    const raw = JSON.parse(localStorage.getItem('userData') || '{}');
+    for (const src of [raw?.response, raw?.user, raw]) {
+      if (!src || typeof src !== 'object') continue;
+      const n = src.nome || src.nome_cliente || src.nome_usuario || src.name;
+      if (n && typeof n === 'string' && n.trim()) return n.trim();
+    }
+  } catch {}
+  return 'Cliente';
+}
+
+async function writeRoomMetadata(prestadorId) {
+  const nome = getClienteName();
+  if (!prestadorId) return;
+  try {
+    await setDoc(doc(db, 'rooms', String(prestadorId)), {
+      clientName: nome,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (e) { console.error('Erro ao gravar metadata da sala:', e); }
+}
+
+async function sendMessage() {
   const text = newMessage.value.trim();
-  if (!text) return;
+  if (!text || !selectedContactId.value) return;
 
-  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
-  if (chat) {
-    chat.messages.push({
-      id: Date.now(),
-      type: 'outgoing',
+  try {
+    const messagesRef = collection(db, 'rooms', String(selectedContactId.value), 'messages');
+    await addDoc(messagesRef, {
+      sender: currentUser,
+      senderName: getClienteName(),
       text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      createdAt: serverTimestamp(),
     });
+    newMessage.value = '';
+  } catch (error) {
+    console.error('Erro ao enviar mensagem:', error);
   }
-
-  newMessage.value = '';
 }
 
 function requestService() {
   const contatoAtivo = selectedContact.value;
-
   router.push({
     name: 'configurar-pedido-cliente',
     query: {
       contactId: contatoAtivo.id,
       providerName: contatoAtivo.name,
       providerEmail: contatoAtivo.email,
-      tipo: 'comum'
+      tipo: 'comum',
     }
   });
 }
 
+onBeforeUnmount(() => {
+  if (typeof unsubscribeMessages === 'function') unsubscribeMessages();
+});
 </script>
 
 <style scoped>
@@ -199,16 +240,17 @@ function requestService() {
 }
 
 .mensagem-app {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: #f9f6e6;
   color: #111827;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 .mensagem-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -217,7 +259,6 @@ function requestService() {
   padding: 25px 24px;
   color: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  position: sticky;
 }
 
 .mensagem-topbar__title {
@@ -279,9 +320,11 @@ function requestService() {
 }
 
 .mensagem-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 600px minmax(0, 1fr);
-  min-height: calc(100vh - 80px);
 }
 
 .mensagem-sidebar {
@@ -291,6 +334,8 @@ function requestService() {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .mensagem-sidebar__search {
@@ -369,8 +414,9 @@ function requestService() {
 .mensagem-chat {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: 24px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mensagem-chat__header {
@@ -417,6 +463,7 @@ function requestService() {
 .mensagem-chat__body {
   margin-top: 28px;
   flex: 1;
+  min-height: 0;
   padding-right: 12px;
   overflow-y: auto;
   display: flex;
@@ -546,7 +593,7 @@ function requestService() {
   }
 
   .mensagem-sidebar {
-    min-height: 280px;
+    max-height: 280px;
   }
 }
 
@@ -556,7 +603,8 @@ function requestService() {
   }
 
   .mensagem-screen {
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 
   .mensagem-sidebar,

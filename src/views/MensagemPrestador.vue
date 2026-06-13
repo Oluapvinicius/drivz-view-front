@@ -57,9 +57,6 @@
         </div>
 
         <div class="mensagem-chat__footer">
-          <button class="mensagem-icon-button mensagem-attach" type="button" aria-label="Anexar imagem">
-            <img src="../assets/image.svg" alt="Anexar imagem" />
-          </button>
           <input
             type="text"
             placeholder="Digite a mensagem"
@@ -68,7 +65,7 @@
             class="mensagem-input"
           />
           <button class="mensagem-icon-button mensagem-send" type="button" @click="sendMessage" aria-label="Enviar mensagem">
-            <img src="../assets/email.svg" alt="Enviar mensagem" />
+            <img src="../assets/email.svg" alt="Enviar" />
           </button>
         </div>
       </section>
@@ -77,117 +74,182 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { useRoute } from 'vue-router';
+import { db } from '@/firebase/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 
-const searchQuery = ref('');
-const selectedContactId = ref(1);
-const newMessage = ref('');
+const route = useRoute();
 
-const contacts = [
-  // {
-  //   id: 1,
-  //   name: 'João Silva',
-  //   avatar: 'https://via.placeholder.com/150',
-  //   lastMessage: 'Chegou mais rápido que o esperado',
-  // },
-  // {
-  //   id: 2,
-  //   name: 'Maria Santos',
-  //   avatar: 'https://via.placeholder.com/150',
-  //   lastMessage: 'Você chega em quanto tempo?',
-  // },
-  // {
-  //   id: 3,
-  //   name: 'Carlos Oliveira',
-  //   avatar: 'https://via.placeholder.com/150',
-  //   lastMessage: 'Obrigado pela rapidez!',
-  // },
-  // {
-  //   id: 4,
-  //   name: 'Ana Costa',
-  //   avatar: 'https://via.placeholder.com/150',
-  //   lastMessage: 'Solicitação de um reboque urgente',
-  // }
-];
+const CONTACTS_KEY = 'drivez_prestador_contacts';
+const SELECTED_KEY = 'drivez_prestador_selected';
+const ROOMS_KEY   = 'drivez_prestador_rooms';
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&q=80&w=200&h=200';
 
-const chats = [
-  // {
-  //   contactId: 1,
-  //   messages: [
-  //     { id: 1, type: 'incoming', text: 'Olá, você consegue fazer um reboque agora?', time: '14:20' },
-  //     { id: 2, type: 'outgoing', text: 'Opa, sim! Já estou saindo para lá', time: '14:22' },
-  //     { id: 3, type: 'incoming', text: 'Perfeito, obrigado!', time: '14:25' },
-  //     { id: 4, type: 'incoming', text: 'Chegou mais rápido que o esperado', time: '14:50' }
-  //   ]
-  // },
-  // {
-  //   contactId: 2,
-  //   messages: [
-  //     { id: 1, type: 'incoming', text: 'Oi, preciso de um reboque urgente', time: '16:10' },
-  //     { id: 2, type: 'outgoing', text: 'Qual é a sua localização?', time: '16:11' },
-  //     { id: 3, type: 'incoming', text: 'Estou na Rua Oscar Freire, 500', time: '16:12' },
-  //     { id: 4, type: 'outgoing', text: 'Chegando em 5 minutos', time: '16:13' },
-  //     { id: 5, type: 'incoming', text: 'Você chega em quanto tempo?', time: '16:15' }
-  //   ]
-  // },
-  // {
-  //   contactId: 3,
-  //   messages: [
-  //     { id: 1, type: 'incoming', text: 'Olá, tudo bem?', time: '10:30' },
-  //     { id: 2, type: 'outgoing', text: 'Tudo certo! Qual é a necessidade?', time: '10:32' },
-  //     { id: 3, type: 'incoming', text: 'Meu carro pifou na Av. Faria Lima', time: '10:35' },
-  //     { id: 4, type: 'outgoing', text: 'Já estou indo, 10 minutos', time: '10:36' },
-  //     { id: 5, type: 'incoming', text: 'Obrigado pela rapidez!', time: '11:00' }
-  //   ]
-  // },
-  // {
-  //   contactId: 4,
-  //   messages: [
-  //     { id: 1, type: 'incoming', text: 'Oi, você atende reboque na Av. Brasil?', time: '17:00' },
-  //     { id: 2, type: 'outgoing', text: 'Sim, atendo sim! Qual é o endereço exato?', time: '17:01' }
-  //   ]
-  // }
-];
-
-const selectedContact = computed(() => {
-  return contacts.find((contact) => contact.id === selectedContactId.value) || contacts[0];
-});
-
-const filteredContacts = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts;
-
-  return contacts.filter((contact) => {
-    return contact.name.toLowerCase().includes(query) ||
-      contact.lastMessage.toLowerCase().includes(query);
-  });
-});
-
-const chatMessages = computed(() => {
-  const chat = chats.find((item) => item.contactId === selectedContactId.value);
-  return chat ? chat.messages : [];
-});
-
-function selectContact(contactId) {
-  selectedContactId.value = contactId;
+function loadSaved(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; }
+  catch { return fallback; }
 }
 
-function sendMessage() {
-  const text = newMessage.value.trim();
-  if (!text) return;
+const routeContactId   = Number(route.query.contactId) || null;
+const routeContactName = route.query.contactName || 'Cliente';
+const routeContactAvatar = route.query.contactAvatar || DEFAULT_AVATAR;
 
-  const chat = chats.find((item) => item.contactId === selectedContactId.value);
-  if (chat) {
-    chat.messages.push({
-      id: Date.now(),
-      type: 'outgoing',
-      text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const currentUser = 'prestador';
+const searchQuery = ref('');
+const newMessage  = ref('');
+const chatMessages = ref([]);
+const contacts = ref(loadSaved(CONTACTS_KEY, []));
+let unsubscribeMessages = null;
+const bgUnsubscribers = [];
+
+// Salas que este prestador já atendeu — persistidas para redescobrir contatos
+const trackedRooms = loadSaved(ROOMS_KEY, []);
+
+if (routeContactId) {
+  // Registra a sala se ainda não está rastreada
+  if (!trackedRooms.includes(routeContactId)) {
+    trackedRooms.push(routeContactId);
+    localStorage.setItem(ROOMS_KEY, JSON.stringify(trackedRooms));
+  }
+  // Garante contato na lista
+  if (!contacts.value.find(c => c.id === routeContactId)) {
+    contacts.value.push({
+      id: routeContactId,
+      name: routeContactName,
+      avatar: routeContactAvatar,
+      lastMessage: '',
     });
   }
-
-  newMessage.value = '';
 }
+
+const initialSelected = routeContactId || loadSaved(SELECTED_KEY, contacts.value[0]?.id || null);
+const selectedContactId = ref(initialSelected);
+
+watch(contacts, val => localStorage.setItem(CONTACTS_KEY, JSON.stringify(val)), { deep: true });
+watch(selectedContactId, val => { if (val != null) localStorage.setItem(SELECTED_KEY, String(val)); });
+
+const selectedContact = computed(() =>
+  contacts.value.find(c => c.id === selectedContactId.value) || contacts.value[0] || {}
+);
+
+const filteredContacts = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return contacts.value;
+  return contacts.value.filter(c => c.name.toLowerCase().includes(q));
+});
+
+function formatTimestamp(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function mapDocToMessage(doc) {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    text: data.text || '',
+    time: formatTimestamp(data.createdAt),
+    type: data.sender === currentUser ? 'outgoing' : 'incoming',
+    sender: data.sender || '',
+    senderName: data.senderName || '',
+  };
+}
+
+function selectContact(id) {
+  selectedContactId.value = id;
+}
+
+// Sincroniza contato do cliente a partir das mensagens de uma sala
+function syncContactFromDocs(roomId, docs) {
+  const clientDoc = docs.find(d => d.data().sender === 'cliente');
+  if (!clientDoc) return;
+
+  const data = clientDoc.data();
+  const clientName = data.senderName || 'Cliente';
+  const lastText   = docs.length ? (docs[docs.length - 1].data().text || '') : '';
+  const roomIdNum  = Number(roomId);
+
+  const existing = contacts.value.find(c => c.id === roomIdNum);
+  if (existing) {
+    if (data.senderName) existing.name = data.senderName;
+    existing.lastMessage = lastText;
+  } else {
+    contacts.value.push({
+      id: roomIdNum,
+      name: clientName,
+      avatar: DEFAULT_AVATAR,
+      lastMessage: lastText,
+    });
+    if (!selectedContactId.value) selectedContactId.value = roomIdNum;
+  }
+}
+
+// Listener principal — mensagens exibidas no chat
+function subscribeToMessages(roomId) {
+  if (unsubscribeMessages) unsubscribeMessages();
+  chatMessages.value = [];
+  if (!roomId) return;
+
+  const q = query(collection(db, 'rooms', String(roomId), 'messages'), orderBy('createdAt'));
+  unsubscribeMessages = onSnapshot(q,
+    snapshot => { chatMessages.value = snapshot.docs.map(mapDocToMessage); },
+    err => console.error('Erro Firestore:', err)
+  );
+}
+
+// Listeners em background em TODAS as salas rastreadas — detecta novos contatos em tempo real
+function watchAllTrackedRooms() {
+  trackedRooms.forEach(roomId => {
+    const q = query(collection(db, 'rooms', String(roomId), 'messages'), orderBy('createdAt'));
+    const unsub = onSnapshot(q, snapshot => {
+      syncContactFromDocs(roomId, snapshot.docs);
+    });
+    bgUnsubscribers.push(unsub);
+  });
+}
+
+// Listener no documento da sala — fonte primária do nome do cliente
+function watchRoomDoc(roomId) {
+  if (!roomId) return () => {};
+  return onSnapshot(doc(db, 'rooms', String(roomId)), snapshot => {
+    const data = snapshot.data() || {};
+    if (!data.clientName) return;
+    const roomIdNum = Number(roomId);
+    const contact = contacts.value.find(c => c.id === roomIdNum);
+    if (contact) contact.name = data.clientName;
+    else contacts.value.push({ id: roomIdNum, name: data.clientName, avatar: DEFAULT_AVATAR, lastMessage: '' });
+  });
+}
+
+watch(selectedContactId, newId => subscribeToMessages(newId), { immediate: true });
+
+watchAllTrackedRooms();
+
+// Observa documento da sala para todos os contatos rastreados
+const roomsToWatch = [...new Set([...trackedRooms, routeContactId].filter(Boolean))];
+roomsToWatch.forEach(roomId => bgUnsubscribers.push(watchRoomDoc(roomId)));
+
+async function sendMessage() {
+  const text = newMessage.value.trim();
+  if (!text || !selectedContactId.value) return;
+  try {
+    await addDoc(collection(db, 'rooms', String(selectedContactId.value), 'messages'), {
+      sender: currentUser,
+      text,
+      createdAt: serverTimestamp(),
+    });
+    newMessage.value = '';
+  } catch (err) {
+    console.error('Erro ao enviar mensagem:', err);
+  }
+}
+
+onBeforeUnmount(() => {
+  if (typeof unsubscribeMessages === 'function') unsubscribeMessages();
+  bgUnsubscribers.forEach(u => u());
+});
 </script>
 
 <style scoped>
@@ -196,16 +258,17 @@ function sendMessage() {
 }
 
 .mensagem-app {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: #f9f6e6;
   color: #111827;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 .mensagem-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,9 +313,11 @@ function sendMessage() {
 }
 
 .mensagem-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 600px minmax(0, 1fr);
-  min-height: calc(100vh - 80px);
 }
 
 .mensagem-sidebar {
@@ -262,6 +327,8 @@ function sendMessage() {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .mensagem-sidebar__search {
@@ -340,13 +407,15 @@ function sendMessage() {
 .mensagem-chat {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: 24px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mensagem-chat__body {
   margin-top: 28px;
   flex: 1;
+  min-height: 0;
   padding-right: 12px;
   overflow-y: auto;
   display: flex;
@@ -442,7 +511,7 @@ function sendMessage() {
   }
 
   .mensagem-sidebar {
-    min-height: 280px;
+    max-height: 280px;
   }
 }
 
@@ -452,7 +521,8 @@ function sendMessage() {
   }
 
   .mensagem-screen {
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 
   .mensagem-sidebar,
