@@ -76,167 +76,139 @@
   </div>
 </template>
 
+
+
+
+
+
+
+
+
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
-import { userStorage } from '../utils/userStorage';
-import { enviarMensagem, buscarHistoricoMensagens } from '../requests/mensagem.js';
+import { db } from '@/firebase/firebase';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 const route = useRoute();
-const pedidoId = Number(route.query.pedidoId) || null;
 const contactId = Number(route.query.contactId) || null;
 const routeContactName = route.query.contactName || 'Cliente';
-const routeContactAvatar = route.query.contactAvatar || 'https://via.placeholder.com/150';
+const routeContactAvatar =
+  route.query.contactAvatar || 'https://via.placeholder.com/150';
 
-console.log('[MensagemPrestador] Params:', { pedidoId, contactId, routeContactName });
-
-const socket = ref(null);
+const currentUser = 'prestador'; // Identificador do usuário atual (prestador)
 const searchQuery = ref('');
 const selectedContactId = ref(contactId || 1);
 const newMessage = ref('');
-const chatMessagesArray = ref([]);
-
-// Dados mock para sidebar de contatos
+const chatMessages = ref([]);
 const contacts = ref([]);
+let unsubscribeMessages = null;
 
-// Adiciona o contato com quem está conversando
 if (contactId) {
-  contacts.value = [{
-    id: contactId,
-    name: routeContactName || 'Cliente',
-    avatar: routeContactAvatar || 'https://via.placeholder.com/150',
-    lastMessage: 'Conversa ativa'
-  }];
+  contacts.value = [
+    {
+      id: contactId,
+      name: routeContactName || 'Cliente',
+      avatar: routeContactAvatar,
+      lastMessage: 'Conversa ativa',
+    },
+  ];
 }
 
 const selectedContact = computed(() => {
-  return contacts.value.find((contact) => contact.id === selectedContactId.value) || contacts.value[0];
+  return (
+    contacts.value.find((contact) => contact.id === selectedContactId.value) ||
+    contacts.value[0]
+  );
 });
 
 const filteredContacts = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts.value;
+  const queryText = searchQuery.value.trim().toLowerCase();
+  if (!queryText) return contacts.value;
   return contacts.value.filter((contact) => {
-    return contact.name.toLowerCase().includes(query);
+    return contact.name.toLowerCase().includes(queryText);
   });
 });
 
-const chatMessages = computed(() => {
-  return chatMessagesArray.value;
-});
-
-function getSocketHost() {
-  const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8080/v1/drivez';
-  return apiBase.replace(/\/v1\/drivez\/?$/, '');
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
-function handleIncomingMessage(payload) {
-  console.log('[MensagemPrestador] Mensagem recebida:', payload);
-  if (!payload) return;
-  
-  chatMessagesArray.value.push({
-    id: payload.id_mensagem || Date.now(),
-    type: 'incoming',
-    text: payload.texto_mensagem || payload.text || '',
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    media: payload.imagem || null
-  });
+function mapDocToMessage(doc) {
+  const data = doc.data() || {};
+  const sender = data.sender || '';
+  return {
+    id: doc.id,
+    text: data.text || '',
+    time: formatTimestamp(data.createdAt),
+    type: sender === currentUser ? 'sent' : 'received',
+    sender,
+  };
 }
 
 function selectContact(id) {
   selectedContactId.value = id;
 }
 
-function sendMessage() {
+async function sendMessage() {
   const text = newMessage.value.trim();
-  if (!text || !pedidoId || !contactId) {
-    console.warn('[MensagemPrestador] Não pode enviar:', { text, pedidoId, contactId });
-    return;
-  }
+  if (!text) return;
 
-  const prestadorId = userStorage.getUserId();
-  console.log('[MensagemPrestador] Enviando mensagem:', { prestadorId, contactId, pedidoId, text });
-
-  // Adicionar à tela imediatamente
-  chatMessagesArray.value.push({
-    id: Date.now(),
-    type: 'outgoing',
-    text,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  });
-
-  // Enviar via socket
-  if (socket.value) {
-    socket.value.emit('chat-message', {
-      data_envio: new Date().toISOString(),
-      texto_mensagem: text,
-      lida: false,
-      id_pedido: pedidoId,
-      id_prestador: prestadorId,
-      id_cliente: contactId,
-      imagem: null
+  try {
+    await addDoc(collection(db, 'message'), {
+      sender: currentUser,
+      text,
+      createdAt: serverTimestamp(),
     });
-    console.log('[MensagemPrestador] Mensagem emitida via socket');
-  } else {
-    console.warn('[MensagemPrestador] Socket não conectado');
+    newMessage.value = '';
+  } catch (error) {
+    console.error('Erro ao enviar mensagem:', error);
   }
-
-  newMessage.value = '';
 }
 
 onMounted(() => {
-  console.log('[MensagemPrestador] Montando componente...');
-  
-  if (!pedidoId) {
-    console.warn('[MensagemPrestador] Sem pedidoId, não conectando socket');
-    return;
-  }
+  const messagesRef = collection(db, 'message');
+  const messagesQuery = query(messagesRef, orderBy('createdAt'));
 
-  try {
-    const socketHost = getSocketHost();
-    console.log('[MensagemPrestador] Conectando socket em:', socketHost);
-    
-    socket.value = io(socketHost, { 
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
-    });
-    
-    socket.value.on('connect', () => {
-      console.log('[MensagemPrestador] Socket conectado:', socket.value.id);
-      // Entrar na sala do pedido
-      socket.value.emit('join-pedido', pedidoId);
-      console.log('[MensagemPrestador] Emitiu join-pedido para:', pedidoId);
-    });
-
-    socket.value.on('joined-room', (data) => {
-      console.log('[MensagemPrestador] Entrou na sala:', data);
-    });
-
-    socket.value.on('chat-message', handleIncomingMessage);
-    
-    socket.value.on('connect_error', (error) => {
-      console.warn('[MensagemPrestador] Socket connection error:', error);
-    });
-
-    socket.value.on('disconnect', () => {
-      console.log('[MensagemPrestador] Socket desconectado');
-    });
-
-  } catch (error) {
-    console.warn('[MensagemPrestador] Erro ao conectar socket:', error);
-  }
+  unsubscribeMessages = onSnapshot(
+    messagesQuery,
+    (snapshot) => {
+      chatMessages.value = snapshot.docs.map(mapDocToMessage);
+    },
+    (error) => {
+      console.error('Erro no listener Firestore:', error);
+    }
+  );
 });
 
 onBeforeUnmount(() => {
-  if (socket.value) {
-    socket.value.disconnect();
-    socket.value = null;
+  if (typeof unsubscribeMessages === 'function') {
+    unsubscribeMessages();
   }
 });
 </script>
+
+
+
+
+
+
+
+
+
+
+
 
 <style scoped>
 * {
@@ -411,7 +383,8 @@ onBeforeUnmount(() => {
 
 .mensagem-bubble.incoming {
   align-self: flex-start;
-  background: white;
+  
+  background: rgb(245, 63, 63);
   border-radius: 22px 22px 22px 6px;
   padding: 16px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
@@ -419,7 +392,7 @@ onBeforeUnmount(() => {
 
 .mensagem-bubble.outgoing {
   align-self: flex-end;
-  background: #f3f4f6;
+  background: #7d7d7e;
   border-radius: 22px 22px 6px 22px;
   padding: 16px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
