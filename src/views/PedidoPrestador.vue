@@ -1,21 +1,20 @@
 <template>
   <div class="order-tracking-container">
-    <div class="map-background">
-      <!-- Mapa será implementado aqui futuramente -->
-    </div>
+    <div id="map" class="map-background"></div>
 
     <div class="tracking-card" :class="{ 'expanded': currentStep === 2 }">
-      <button class="test-button" @click="currentStep = currentStep === 1 ? 2 : 1">
+      <!-- <button class="test-button" @click="currentStep = currentStep === 1 ? 2 : 1">
         Teste: {{ currentStep === 1 ? 'Frente' : 'TrAz' }}
-      </button>
+      </button> -->
 
       <template v-if="currentStep === 1">
       <div class="client-profile">
         <div class="client-photo">
-          <img src="/driver-default.svg" alt="Cliente" />
+          <img :src="client.photo || photoFallback" alt="Cliente" />
         </div>
         <div class="client-center-content">
           <h3 class="client-name">{{ client.name }}</h3>
+          
         </div>
 
         <div class="client-rating-badge">
@@ -45,14 +44,14 @@
           <div class="address-icon origin"></div>
           <div class="address-content">
             <span class="address-label">Origem</span>
-            <span class="address-text">Av. Paulista, 1578 - Bela Vista</span>
+            <span class="address-text">{{ endereçoOrigem }}</span>
           </div>
         </div>
         <div class="address-item">
           <div class="address-icon destination"></div>
           <div class="address-content">
             <span class="address-label">Destino</span>
-            <span class="address-text">Rua Augusta, 2200 - Jardins</span>
+            <span class="address-text">{{ endereçoDestino }}</span>
           </div>
         </div>
       </div>
@@ -62,15 +61,35 @@
 
       <template v-if="currentStep === 2">
         <div class="evaluation-container">
-          <h2 class="evaluation-title">Avalie o serviço do cliente!</h2>
-          
-          <div class="evaluation-profile">
-            <div class="eval-client-photo">
-              <img src="/driver-default.svg" alt="Cliente" />
+          <div class="client-profile small">
+            <div class="client-photo">
+              <img :src="client.photo || photoFallback" alt="Cliente" />
             </div>
-            <h3 class="eval-client-name">{{ client.name }}</h3>
-            <span class="eval-client-role">Cliente</span>
+            <div class="client-center-content">
+              <div class="client-top">
+                <h3 class="client-name">{{ client.name }}</h3>
+                <span class="rating-inline">★ {{ client.rating }}</span>
+              </div>
+              <div class="client-sub">{{ endereçoOrigem }} → {{ endereçoDestino }}</div>
+              <div class="plate-badge small">{{ client.plate }}</div>
+            </div>
+            <button class="chat-button" @click="toggleChatModal" title="Enviar mensagem">
+              <img src="../assets/icon.svg" alt="Chat" />
+            </button>
           </div>
+          <div class="metrics-section">
+            <div class="metric-item">
+              <span class="metric-label">DISTÂNCIA</span>
+              <span class="metric-value">{{ client.distance || '-- km' }}</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+              <span class="metric-label">CHEGADA EM</span>
+              <span class="metric-value">{{ client.eta || 'Calculando...' }}</span>
+            </div>
+          </div>
+
+          <h2 class="evaluation-title">Avalie o serviço do cliente!</h2>
 
           <div class="rating-stars">
             <span 
@@ -152,21 +171,112 @@
 </template>
 
 <script>
+import { MapboxService } from '@/requests/mapboxService';
+import { userStorage } from '@/utils/userStorage';
+import { buscarPrestadorPorId } from '@/requests/prestador';
 export default {
   name: 'PedidoPrestador',
   data() {
     return {
+      mapboxService: null,
+      endereçoOrigem: 'Buscando endereço...',
+      endereçoDestino: 'Buscando endereço...',
+      photoFallback: null,
+      client: {
+        name: 'Cliente',
+        rating: '4.5',
+        distance: '-- km',
+        eta: 'A caminho...',
+        photo: null,
+        plate: null
+      },
       showChatModal: false,
       currentStep: 1,
       userRating: 0,
       userComment: '',
-      client: {
-        name: 'João Silva',
-        rating: '4.8',
-        distance: '423 m',
-        eta: '5 min'
+
+    }
+  },
+  async mounted() {
+    const { origemLng, origemLat, destinoLng, destinoLat, txtOrigem, txtDestino } = this.$route.query || {};
+
+    this.endereçoOrigem = txtOrigem || 'Endereço de Origem';
+    this.endereçoDestino = txtDestino || 'Não informado';
+
+    const origin = origemLng && origemLat ? [parseFloat(origemLng), parseFloat(origemLat)] : null;
+    const destination = destinoLng && destinoLat ? [parseFloat(destinoLng), parseFloat(destinoLat)] : null;
+
+    this.mapboxService = new MapboxService();
+
+    // Inicializa o mapa igual ao do cliente, mas invertendo origem e destino
+    if (origin && destination) {
+      // passamos destination como origem e origin como destino (inversão)
+      this.mapboxService.initMap('map', destination, origin, (dadosCalculados) => {
+        try {
+          if (dadosCalculados && dadosCalculados.distancia) this.client.distance = dadosCalculados.distancia;
+          if (dadosCalculados && dadosCalculados.tempo) this.client.eta = dadosCalculados.tempo;
+        } catch (e) { console.warn('Erro ao aplicar dados calculados do mapa:', e); }
+      });
+    } else if (origin) {
+      // Sem destino informado — mostra apenas o ponto de origem do cliente
+      this.mapboxService.initMapApenasOrigem('map', origin, () => {
+        this.client.distance = this.client.distance || '-- km';
+        this.client.eta = this.client.eta || 'Calculando...';
+      });
+    }
+
+    // Preencher dados do cliente a partir da query (enviados pelo prestador ao aceitar)
+    const { clientName, clientRating, clientPhoto, clientPlate } = this.$route.query || {};
+    if (clientName) this.client.name = clientName;
+    if (clientRating) this.client.rating = clientRating;
+    // ensure rating format
+    if (!this.client.rating) this.client.rating = '4.5';
+    if (clientPhoto) {
+      // aceita URLs relativas e absolutas
+      if (String(clientPhoto).startsWith('http') || String(clientPhoto).startsWith('data:')) {
+        this.client.photo = clientPhoto;
+      } else {
+        this.client.photo = clientPhoto ? `http://localhost:8080/${String(clientPhoto).replace(/^\//, '')}` : null;
       }
     }
+    // fallback avatar
+    if (!this.client.photo) this.photoFallback = this.photoFallback || `https://i.pravatar.cc/150?u=${encodeURIComponent(this.client.name)}`;
+    // plate: usar plate enviado ou gerar aleatória
+    if (clientPlate) {
+      this.client.plate = clientPlate;
+    } else if (!this.client.plate) {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const randLetters = Array.from({ length: 3 }).map(() => letters.charAt(Math.floor(Math.random() * letters.length))).join('');
+      const randNumbers = String(Math.floor(1000 + Math.random() * 9000));
+      this.client.plate = `${randLetters}-${randNumbers}`;
+    }
+
+    // Tentar preencher com os dados do prestador logado (userStorage) ou buscar pela API
+    try {
+      const stored = userStorage.getUserData();
+      const prestadorId = userStorage.getUserId();
+      if (stored && (stored.nome || stored.name || stored.foto || stored.placa)) {
+        this.client.name = stored.nome || stored.name || this.client.name;
+        this.client.rating = stored.media_avaliacoes || stored.rating || this.client.rating;
+        this.client.photo = this.client.photo || stored.foto || stored.img_perfil || stored.profileImage || this.client.photo;
+        this.client.plate = this.client.plate || stored.placa || stored.plate || this.client.plate;
+      } else if (prestadorId) {
+        try {
+          const resp = await buscarPrestadorPorId(prestadorId);
+          if (resp) {
+            this.client.name = resp.nome || resp.name || this.client.name;
+            this.client.rating = resp.media_avaliacoes || resp.rating || this.client.rating;
+            this.client.photo = this.client.photo || resp.foto || resp.img_perfil || this.client.photo;
+            this.client.plate = this.client.plate || resp.placa || resp.plate || this.client.plate;
+          }
+        } catch (e) { console.warn('Erro ao buscar prestador por id:', e); }
+      }
+    } catch (e) {
+      console.warn('Erro ao obter dados do prestador:', e);
+    }
+  },
+  beforeDestroy() {
+    if (this.mapboxService) this.mapboxService.destroyMap();
   },
   methods: {
     toggleChatModal() {
@@ -318,6 +428,20 @@ export default {
   line-height: 1.2;
 }
 
+.client-profile.small {
+  align-items: center;
+  gap: 14px;
+}
+.plate-badge.small {
+  display: inline-block;
+  margin-top: 8px;
+  background: #ffd54a;
+  color: #111;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
 .client-type {
   font-size: 12px;
   color: #888;

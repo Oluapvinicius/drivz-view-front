@@ -105,7 +105,7 @@ const routeContactAvatar =
 
 const currentUser = 'prestador'; // Identificador do usuário atual (prestador)
 const searchQuery = ref('');
-const selectedContactId = ref(contactId || 1);
+const selectedContactId = ref(1);
 const newMessage = ref('');
 const chatMessages = ref([]);
 const contacts = ref([]);

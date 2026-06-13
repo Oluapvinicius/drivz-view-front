@@ -10,6 +10,7 @@
 
     <main class="pedido-content">
       <div class="pedido-card">
+
         <div class="autocomplete-container">
           <label class="pedido-label" for="origem">Origem</label>
           <input id="origem" v-model="origem" class="pedido-input" @input="aoDigitar('origem')"
@@ -21,7 +22,7 @@
           </ul>
         </div>
 
-        <div class="autocomplete-container">
+        <div v-if="tipoPedido === 'emergencia'" class="autocomplete-container">
           <label class="pedido-label" for="destino">Destino</label>
           <input id="destino" v-model="destino" class="pedido-input" @input="aoDigitar('destino')"
             @blur="setTimeout(() => { sugestoesDestino = [] }, 200)" autocomplete="off" />
@@ -38,29 +39,10 @@
         <textarea id="descricao" v-model="descricao" class="pedido-textarea" rows="6"
           placeholder="Descreva o pedido com mais detalhes"></textarea>
 
-        <button class="pedido-button" @click="continuar">Continuar</button>
+        <button class="pedido-button" @click="continuarPedido">Continuar</button>
       </div>
     </main>
 
-    <div v-if="categoryPopupOpen" class="category-overlay" @click="closePopup">
-      <div class="category-modal" @click.stop>
-        <h2>Selecione a categoria do pedido</h2>
-        <div class="category-divider"></div>
-
-        <div class="search-field">
-          <img src="../assets/lupa.svg" alt="Buscar" />
-          <input type="text" v-model="searchQuery" class="search-input" placeholder="Buscar categoria" />
-        </div>
-
-        <div class="category-list">
-          <button v-for="category in filteredCategories" :key="category.name" class="category-button"
-            @click="selectCategory(category)">
-            <img :src="category.icon" :alt="category.name" class="category-icon" />
-            <span class="category-label">{{ category.name }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 <script>
@@ -72,86 +54,86 @@ import pneuIcon from '../assets/pneu.svg';
 
 // export default {
 //   name: 'ConfigurarPedidoCliente',
-  // data() {
-  //   return {
-  //     origem: '',
-  //     destino: '',
-  //     sugestoesOrigem: [],
-  //     sugestoesDestino: [],
-  //     timeoutDebounce: null,
-  //     descricao: '',
-  //     categoryPopupOpen: false,
-  //     searchQuery: '',
-  //     selectedCategory: null,
-  //     categories: [
-  //       { name: 'Guincho', icon: guinchoIcon },
-  //       { name: 'Mecânico', icon: mecanicoIcon },
-  //       { name: 'Eletricista', icon: eletricistaIcon },
-  //       { name: 'Borracheiro', icon: borracheiroIcon },
-  //       { name: 'Troca de Pneu', icon: pneuIcon }
-  //     ]
-  //   };
-  // },
-  // computed: {
-  //   filteredCategories() {
-  //     const query = this.searchQuery.trim().toLowerCase();
-  //     if (!query) return this.categories;
-  //     return this.categories.filter(item => item.name.toLowerCase().includes(query));
-  //   }
-  // },
-  // methods: {
-  //   goBack() {
-  //     this.$router.back();
-  //   },
-  //   aoDigitar(campo) {
-  //     clearTimeout(this.timeoutDebounce);
+// data() {
+//   return {
+//     origem: '',
+//     destino: '',
+//     sugestoesOrigem: [],
+//     sugestoesDestino: [],
+//     timeoutDebounce: null,
+//     descricao: '',
+//     categoryPopupOpen: false,
+//     searchQuery: '',
+//     selectedCategory: null,
+//     categories: [
+//       { name: 'Guincho', icon: guinchoIcon },
+//       { name: 'Mecânico', icon: mecanicoIcon },
+//       { name: 'Eletricista', icon: eletricistaIcon },
+//       { name: 'Borracheiro', icon: borracheiroIcon },
+//       { name: 'Troca de Pneu', icon: pneuIcon }
+//     ]
+//   };
+// },
+// computed: {
+//   filteredCategories() {
+//     const query = this.searchQuery.trim().toLowerCase();
+//     if (!query) return this.categories;
+//     return this.categories.filter(item => item.name.toLowerCase().includes(query));
+//   }
+// },
+// methods: {
+//   goBack() {
+//     this.$router.back();
+//   },
+//   aoDigitar(campo) {
+//     clearTimeout(this.timeoutDebounce);
 
-  //     const valor = this[campo];
-  //     const listaSugestoes = campo === 'origem' ? 'sugestoesOrigem' : 'sugestoesDestino';
+//     const valor = this[campo];
+//     const listaSugestoes = campo === 'origem' ? 'sugestoesOrigem' : 'sugestoesDestino';
 
-  //     if (valor.length < 4) {
-  //       this[listaSugestoes] = [];
-  //       return;
-  //     }
+//     if (valor.length < 4) {
+//       this[listaSugestoes] = [];
+//       return;
+//     }
 
-  //     this.timeoutDebounce = setTimeout(() => {
-  //       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(valor)}&format=json&countrycodes=br&addressdetails=1&limit=5`;
+//     this.timeoutDebounce = setTimeout(() => {
+//       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(valor)}&format=json&countrycodes=br&addressdetails=1&limit=5`;
 
-  //       fetch(url, {
-  //         headers: {
-  //           'Accept-Language': 'pt-BR'
-  //         }
-  //       })
-  //         .then(response => response.json())
-  //         .then(dados => {
-  //           this[listaSugestoes] = dados;
-  //         })
-  //         .catch(erro => {
-  //           console.error('Erro ao buscar endereços:', erro);
-  //         });
-  //     }, 500);
-  //   },
-  //   selecionarEndereco(sugestao, campo) {
-  //     if (campo === 'origem') {
-  //       this.origem = sugestao.display_name;
-  //       this.sugestoesOrigem = [];
-  //     } else {
-  //       this.destino = sugestao.display_name;
-  //       this.sugestoesDestino = [];
-  //     }
-  //   },
-  //   continuar() {
-  //     this.categoryPopupOpen = true;
-  //   },
-  //   closePopup() {
-  //     this.categoryPopupOpen = false;
-  //   },
-  //   selectCategory(category) {
-  //     this.selectedCategory = category;
-  //     this.categoryPopupOpen = false;
-  //     this.$router.push({ name: 'pedido-cliente' });
-  //   }
-  // }
+//       fetch(url, {
+//         headers: {
+//           'Accept-Language': 'pt-BR'
+//         }
+//       })
+//         .then(response => response.json())
+//         .then(dados => {
+//           this[listaSugestoes] = dados;
+//         })
+//         .catch(erro => {
+//           console.error('Erro ao buscar endereços:', erro);
+//         });
+//     }, 500);
+//   },
+//   selecionarEndereco(sugestao, campo) {
+//     if (campo === 'origem') {
+//       this.origem = sugestao.display_name;
+//       this.sugestoesOrigem = [];
+//     } else {
+//       this.destino = sugestao.display_name;
+//       this.sugestoesDestino = [];
+//     }
+//   },
+//   continuar() {
+//     this.categoryPopupOpen = true;
+//   },
+//   closePopup() {
+//     this.categoryPopupOpen = false;
+//   },
+//   selectCategory(category) {
+//     this.selectedCategory = category;
+//     this.categoryPopupOpen = false;
+//     this.$router.push({ name: 'pedido-cliente' });
+//   }
+// }
 
 //   data() {
 //     return {
@@ -218,6 +200,7 @@ export default {
   name: 'ConfigurarPedidoCliente',
   data() {
     return {
+      tipoPedido: 'comum',
       origem: '',
       destino: '',
       origemCoords: null,
@@ -245,13 +228,20 @@ export default {
       return this.categories.filter(item => item.name.toLowerCase().includes(query));
     }
   },
+  mounted() {
+    const tipoVindoDoChat = this.$route.query.tipo;
+
+    if (tipoVindoDoChat) {
+      this.tipoPedido = tipoVindoDoChat;
+    }
+  },
   methods: {
     goBack() {
       this.$router.back();
     },
     aoDigitar(campo) {
       clearTimeout(this.timeoutDebounce);
-      
+
       const valor = this[campo];
       const listaSugestoes = campo === 'origem' ? 'sugestoesOrigem' : 'sugestoesDestino';
 
@@ -262,7 +252,7 @@ export default {
 
       this.timeoutDebounce = setTimeout(() => {
         const token = import.meta.env.VITE_MAPBOX_TOKEN
-        
+
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(valor)}.json?access_token=${token}&country=br&autocomplete=true&limit=5&language=pt`;
 
         fetch(url)
@@ -288,12 +278,38 @@ export default {
         this.sugestoesDestino = [];
       }
     },
-    continuar() {
-      if (!this.origemCoords || !this.destinoCoords) {
-        alert('Por favor, selecione os endereços de origem e destino utilizando as sugestões da lista!');
+    continuarPedido() {
+      const tipoAtual = this.$route.query.tipo || 'comum';
+
+      if (tipoAtual === 'comum' && (!this.origem || this.origem.trim() === '')) {
+        alert('Por favor, digite e selecione o endereço de origem!');
         return;
       }
-      this.categoryPopupOpen = true;
+
+      if (tipoAtual === 'emergencia') {
+        if (!this.origem || this.origem.trim() === '' || !this.destino || this.destino.trim() === '') {
+          alert('Para emergências, por favor preencha os endereços de origem e destino!');
+          return;
+        }
+      }
+
+      this.$router.push({
+        name: 'pedido-cliente',
+        query: {
+          origemLng: this.origemCoords ? this.origemCoords[0] : '-46.6558',
+          origemLat: this.origemCoords ? this.origemCoords[1] : '-23.5615',
+          destinoLng: tipoAtual === 'emergencia' && this.destinoCoords ? this.destinoCoords[0] : null,
+          destinoLat: tipoAtual === 'emergencia' && this.destinoCoords ? this.destinoCoords[1] : null,
+
+          txtOrigem: this.origem,
+          txtDestino: tipoAtual === 'emergencia' ? this.destino : 'Não informado (Atendimento Comum)',
+          
+          tipo: tipoAtual,
+          descricao: this.descricao,
+
+          contactId: this.$route.query.contactId || '123'
+        }
+      });
     },
     closePopup() {
       this.categoryPopupOpen = false;
@@ -301,9 +317,9 @@ export default {
     selectCategory(category) {
       this.selectedCategory = category;
       this.categoryPopupOpen = false;
-      
-      this.$router.push({ 
-        name: 'pedido-cliente', 
+
+      this.$router.push({
+        name: 'pedido-cliente',
         query: {
           origemLng: this.origemCoords[0],
           origemLat: this.origemCoords[1],
@@ -311,6 +327,11 @@ export default {
           destinoLat: this.destinoCoords[1],
           txtOrigem: this.origem,
           txtDestino: this.destino,
+          categoria: category.name,
+
+          contactId: this.$route.query.contactId,
+          providerName: this.$route.query.providerName,
+          providerEmail: this.$route.query.providerEmail
         }
       });
     }
