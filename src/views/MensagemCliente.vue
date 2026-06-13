@@ -8,7 +8,6 @@
         <span>Contatos</span>
       </div>
       <div class="mensagem-topbar__spacer"></div>
-      
     </header>
 
     <div class="mensagem-screen">
@@ -60,53 +59,104 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { db } from '@/firebase/firebase';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 const route = useRoute();
 const router = useRouter();
-// Using runtime data (API or dynamic creation). Start with empty lists.
-const contacts = ref([]);
-const chats = ref([]);
 
+// Estados Reativos Unificados
+const currentUser = 'customer';
 const searchQuery = ref('');
-const selectedContactId = ref(route.query.contactId ? Number(route.query.contactId) : contacts.value[0]?.id || 1);
 const newMessage = ref('');
+const chatMessages = ref([]);
+const contacts = ref([]);
+let unsubscribeMessages = null;
 
+// Parâmetros da URL
+const contactId = route.query.contactId ? Number(route.query.contactId) : null;
+const routeContactName = route.query.contactName || 'Prestador';
+const routeContactAvatar = route.query.contactAvatar || 'https://via.placeholder.com/150';
+
+const selectedContactId = ref(contactId || 1);
+
+// Inicializa contatos se houver dados na URL
+if (contactId) {
+  contacts.value = [
+    {
+      id: contactId,
+      name: routeContactName,
+      avatar: routeContactAvatar,
+      subtitle: 'Conversa ativa',
+    },
+  ];
+}
+
+// Propriedades Computadas
 const selectedContact = computed(() => {
-  return contacts.value.find((contact) => String(contact.id) === String(selectedContactId.value)) || contacts.value[0] || {};
+  return (
+    contacts.value.find((contact) => String(contact.id) === String(selectedContactId.value)) ||
+    contacts.value[0] || 
+    {}
+  );
 });
 
 const filteredContacts = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return contacts.value;
+  const queryText = searchQuery.value.trim().toLowerCase();
+  if (!queryText) return contacts.value;
 
   return contacts.value.filter((contact) => {
     return (
-      contact.name.toLowerCase().includes(query) ||
-      contact.subtitle.toLowerCase().includes(query) ||
-      contact.location.toLowerCase().includes(query)
+      contact.name.toLowerCase().includes(queryText) ||
+      (contact.subtitle && contact.subtitle.toLowerCase().includes(queryText))
     );
   });
 });
 
-const chatMessages = computed(() => {
-  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
-  return chat ? chat.messages : [];
-});
-
-function selectContact(contactId) {
-  selectedContactId.value = contactId;
+// Funções Auxiliares
+function selectContact(id) {
+  selectedContactId.value = id;
 }
 
-function findContactByQuery(query) {
-  if (!query) return null;
-  const contactId = query.contactId;
-  const providerName = query.providerName;
-  const providerEmail = query.providerEmail;
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
 
-  let contact = contacts.value.find((item) => String(item.id) === String(contactId));
+function mapDocToMessage(doc) {
+  const data = doc.data() || {};
+  const sender = data.sender || '';
+  return {
+    id: doc.id,
+    text: data.text || '',
+    time: formatTimestamp(data.createdAt),
+    // Corrigido para bater com os estilos CSS (.incoming e .outgoing)
+    type: sender === currentUser ? 'outgoing' : 'incoming',
+    sender,
+  };
+}
+
+function findContactByQuery(queryParam) {
+  if (!queryParam) return null;
+  const cId = queryParam.contactId;
+  const providerName = queryParam.providerName;
+  const providerEmail = queryParam.providerEmail;
+
+  let contact = contacts.value.find((item) => String(item.id) === String(cId));
   if (contact) return contact;
+  
   if (providerEmail) {
     contact = contacts.value.find((item) => item.email === providerEmail);
     if (contact) return contact;
@@ -118,63 +168,53 @@ function findContactByQuery(query) {
   return null;
 }
 
-function createDynamicContact(query) {
+function createDynamicContact(queryParam) {
   const nextId = contacts.value.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
   const newContact = {
     id: nextId,
-    name: query.providerName || 'Prestador',
+    name: queryParam.providerName || 'Prestador',
     subtitle: 'Conversa iniciada após solicitação de serviço',
     avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
     location: '',
-    email: query.providerEmail || ''
+    email: queryParam.providerEmail || ''
   };
   contacts.value.push(newContact);
-  chats.value.push({
-    contactId: nextId,
-    messages: [
-      {
-        id: 1,
-        type: 'incoming',
-        text: 'Solicitação de serviço recebida. Vamos conversar pelo chat.',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]
-  });
   return newContact;
 }
 
+// Observadores (Watchers)
 watch(
   () => route.query,
-  (query) => {
-    if (!query?.contactId) return;
+  (newQuery) => {
+    if (!newQuery?.contactId) return;
 
-    const contact = findContactByQuery(query);
+    const contact = findContactByQuery(newQuery);
     if (contact) {
       selectedContactId.value = contact.id;
       return;
     }
 
-    const newContact = createDynamicContact(query);
+    const newContact = createDynamicContact(newQuery);
     selectedContactId.value = newContact.id;
   },
   { immediate: true }
 );
 
-function sendMessage() {
+// Ações do Chat
+async function sendMessage() {
   const text = newMessage.value.trim();
   if (!text) return;
 
-  const chat = chats.value.find((item) => String(item.contactId) === String(selectedContactId.value));
-  if (chat) {
-    chat.messages.push({
-      id: Date.now(),
-      type: 'outgoing',
+  try {
+    await addDoc(collection(db, 'message'), {
+      sender: currentUser,
       text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      createdAt: serverTimestamp(),
     });
+    newMessage.value = '';
+  } catch (error) {
+    console.error('Erro ao enviar mensagem:', error);
   }
-
-  newMessage.value = '';
 }
 
 function requestService() {
@@ -191,6 +231,27 @@ function requestService() {
   });
 }
 
+// Hooks de Ciclo de Vida
+onMounted(() => {
+  const messagesRef = collection(db, 'message');
+  const messagesQuery = query(messagesRef, orderBy('createdAt'));
+
+  unsubscribeMessages = onSnapshot(
+    messagesQuery,
+    (snapshot) => {
+      chatMessages.value = snapshot.docs.map(mapDocToMessage);
+    },
+    (error) => {
+      console.error('Erro no listener Firestore:', error);
+    }
+  );
+});
+
+onBeforeUnmount(() => {
+  if (typeof unsubscribeMessages === 'function') {
+    unsubscribeMessages();
+  }
+});
 </script>
 
 <style scoped>
@@ -217,7 +278,6 @@ function requestService() {
   padding: 25px 24px;
   color: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  position: sticky;
 }
 
 .mensagem-topbar__title {
@@ -271,11 +331,6 @@ function requestService() {
   width: 26px;
   height: 26px;
   filter: invert(1) brightness(2);
-}
-
-.mensagem-topbar__title span {
-  font-size: 20px;
-  font-weight: 700;
 }
 
 .mensagem-screen {
@@ -551,10 +606,6 @@ function requestService() {
 }
 
 @media (max-width: 760px) {
-  .mensagem-topbar {
-    padding: 14px 16px;
-  }
-
   .mensagem-screen {
     display: block;
   }
