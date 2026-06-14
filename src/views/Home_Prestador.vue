@@ -3,16 +3,18 @@
     <template v-if="activeScreen === 'history'">
       <section class="orders-screen">
         <div class="orders-screen__header">
+          <h2 class="orders-screen__title">Histórico de Pedidos</h2>
           <button class="orders-screen__back" @click="activeScreen = 'home'">Voltar</button>
         </div>
 
-        <div v-if="historyLoading" class="orders-screen__empty">
-          <p>Carregando histórico de pedidos...</p>
+        <div v-if="historyLoading" class="orders-screen__loading">
+          <div class="orders-spinner"></div>
+          <span>Carregando pedidos...</span>
         </div>
 
         <div v-else-if="orders.length === 0" class="orders-screen__empty">
+          <span class="orders-screen__empty-icon">📋</span>
           <p>Você ainda não atendeu nenhum pedido.</p>
-          <p>Peça atendimento agora para ver seu histórico aparecer aqui.</p>
           <button class="orders-screen__cta" @click="activeScreen = 'home'">Voltar para o mapa</button>
         </div>
 
@@ -20,16 +22,25 @@
           <article v-for="order in orders" :key="order.id" class="orders-screen__card">
             <div class="orders-screen__top">
               <div class="orders-screen__provider">
-                <img :src="order.clientAvatar" @error="order.clientAvatar = defaultProfileFallback"
+                <img :src="order.clientAvatar || defaultProfileFallback" @error="order.clientAvatar = defaultProfileFallback"
                   alt="Avatar do cliente" class="orders-screen__avatar" />
                 <div class="orders-screen__provider-info">
-                  <span class="orders-screen__provider-label">Cliente:</span>
+                  <span class="orders-screen__provider-label">Cliente</span>
                   <strong class="orders-screen__provider-name">{{ order.clientName }}</strong>
+                  <span v-if="order.categoria" class="orders-screen__category">{{ order.categoria }}</span>
                 </div>
               </div>
               <div class="orders-screen__info">
                 <span class="orders-screen__date">{{ order.date }}</span>
-                <span class="orders-screen__status">{{ order.status }}</span>
+                <span
+                  class="orders-screen__status-badge"
+                  :class="{
+                    'status--concluido': order.status === 'Concluído' || order.status === 'concluido' || order.status === 'concluído',
+                    'status--pendente': order.status === 'Pendente' || order.status === 'pendente',
+                    'status--cancelado': order.status === 'Cancelado' || order.status === 'cancelado',
+                    'status--andamento': order.status === 'Em andamento' || order.status === 'em_andamento'
+                  }"
+                >{{ order.status }}</span>
               </div>
             </div>
             <div class="orders-screen__route">
@@ -42,6 +53,10 @@
                 <span class="orders-screen__route-title">Destino</span>
                 <span class="orders-screen__route-text">{{ order.destination }}</span>
               </div>
+            </div>
+            <div v-if="order.descricao || order.distancia_km" class="orders-screen__footer">
+              <span v-if="order.descricao" class="orders-screen__desc">{{ order.descricao }}</span>
+              <span v-if="order.distancia_km" class="orders-screen__distance">{{ order.distancia_km }} km</span>
             </div>
           </article>
         </div>
@@ -114,12 +129,12 @@
             </svg>
           </button>
           <div class="header__logo">
-            <img src="../assets/Group 294.svg" alt="Logo">
+            <img src="../assets/logo-principal-black.png" alt="DriveZ" class="header__logo-img">
           </div>
         </header>
         <div class="map-container">
           <div id="map-prestador" class="map-placeholder"></div>
-          <button class="emergency-test-btn" @click="testMockEmergency">🧪 Testar Emergência (Mock)</button>
+         
         </div>
       </main>
 
@@ -260,6 +275,7 @@ import { userStorage } from '../utils/userStorage';
 import { MapboxService } from '../requests/mapboxService';
 import { ref } from 'vue'
 import { listarPedidos, listarEmergenciasPendentes, aceitarEmergencia } from '../requests/pedido';
+import { buscarPedidosPrestador } from '../requests/pedidos';
 import { prestadoresGuincho } from '../requests/prestador';
 import defaultProfile from '../assets/profile.svg';
 import { useRouter } from 'vue-router';
@@ -332,9 +348,10 @@ export default {
     loadUserFromStorage(event) {
       const sourceData = event?.detail || userStorage.getUserData();
       if (!sourceData) return;
+      const rawData = sourceData?.response || sourceData?.user || sourceData || {};
       this.user = {
         ...this.user,
-        ...this.normalizeUserSessionData(sourceData)
+        ...this.normalizeUserSessionData(rawData)
       };
     },
 
@@ -387,7 +404,7 @@ export default {
               fotoFinal = rawAvatar;
             } else {
               // Ajuste o endereço "http://localhost:8080" se o seu backend rodar em outra porta
-              fotoFinal = `http://localhost:8080/${rawAvatar.replace(/^\//, '')}`;
+              fotoFinal = `https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/${rawAvatar.replace(/^\//, '')}`;
             }
           }
 
@@ -455,7 +472,7 @@ export default {
           let fotoFinal = defaultProfile;
           if (rawAvatar) {
             if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:image')) fotoFinal = rawAvatar;
-            else fotoFinal = `http://localhost:8080/${String(rawAvatar).replace(/^\//, '')}`;
+            else fotoFinal = `https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/${String(rawAvatar).replace(/^\//, '')}`;
           }
 
           return {
@@ -526,7 +543,7 @@ export default {
         let fotoFinal = this.defaultProfileFallback || '../assets/profile.svg';
         if (rawAvatar) {
           if (String(rawAvatar).startsWith('http') || String(rawAvatar).startsWith('data:image')) fotoFinal = rawAvatar;
-          else fotoFinal = `http://localhost:8080/${String(rawAvatar).replace(/^\//, '')}`;
+          else fotoFinal = `https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/${String(rawAvatar).replace(/^\//, '')}`;
         }
 
         const pedidoId = pedido.id || pedido.id_pedido || `${pedido.id || Date.now()}`;
@@ -709,63 +726,11 @@ export default {
     async carregarHistoricoDePedidos() {
       this.historyLoading = true;
       try {
-        const prestadorId = userStorage.getUserId();
-        if (!prestadorId) {
-          this.orders = [];
-          return;
-        }
-
-        const dadosPedidos = await listarPedidos();
-        let listaReal = [];
-        if (Array.isArray(dadosPedidos)) listaReal = dadosPedidos;
-        else if (dadosPedidos?.response) listaReal = dadosPedidos.response;
-        else if (dadosPedidos?.pedidos) listaReal = dadosPedidos.pedidos;
-
-        const prestadorIdString = String(prestadorId);
-        const pedidosDoPrestador = listaReal.filter(pedido => {
-          const pedidoPrestadorId = String(pedido.id_prestador || pedido.prestadorId || pedido.idPrestador || pedido.prestador?.id || pedido.prestador_id || '');
-          const pedidoPrestadorEmail = String(pedido.prestadorEmail || pedido.email_prestador || pedido.prestador?.email || pedido.email || '');
-
-          return pedidoPrestadorId === prestadorIdString || pedidoPrestadorEmail === prestadorIdString;
-        });
-
-        const pedidosComCliente = await Promise.all(pedidosDoPrestador.map(async (o) => {
-          const clienteId = o.id_cliente || o.clienteId || o.idCliente || o.cliente?.id || o.cliente_id || '';
-          let dadosCliente = null;
-
-          if (clienteId) {
-            try {
-              const resCliente = await buscarClientePorId(clienteId);
-              dadosCliente = resCliente?.response || resCliente;
-            } catch (err) {
-              console.warn(`[HomePrestador] Falha ao buscar cliente ${clienteId}:`, err);
-            }
-          }
-
-          // Descobre qual propriedade de imagem o cliente possui na resposta da API
-          const rawAvatar = dadosCliente?.img_perfil || dadosCliente?.profileImage || dadosCliente?.foto || dadosCliente?.avatar || dadosCliente?.imagem || o.avatar || o.foto_cliente;
-
-          // Se a imagem for uma rota relativa (ex: /uploads/foto.png), você pode concatenar com a URL do seu servidor aqui:
-          // const urlCompleta = rawAvatar && !rawAvatar.startsWith('http') ? `http://localhost:8080${rawAvatar}` : rawAvatar;
-
-          return {
-            id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_prestador}`,
-            clientName: dadosCliente?.nome || dadosCliente?.nome_cliente || dadosCliente?.name || o.clienteNome || o.nome_cliente || o.nomeCliente || 'Cliente',
-
-            // Se encontrou o avatar usa ele, se não, usa o defaultProfile importado lá no topo
-            clientAvatar: rawAvatar || defaultProfile,
-
-            status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído',
-            date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ?
-              new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
-            origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
-            destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado'
-          };
-        }));
-
-        this.orders = pedidosComCliente;
+        const resultado = await buscarPedidosPrestador();
+        this.orders = Array.isArray(resultado) ? resultado : [];
+        console.log('[HomePrestador] Histórico carregado:', this.orders.length, 'pedidos');
       } catch (error) {
-        console.error("Erro ao carregar histórico:", error);
+        console.error('[HomePrestador] Erro ao carregar histórico:', error);
         this.orders = [];
       } finally {
         this.historyLoading = false;
@@ -1062,6 +1027,17 @@ export default {
   },
 
   async mounted() {
+
+    if (!userStorage.isPrestador()) {
+      if (userStorage.isCliente()) {
+        console.warn('[Home_Prestador] Usuário cliente logado. Redirecionando para home-cliente.');
+        router.push({ name: 'home-cliente' });
+        return;
+      }
+      console.error('[Home_Prestador] Sessão inválida ou usuário não é prestador. Redirecionando para login.');
+      router.push({ name: 'login' });
+      return;
+    }
 
     this.loadUserFromStorage();
     window.addEventListener('userDataUpdated', this.loadUserFromStorage);
@@ -1479,9 +1455,11 @@ export default {
   justify-content: center;
 }
 
-.header__logo img {
-  max-height: 150px;
-  max-width: 320px;
+.header__logo img,
+.header__logo-img {
+    height: 200px;
+  width: auto;
+  max-width: 250px;
   object-fit: contain;
 }
 
@@ -1712,8 +1690,8 @@ export default {
 }
 
 .orders-screen {
-  margin: 50px;
-  padding: 32px;
+  margin: 18px 24px;
+  padding: 28px 32px;
   background: #f5f6f8;
   border-radius: 28px;
   display: flex;
@@ -1724,10 +1702,42 @@ export default {
 
 .orders-screen__header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 16px;
   margin-bottom: 20px;
+}
+
+.orders-screen__title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111111;
+  flex: 1;
+}
+
+.orders-screen__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  color: #D62828;
+  font-size: 15px;
+}
+
+.orders-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #D62828;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .orders-screen__back {
@@ -1762,10 +1772,81 @@ export default {
   border: 1px dashed #d8d8d8;
 }
 
+.orders-screen__empty-icon {
+  font-size: 48px;
+}
+
 .orders-screen__empty p {
   margin: 0;
   font-size: 16px;
   line-height: 1.6;
+}
+
+.orders-screen__status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: #e8e8e8;
+  color: #555555;
+}
+
+.status--concluido {
+  background: #d4edda;
+  color: #1a7a3a;
+}
+
+.status--pendente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status--cancelado {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.status--andamento {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.orders-screen__category {
+  display: block;
+  font-size: 12px;
+  color: #D62828;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.orders-screen__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.orders-screen__desc {
+  font-size: 13px;
+  color: #7f7f7f;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orders-screen__distance {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333333;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .orders-screen__cta {
@@ -1863,7 +1944,7 @@ export default {
 
 .orders-screen__provider-label {
   display: block;
-  font-size: 20px;
+  font-size: 12px;
   color: #7f7f7f;
   font-weight: 500;
   margin-bottom: 2px;

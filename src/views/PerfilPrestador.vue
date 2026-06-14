@@ -526,8 +526,7 @@ const salvarAlteracoes = async () => {
     cpf:          documentoLimpo.length === 11 ? documentoLimpo : null,
     cnpj:         documentoLimpo.length === 14 ? documentoLimpo : null,
     cnh:          form.cnh,
-    data_validade:form.data_validade,
-    senha:        ''
+    data_validade:form.data_validade
   };
 
   try {

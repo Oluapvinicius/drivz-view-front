@@ -221,7 +221,7 @@ export default {
       if (String(clientPhoto).startsWith('http') || String(clientPhoto).startsWith('data:')) {
         this.client.photo = clientPhoto;
       } else {
-        this.client.photo = clientPhoto ? `http://localhost:8080/${String(clientPhoto).replace(/^\//, '')}` : null;
+        this.client.photo = clientPhoto ? `https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/${String(clientPhoto).replace(/^\//, '')}` : null;
       }
     }
     // fallback avatar

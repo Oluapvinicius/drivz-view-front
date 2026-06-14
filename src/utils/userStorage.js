@@ -1,8 +1,9 @@
 export const userStorage = {
   setSession(id, data, type) {
+    const normalizedType = String(type || '').toLowerCase();
     localStorage.setItem('userId', id);
     localStorage.setItem('userData', JSON.stringify(data));
-    localStorage.setItem('userType', type);
+    localStorage.setItem('userType', normalizedType);
   },
 
   getUserId() {

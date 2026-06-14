@@ -1,5 +1,7 @@
+import { buildUrl } from './api';
+
 export async function listarPedidos() {
-    const url = "http://localhost:8080/v1/drivez/pedidos";
+    const url = buildUrl('/pedidos');
     const response = await fetch(url, {
         method: "GET",
     });
@@ -7,7 +9,7 @@ export async function listarPedidos() {
 }
 
 export async function criarPedido(pedido) {
-    const url = "http://localhost:8080/v1/drivez/pedido";
+    const url = buildUrl('/pedido');
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -19,7 +21,7 @@ export async function criarPedido(pedido) {
 }
 
 export async function atualizarStatusPedido(id, status) {
-    const url = `http://localhost:8080/v1/drivez/pedido/${id}/status`;
+    const url = buildUrl(`/pedido/${id}/status`);
     const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -31,7 +33,7 @@ export async function atualizarStatusPedido(id, status) {
 }
 
 export async function buscarPedidoPorId(id) {
-    const url = `http://localhost:8080/v1/drivez/pedido/${id}`;
+    const url = buildUrl(`/pedido/${id}`);
     const response = await fetch(url, {
         method: "GET",
     });
@@ -41,7 +43,7 @@ export async function buscarPedidoPorId(id) {
 // ========== EMERGÊNCIA ENDPOINTS ==========
 
 export async function listarEmergenciasPendentes() {
-    const url = "http://localhost:8080/v1/drivez/emergencias";
+    const url = buildUrl('/emergencias');
     const response = await fetch(url, {
         method: "GET",
     });
@@ -49,7 +51,7 @@ export async function listarEmergenciasPendentes() {
 }
 
 export async function buscarEmergenciaPendente(idPrestador) {
-    const url = `http://localhost:8080/v1/drivez/emergencias/pendente/${idPrestador}`;
+    const url = buildUrl(`/emergencias/pendente/${idPrestador}`);
     const response = await fetch(url, {
         method: "GET",
     });
@@ -57,7 +59,7 @@ export async function buscarEmergenciaPendente(idPrestador) {
 }
 
 export async function aceitarEmergencia(idPedido, idPrestador) {
-    const url = `http://localhost:8080/v1/drivez/emergencias/aceitar/${idPedido}/${idPrestador}`;
+    const url = buildUrl(`/emergencias/aceitar/${idPedido}/${idPrestador}`);
     const response = await fetch(url, {
         method: "POST",
     });
@@ -65,7 +67,7 @@ export async function aceitarEmergencia(idPedido, idPrestador) {
 }
 
 export async function solicitarEmergencia(dadosEmergencia) {
-    const url = "http://localhost:8080/v1/drivez/pedido";
+    const url = buildUrl('/pedido');
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -77,7 +79,7 @@ export async function solicitarEmergencia(dadosEmergencia) {
 }
 
 export async function verificarEmergenciaPrestador(idPedido) {
-    const url = `http://localhost:8080/v1/drivez/pedido/${idPedido}`;
+    const url = buildUrl(`/pedido/${idPedido}`);
     const response = await fetch(url, {
         method: "GET",
     });

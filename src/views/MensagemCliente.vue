@@ -63,7 +63,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { db } from '@/firebase/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 
 const route = useRoute();
 const router = useRouter();
@@ -78,9 +78,13 @@ function loadSaved(key, fallback) {
   catch { return fallback; }
 }
 
-const contacts = ref(loadSaved(CONTACTS_KEY, []));
+const ROOM_ID = 12; 
+
+const contacts = ref(loadSaved(CONTACTS_KEY, [
+  { id: ROOM_ID, name: 'Prestador', subtitle: 'Conversa com prestador', avatar: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&q=80&w=200&h=200' }
+]));
 const searchQuery = ref('');
-const selectedContactId = ref(loadSaved(SELECTED_KEY, null));
+const selectedContactId = ref(ROOM_ID);
 const newMessage = ref('');
 const chatMessages = ref([]);
 let unsubscribeMessages = null;
@@ -103,18 +107,31 @@ watch(selectedContactId, val => { if (val != null) localStorage.setItem(SELECTED
 
 function formatTimestamp(timestamp) {
   if (!timestamp) return '';
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  let date;
+  if (timestamp?.toDate) {
+    date = timestamp.toDate();
+  } else if (timestamp?.seconds) {
+    date = new Date(timestamp.seconds * 1000);
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    date = new Date(timestamp);
+  }
+  if (isNaN(date.getTime())) return '';
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 function mapDocToMessage(doc) {
   const data = doc.data() || {};
+  const ts = data.createdAt || data.updatedAt || data.timestamp || data.sentAt || null;
+  const sender = data.sender || 'prestador';
   return {
     id: doc.id,
     text: data.text || '',
-    time: formatTimestamp(data.createdAt),
-    type: data.sender === currentUser ? 'outgoing' : 'incoming',
-    sender: data.sender || '',
+    time: formatTimestamp(ts || new Date()),
+    type: sender === currentUser ? 'outgoing' : 'incoming',
+    sender,
+    _ts: ts || new Date(),
   };
 }
 
@@ -128,13 +145,19 @@ function subscribeToMessages(roomId) {
   chatMessages.value = [];
   if (!roomId) return;
 
-  const messagesRef = collection(db, 'rooms', String(roomId), 'messages');
-  const messagesQuery = query(messagesRef, orderBy('createdAt'));
-
+  const messagesRef = collection(db, 'chats', String(roomId), 'messages');
   unsubscribeMessages = onSnapshot(
-    messagesQuery,
-    snapshot => { chatMessages.value = snapshot.docs.map(mapDocToMessage); },
-    error => { console.error('Erro no listener Firestore:', error); }
+    messagesRef,
+    snapshot => {
+      chatMessages.value = snapshot.docs
+        .map(mapDocToMessage)
+        .sort((a, b) => {
+          const ta = a._ts?.toDate?.()?.getTime() ?? (a._ts instanceof Date ? a._ts.getTime() : 0);
+          const tb = b._ts?.toDate?.()?.getTime() ?? (b._ts instanceof Date ? b._ts.getTime() : 0);
+          return ta - tb;
+        });
+    },
+    error => console.error('Erro no listener Firestore:', error)
   );
 }
 
@@ -143,32 +166,8 @@ watch(selectedContactId, (newId) => {
   if (newId) writeRoomMetadata(newId);
 }, { immediate: true });
 
-watch(
-  () => route.query,
-  (q) => {
-    if (!q?.contactId) return;
-    const id = Number(q.contactId);
-
-    const existing = contacts.value.find(c => c.id === id);
-    if (existing) {
-      selectedContactId.value = existing.id;
-      writeRoomMetadata(id);
-      return;
-    }
-
-    const newContact = {
-      id,
-      name: q.providerName || 'Prestador',
-      subtitle: 'Conversa iniciada após solicitação de serviço',
-      avatar: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200&h=200',
-      email: q.providerEmail || '',
-    };
-    contacts.value.push(newContact);
-    selectedContactId.value = newContact.id;
-    writeRoomMetadata(id);
-  },
-  { immediate: true }
-);
+// room fixa — sempre chats/12/messages independente da rota
+writeRoomMetadata(ROOM_ID);
 
 function getClienteName() {
   // 1. Chave simples gravada pelo HomeCliente ao carregar o perfil (mais confiável)
@@ -191,7 +190,7 @@ async function writeRoomMetadata(prestadorId) {
   const nome = getClienteName();
   if (!prestadorId) return;
   try {
-    await setDoc(doc(db, 'rooms', String(prestadorId)), {
+    await setDoc(doc(db, 'chats', String(prestadorId)), {
       clientName: nome,
       updatedAt: serverTimestamp(),
     }, { merge: true });
@@ -203,12 +202,14 @@ async function sendMessage() {
   if (!text || !selectedContactId.value) return;
 
   try {
-    const messagesRef = collection(db, 'rooms', String(selectedContactId.value), 'messages');
+    const messagesRef = collection(db, 'chats', String(selectedContactId.value), 'messages');
     await addDoc(messagesRef, {
       sender: currentUser,
       senderName: getClienteName(),
+      clientName: getClienteName(), // compatibilidade mobile
       text,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(), // compatibilidade mobile
     });
     newMessage.value = '';
   } catch (error) {

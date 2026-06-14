@@ -23,7 +23,15 @@ const router = useRouter();
 const irParaHome = (respostaCompleta) => {
   const usuario = respostaCompleta.user || respostaCompleta;
   const identificador = usuario.id || usuario.id_cliente || usuario.id_prestador || usuario.clienteId || usuario.prestadorId;
-  const tipoUsuario = String(usuario.tipoUsuario || usuario.tipo_usuario || usuario.tipo || usuario.role || '');
+  let tipoUsuario = String(usuario.tipoUsuario || usuario.tipo_usuario || usuario.tipo || usuario.type || usuario.role || '').toLowerCase();
+
+  if (!tipoUsuario) {
+    if (usuario.id_prestador || usuario.prestadorId) {
+      tipoUsuario = 'prestador';
+    } else if (usuario.id_cliente || usuario.clienteId) {
+      tipoUsuario = 'cliente';
+    }
+  }
 
   if (!identificador) {
     loginErro.value = 'Erro: não foi possível identificar o usuário na resposta.';
@@ -35,12 +43,11 @@ const irParaHome = (respostaCompleta) => {
   // Salva o nome do cliente em chave simples para uso no chat
   const dadosUsuario = usuario?.response || usuario;
   const nomeEncontrado = dadosUsuario?.nome || dadosUsuario?.nome_cliente || dadosUsuario?.name || '';
-  const tipo = tipoUsuario.toLowerCase();
-  if (nomeEncontrado && (tipo === 'cliente' || tipo === 'client')) {
+  if (nomeEncontrado && (tipoUsuario === 'cliente' || tipoUsuario === 'client')) {
     localStorage.setItem('clienteNome', nomeEncontrado);
   }
 
-  if (userStorage.getUserData().type === 'prestador') {
+  if (userStorage.isPrestador()) {
     router.push({ name: 'home-prestador' });
   } else {
     router.push({ name: 'home-cliente' });

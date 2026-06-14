@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/v1/drivez';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://backend-drivez-atgfavb2cuccgrah.eastus2-01.azurewebsites.net/v1/drivez';
 
 export function buildUrl(path) {
   if (!path) return API_BASE;

@@ -440,11 +440,11 @@ const salvarAlteracoes = async () => {
   const payload = {
     nome: form.nome.trim(),
     email: form.email.trim(),
+    tipoUsuario: 'cliente',
     telefone: form.telefone.replace(/\D/g, ''),
     img_perfil: form.profileImage || dadosIniciais.value.profileImage || '',
     cpf: documentoLimpo.length === 11 ? documentoLimpo : null,
-    cnpj: documentoLimpo.length === 14 ? documentoLimpo : null,
-    senha: '123'
+    cnpj: documentoLimpo.length === 14 ? documentoLimpo : null
   };
 
   console.log('Payload enviado para backend:', payload);

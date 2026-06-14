@@ -77,7 +77,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { db } from '@/firebase/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 
 const route = useRoute();
 
@@ -141,19 +141,32 @@ const filteredContacts = computed(() => {
 
 function formatTimestamp(ts) {
   if (!ts) return '';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  let d;
+  if (ts?.toDate) {
+    d = ts.toDate();
+  } else if (ts?.seconds) {
+    d = new Date(ts.seconds * 1000);
+  } else if (ts instanceof Date) {
+    d = ts;
+  } else {
+    d = new Date(ts);
+  }
+  if (isNaN(d.getTime())) return '';
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
 function mapDocToMessage(doc) {
   const data = doc.data() || {};
+  const ts = data.createdAt || data.updatedAt || null;
+  const sender = data.sender || 'cliente';
   return {
     id: doc.id,
     text: data.text || '',
-    time: formatTimestamp(data.createdAt),
-    type: data.sender === currentUser ? 'outgoing' : 'incoming',
-    sender: data.sender || '',
-    senderName: data.senderName || '',
+    time: formatTimestamp(ts),
+    type: sender === currentUser ? 'outgoing' : 'incoming',
+    sender,
+    senderName: data.senderName || data.clientName || '',
+    _ts: ts,
   };
 }
 
@@ -161,13 +174,16 @@ function selectContact(id) {
   selectedContactId.value = id;
 }
 
-// Sincroniza contato do cliente a partir das mensagens de uma sala
+// Sincroniza contato do cliente a partir das mensagens de uma sala (web e mobile)
 function syncContactFromDocs(roomId, docs) {
-  const clientDoc = docs.find(d => d.data().sender === 'cliente');
+  const clientDoc = docs.find(d => {
+    const data = d.data();
+    return data.sender === 'cliente' || (!data.sender && (data.senderName || data.clientName));
+  });
   if (!clientDoc) return;
 
   const data = clientDoc.data();
-  const clientName = data.senderName || 'Cliente';
+  const clientName = data.senderName || data.clientName || 'Cliente';
   const lastText   = docs.length ? (docs[docs.length - 1].data().text || '') : '';
   const roomIdNum  = Number(roomId);
 
@@ -192,9 +208,17 @@ function subscribeToMessages(roomId) {
   chatMessages.value = [];
   if (!roomId) return;
 
-  const q = query(collection(db, 'rooms', String(roomId), 'messages'), orderBy('createdAt'));
-  unsubscribeMessages = onSnapshot(q,
-    snapshot => { chatMessages.value = snapshot.docs.map(mapDocToMessage); },
+  const messagesRef = collection(db, 'chats', String(roomId), 'messages');
+  unsubscribeMessages = onSnapshot(messagesRef,
+    snapshot => {
+      chatMessages.value = snapshot.docs
+        .map(mapDocToMessage)
+        .sort((a, b) => {
+          const ta = a._ts?.toDate?.()?.getTime() ?? (a._ts instanceof Date ? a._ts.getTime() : 0);
+          const tb = b._ts?.toDate?.()?.getTime() ?? (b._ts instanceof Date ? b._ts.getTime() : 0);
+          return ta - tb;
+        });
+    },
     err => console.error('Erro Firestore:', err)
   );
 }
@@ -202,8 +226,8 @@ function subscribeToMessages(roomId) {
 // Listeners em background em TODAS as salas rastreadas — detecta novos contatos em tempo real
 function watchAllTrackedRooms() {
   trackedRooms.forEach(roomId => {
-    const q = query(collection(db, 'rooms', String(roomId), 'messages'), orderBy('createdAt'));
-    const unsub = onSnapshot(q, snapshot => {
+    const messagesRef = collection(db, 'chats', String(roomId), 'messages');
+    const unsub = onSnapshot(messagesRef, snapshot => {
       syncContactFromDocs(roomId, snapshot.docs);
     });
     bgUnsubscribers.push(unsub);
@@ -213,7 +237,7 @@ function watchAllTrackedRooms() {
 // Listener no documento da sala — fonte primária do nome do cliente
 function watchRoomDoc(roomId) {
   if (!roomId) return () => {};
-  return onSnapshot(doc(db, 'rooms', String(roomId)), snapshot => {
+  return onSnapshot(doc(db, 'chats', String(roomId)), snapshot => {
     const data = snapshot.data() || {};
     if (!data.clientName) return;
     const roomIdNum = Number(roomId);
@@ -231,14 +255,29 @@ watchAllTrackedRooms();
 const roomsToWatch = [...new Set([...trackedRooms, routeContactId].filter(Boolean))];
 roomsToWatch.forEach(roomId => bgUnsubscribers.push(watchRoomDoc(roomId)));
 
+function getPrestadorName() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('userData') || '{}');
+    for (const src of [raw?.response, raw?.user, raw]) {
+      if (!src || typeof src !== 'object') continue;
+      const n = src.nome || src.nome_prestador || src.nome_usuario || src.name;
+      if (n && typeof n === 'string' && n.trim()) return n.trim();
+    }
+  } catch {}
+  return 'Prestador';
+}
+
 async function sendMessage() {
   const text = newMessage.value.trim();
   if (!text || !selectedContactId.value) return;
   try {
-    await addDoc(collection(db, 'rooms', String(selectedContactId.value), 'messages'), {
+    await addDoc(collection(db, 'chats', String(selectedContactId.value), 'messages'), {
       sender: currentUser,
+      senderName: getPrestadorName(),
+      clientName: getPrestadorName(), // compatibilidade mobile
       text,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),   // compatibilidade mobile
     });
     newMessage.value = '';
   } catch (err) {

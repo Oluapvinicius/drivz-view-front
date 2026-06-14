@@ -74,7 +74,7 @@
           </button>
 
           <div class="header__logo-container">
-            <img src="../assets/logo.svg" alt="DriveZ" class="header__logo">
+            <img src="../assets/logo-principal-black.png" alt="DriveZ" class="header__logo">
           </div>
 
           <div class="header__spacer"></div>
@@ -130,7 +130,10 @@
         <!-- Orders preview removed — history now shows only when 'Registro de Pedidos' is clicked in the sidebar -->
 
         <button class="call-button" @click="handleCallButtonClick">
-          <span>SOCORRO</span>
+          <div class="call-button__pulse"></div>
+          
+          <span class="call-button__label">Guincho de Emergência</span>
+          <span class="call-button__badge">24h</span>
         </button>
       </template>
 
@@ -138,36 +141,55 @@
 
         <section class="services-screen">
           <div class="services-screen__header-actions">
+            <h2 class="services-screen__title">Histórico de Pedidos</h2>
             <button class="services-screen__back-button" @click="activeScreen = 'home'">Voltar</button>
           </div>
           <div class="services-screen__container">
             <div v-if="isLoading" class="services__loading">
               <div class="spinner"></div>
-              <span>Carregando...</span>
+              <span>Carregando pedidos...</span>
+            </div>
+            <div v-else-if="visibleOrders.length === 0" class="services-screen__empty">
+              <span class="services-screen__empty-icon">📋</span>
+              <p>Nenhum pedido encontrado.</p>
             </div>
             <div v-else class="services-screen__grid">
-              <article v-for="service in visibleOrders" :key="service.id" class="services-screen__card">
+              <article v-for="order in visibleOrders" :key="order.id" class="services-screen__card">
                 <div class="services-screen__top">
                   <div class="services-screen__provider">
-                    <img :src="service.avatar" :alt="service.provider" class="services-screen__avatar" />
+                    <img :src="order.avatar" :alt="order.provider" class="services-screen__avatar" />
                     <div class="services-screen__provider-info">
-                      <span class="services-screen__provider-label">Prestador:</span>
-                      <strong class="services-screen__provider-name">{{ service.provider }}</strong>
+                      <span class="services-screen__provider-label">Prestador</span>
+                      <strong class="services-screen__provider-name">{{ order.provider }}</strong>
+                      <span v-if="order.categoria" class="services-screen__category">{{ order.categoria }}</span>
                     </div>
                   </div>
                   <div class="services-screen__info">
-                    <span class="services-screen__date">{{ service.date }}</span>
+                    <span class="services-screen__date">{{ order.date }}</span>
+                    <span
+                      class="services-screen__status-badge"
+                      :class="{
+                        'status--concluido': order.status === 'Concluído' || order.status === 'concluido',
+                        'status--pendente': order.status === 'Pendente' || order.status === 'pendente',
+                        'status--cancelado': order.status === 'Cancelado' || order.status === 'cancelado',
+                        'status--andamento': order.status === 'Em andamento' || order.status === 'em_andamento'
+                      }"
+                    >{{ order.status }}</span>
                   </div>
                 </div>
                 <div class="services-screen__route">
                   <div class="services-screen__route-group">
                     <span class="services-screen__route-title">Origem</span>
-                    <span class="services-screen__route-text">{{ service.origin }}</span>
+                    <span class="services-screen__route-text">{{ order.origin }}</span>
                   </div>
                   <div class="services-screen__route-group">
                     <span class="services-screen__route-title">Destino</span>
-                    <span class="services-screen__route-text">{{ service.destination }}</span>
+                    <span class="services-screen__route-text">{{ order.destination }}</span>
                   </div>
+                </div>
+                <div v-if="order.descricao || order.distancia_km" class="services-screen__footer">
+                  <span v-if="order.descricao" class="services-screen__desc">{{ order.descricao }}</span>
+                  <span v-if="order.distancia_km" class="services-screen__distance">{{ order.distancia_km }} km</span>
                 </div>
               </article>
             </div>
@@ -219,8 +241,8 @@ import profileImg from '../assets/profile.svg';
 import PerfilCliente from './PerfilCliente.vue';
 
 import { useRouter } from 'vue-router';
-import { buscarCliente, buscarPrestador } from '../requests/buscarUsuarios';
-import { listarPedidos } from '../requests/pedido';
+import { buscarCliente } from '../requests/buscarUsuarios';
+import { buscarPedidosComFallback } from '../requests/pedidos';
 import { listarPrestadores, buscarAvaliacaoPrestador } from '../requests/prestador';
 import { userStorage } from '../utils/userStorage';
 import defaultProfile from '../assets/profile.svg';
@@ -275,7 +297,12 @@ export default {
       });
     },
     visibleServices() {
-      const limit = this.windowWidth <= 768 ? Math.min(this.maxVisibleServices, 6) : this.maxVisibleServices;
+      const w = this.windowWidth;
+      let limit;
+      if (w >= 1440) limit = 8;       // 2 colunas × 4 linhas
+      else if (w >= 1024) limit = 6;  // 2 colunas × 3 linhas
+      else if (w >= 768)  limit = 4;  // 2 colunas × 2 linhas
+      else                limit = 4;  // 1 coluna  × 4 linhas
       return this.filteredServices.slice(0, limit);
     },
     visibleOrders() {
@@ -414,10 +441,11 @@ export default {
         }
       });
     },
-    goToOrderScreen() {
+    async goToOrderScreen() {
       this.activeScreen = 'orders';
-      this.orderPopupOpen = true;
-      this.sidebarOpen = true;
+      this.orderPopupOpen = false;
+      this.sidebarOpen = false;
+      await this.fetchPedidos();
     },
     handleCallButtonClick() {
       this.$router.push({
@@ -443,6 +471,17 @@ export default {
         return 0;
       }
     },
+    normalizeUserSessionData(userData = {}) {
+      const raw = userData?.response || userData?.user || userData || {};
+      const imagem = raw.profileImage || raw.img_perfil || raw.foto || raw.imagem || '';
+      return {
+        nome: raw.nome || raw.nome_cliente || raw.name || '',
+        telefone: raw.telefone || raw.celular || raw.phone || '',
+        localizacao: raw.localizacao || raw.endereco || raw.cidade || '',
+        img_perfil: imagem,
+        profileImage: imagem
+      };
+    },
     shuffleArray(array) {
       return array
         .map(value => ({ value, sort: Math.random() }))
@@ -459,65 +498,20 @@ export default {
       this.windowHeight = window.innerHeight;
     },
     async fetchPedidos() {
+      this.isLoading = true;
       try {
-        console.log('[HomeCliente] Iniciando fetchPedidos usando listarPedidos()...');
-        const pedidosRaw = await listarPedidos();
-        console.log('[HomeCliente] Resposta de listarPedidos:', pedidosRaw);
-
-        const clienteId = userStorage.getUserId();
-        if (!clienteId) {
-          console.warn('[HomeCliente] Nenhum cliente logado (clienteId ausente)');
+        const resultado = await buscarPedidosComFallback();
+        if (Array.isArray(resultado)) {
+          this.orders = resultado;
+        } else {
           this.orders = [];
-          return;
         }
-
-        let lista = [];
-        if (Array.isArray(pedidosRaw)) lista = pedidosRaw;
-        else if (pedidosRaw && Array.isArray(pedidosRaw.response)) lista = pedidosRaw.response;
-        else if (pedidosRaw && Array.isArray(pedidosRaw.pedidos)) lista = pedidosRaw.pedidos;
-
-        const providerCache = {};
-        const fetchProvider = async (id) => {
-          if (!id) return null;
-          if (providerCache[id]) return providerCache[id];
-
-          try {
-            const data = await buscarPrestador(id);
-            const usuario = data?.response || data;
-            providerCache[id] = usuario || null;
-            return providerCache[id];
-          } catch (err) {
-            console.warn(`[HomeCliente] Falha ao buscar prestador ${id}:`, err);
-            providerCache[id] = null;
-            return null;
-          }
-        };
-
-        const filteredPedidos = lista.filter(p => {
-          const pid = String(p.id_cliente || p.clienteId || p.cliente?.id || p.cliente_id || p.idCliente || '');
-          return pid === String(clienteId);
-        });
-
-        const pedidosComPrestador = await Promise.all(filteredPedidos.map(async (o) => {
-          const prestadorId = o.id_prestador || o.prestadorId || o.idPrestador || o.prestador?.id || o.prestador_id || o.prestador?.id_prestador || '';
-          const prestadorInfo = await fetchProvider(prestadorId);
-
-          return {
-            id: o.id || o.id_pedido || o.pedidoId || `${o.id}_${o.id_cliente}`,
-            provider: prestadorInfo?.nome || prestadorInfo?.nome_prestador || prestadorInfo?.name || o.prestadorNome || o.nome_prestador || o.provider || 'Prestador',
-            avatar: prestadorInfo?.img_perfil || prestadorInfo?.profileImage || prestadorInfo?.foto || prestadorInfo?.avatar || o.avatar || o.foto_prestador || defaultProfile,
-            date: o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at ? new Date(o.data_solicitacao || o.data_pedido || o.createdAt || o.created_at).toLocaleDateString('pt-BR') : 'Recentemente',
-            origin: o.endereco_origem || o.endereco || o.origem || 'Origem não informada',
-            destination: o.endereco_destino || o.destino || o.destino_final || 'Destino não informado',
-            status: o.status || o.estado || o.situacao || o.status_pedido || 'Concluído'
-          };
-        }));
-
-        this.orders = pedidosComPrestador;
-        console.log('[HomeCliente] Pedidos do cliente carregados:', this.orders.length);
+        console.log('[HomeCliente] Pedidos carregados:', this.orders.length);
       } catch (error) {
-        console.error('[HomeCliente] Erro ao buscar pedidos da API:', error);
+        console.error('[HomeCliente] Erro ao buscar pedidos:', error);
         this.orders = [];
+      } finally {
+        this.isLoading = false;
       }
     },
     logout() {
@@ -532,7 +526,20 @@ export default {
   async mounted() {
 
     this.fetchServices();
-    this.fetchPedidos();
+
+    if (!userStorage.isCliente()) {
+      if (userStorage.isPrestador()) {
+        console.warn('[HomeCliente] Usuário prestador logado. Redirecionando para home-prestador.');
+        router.push({ name: 'home-prestador' });
+        return;
+      }
+      console.error('[HomeCliente] Sessão inválida ou usuário não é cliente. Redirecionando para login.');
+      router.push({ name: 'login' });
+      return;
+    }
+
+    const storedClienteData = this.normalizeUserSessionData(userStorage.getUserData() || {});
+    this.user = { ...this.user, ...storedClienteData };
 
     const clienteId = userStorage.getUserId();
 
@@ -547,7 +554,8 @@ export default {
         const dadosFinais = response.response || response;
 
         if (dadosFinais) {
-          this.user = { ...this.user, ...dadosFinais };
+          const normalizedDados = this.normalizeUserSessionData(dadosFinais);
+          this.user = { ...this.user, ...normalizedDados };
           userStorage.setSession(clienteId, dadosFinais, 'cliente');
           const nomeCliente = dadosFinais.nome || dadosFinais.nome_cliente || dadosFinais.name || '';
           if (nomeCliente) localStorage.setItem('clienteNome', nomeCliente);
@@ -1150,10 +1158,9 @@ body {
 
 .main-content {
   flex: 1;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   width: 100%;
   overflow: hidden;
 }
@@ -1165,6 +1172,7 @@ body {
   flex-direction: column;
   align-items: center;
   background-color: white;
+  padding: 16px 20px;
 }
 
 .header__top,
@@ -1174,10 +1182,22 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 16px 32px;
 }
 
 .header__top {
-  justify-content: space-arround;
+  justify-content: space-between;
+  position: relative;
+}
+
+.header__logo-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
 }
 
 .header__bottom {
@@ -1219,8 +1239,7 @@ body {
   padding: 15px;
   min-width: 52px;
   min-height: 52px;
-  align-self: flex-start;
-
+  align-self: center;
 }
 
 .header__menu-toggle img {
@@ -1243,9 +1262,10 @@ body {
 
 
 .header__logo {
-  height: auto;
-  width: min(320px, 100%);
-  max-height: 140px;
+  height: 200px;
+  width: auto;
+  max-width: 250px;
+  object-fit: contain;
 }
 
 .header__search {
@@ -1320,13 +1340,22 @@ body {
 
 .services {
   flex: 1;
-  padding: 24px 18px 16px;
-  overflow: visible;
+  min-height: 0;
+  padding: 24px 18px 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .services__container {
   max-width: 1520px;
   margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 8px;
 }
 
 
@@ -1443,44 +1472,185 @@ body {
 
 .call-button {
   position: relative;
-  width: min(420px, calc(100% - 180px));
-  min-height: 91px;
-  padding: 0 36px;
-  margin: 24px auto 32px;
-  background: #D62828;
+  flex-shrink: 0;
+  width: min(480px, calc(100% - 32px));
+  min-height: 76px;
+  padding: 0 24px;
+  margin: 14px auto 18px;
+  background: linear-gradient(120deg, #D62828 0%, #9b1818 100%);
   color: white;
   border: none;
-  border-radius: 9px;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 14px;
   cursor: pointer;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 8px 28px rgba(214, 40, 40, 0.45), 0 2px 6px rgba(0,0,0,0.12);
+  overflow: visible;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .call-button:hover {
-  transform: scale(1.02);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(214, 40, 40, 0.55), 0 4px 10px rgba(0,0,0,0.15);
 }
 
 .call-button:active {
   transform: scale(0.98);
 }
 
+.call-button__pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 26px;
+  border: 2px solid rgba(214, 40, 40, 0.45);
+  animation: pulse-ring 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-ring {
+  0%   { opacity: 1;   transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.07); }
+}
+
+.call-button__icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.call-button__icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.call-button__label {
+  font-size: clamp(14px, 1.8vw, 16px);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.call-button__badge {
+  background: #ffffff;
+  color: #D62828;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
 .services-screen {
-  margin: 50px;
-  padding: 32px;
+  margin: 18px 24px;
+  padding: 28px 32px;
   background: #f5f6f8;
   border-radius: 28px;
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+}
+
+.services-screen__title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111111;
+  flex: 1;
+}
+
+.services-screen__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #888888;
+  font-size: 15px;
+  padding: 60px 0;
+}
+
+.services-screen__empty-icon {
+  font-size: 48px;
+}
+
+.services-screen__status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: #e8e8e8;
+  color: #555555;
+}
+
+.status--concluido {
+  background: #d4edda;
+  color: #1a7a3a;
+}
+
+.status--pendente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status--cancelado {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.status--andamento {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.services-screen__category {
+  display: block;
+  font-size: 12px;
+  color: #D62828;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.services-screen__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.services-screen__desc {
+  font-size: 13px;
+  color: #7f7f7f;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.services-screen__distance {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333333;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .services-screen__container {
@@ -1493,7 +1663,7 @@ body {
 
 .services-screen__header-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 16px;
   margin-bottom: 20px;
@@ -1663,25 +1833,13 @@ body {
 }
 
 @media (max-width: 1024px) {
-  .main-content {
-    overflow: hidden;
-  }
-
-  .services {
-    overflow: hidden;
-  }
-
   .services__container {
-    max-height: calc(100vh - 300px);
-    overflow-y: auto;
-    overflow-x: hidden;
     padding-right: 4px;
     -webkit-overflow-scrolling: touch;
   }
 
   .services__grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    justify-content: center;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .header__search-wrapper {
@@ -1702,17 +1860,6 @@ body {
   }
 }
 
-@media (max-width: 768px) {
-  .services__container {
-    max-height: calc(100vh - 280px);
-  }
-}
-
-@media (max-width: 480px) {
-  .services__container {
-    max-height: calc(100vh - 260px);
-  }
-}
 
 @media (max-width: 768px) {
   .sidebar {
@@ -1743,11 +1890,11 @@ body {
   }
 
   .header__logo {
-    max-height: 140px;
+    height: 48px;
   }
 
   .services {
-    padding: 20px 16px 200px;
+    padding: 20px 16px 0;
   }
 
   .services__grid {
@@ -1840,7 +1987,7 @@ body {
   }
 
   .services {
-    padding: 16px 12px 180px;
+    padding: 16px 12px 0;
   }
 
   .services__grid {

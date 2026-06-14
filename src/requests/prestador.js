@@ -1,5 +1,7 @@
+import { buildUrl } from './api';
+
 export async function inserirPrestador(prestador) {
-    const url = "http://localhost:8080/v1/drivez/prestador";
+    const url = buildUrl('/prestador');
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -11,19 +13,19 @@ export async function inserirPrestador(prestador) {
 }
 
 export async function prestadoresGuincho() {
-    const url = "http://localhost:8080/v1/drivez/prestador/categoria/guincho";
+    const url = buildUrl('/prestador/categoria/guincho');
     const response = await fetch(url, {
         method: "GET",
     });
 
-    const dados = await response.json(); 
-    console.log("Dados reais da API de emergência:", dados); 
-    
+    const dados = await response.json();
+    console.log("Dados reais da API de emergência:", dados);
+
     return dados;
 }
 
 export async function buscarPrestadorPorId(id) {
-    const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
+    const url = buildUrl(`/prestador/${id}`);
     const response = await fetch(url, {
         method: "GET",
     });
@@ -31,7 +33,7 @@ export async function buscarPrestadorPorId(id) {
 }
 
 export async function buscarEnderecosPrestador(id) {
-    const url = `http://localhost:8080/v1/drivez/prestador-endereco/prestador/${id}`;
+    const url = buildUrl(`/prestador-endereco/prestador/${id}`);
     const response = await fetch(url, {
         method: "GET",
     });
@@ -39,7 +41,7 @@ export async function buscarEnderecosPrestador(id) {
 }
 
 export async function atualizarPrestador(id, prestador) {
-    const url = `http://localhost:8080/v1/drivez/prestador/${id}`;
+    const url = buildUrl(`/prestador/${id}`);
     const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -52,7 +54,7 @@ export async function atualizarPrestador(id, prestador) {
 }
 
 export async function buscarAvaliacaoPrestador(id) {
-    const url = `http://localhost:8080/v1/drivez/avaliacoes/mediaPrestador/${id}`;
+    const url = buildUrl(`/avaliacoes/mediaPrestador/${id}`);
     const response = await fetch(url, {
         method: "GET",
     });
@@ -60,7 +62,7 @@ export async function buscarAvaliacaoPrestador(id) {
 }
 
 export async function alterarSenhaPrestador(id, senhaAtual, novaSenha) {
-    const url = `http://localhost:8080/v1/drivez/prestador/${id}/alterarsenha`;
+    const url = buildUrl(`/prestador/${id}/alterarsenha`);
     const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -75,7 +77,7 @@ export async function alterarSenhaPrestador(id, senhaAtual, novaSenha) {
 }
 
 export async function listarPrestadores() {
-    const url = "http://localhost:8080/v1/drivez/prestador";
+    const url = buildUrl('/prestador');
     const response = await fetch(url, {
         method: "GET",
     });

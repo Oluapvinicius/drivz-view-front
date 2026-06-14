@@ -2,6 +2,56 @@ import { userStorage } from '@/utils/userStorage';
 import ordersData from '../data/orders.json';
 import { buildUrl } from './api';
 
+export async function buscarPedidosPrestador() {
+  try {
+    const prestadorId = userStorage.getUserId();
+
+    if (!prestadorId) {
+      console.warn('[pedidos.js] prestadorId não encontrado');
+      return [];
+    }
+
+    const url = buildUrl(`/pedido/prestador/${prestadorId}`);
+    console.log('[pedidos.js] Buscando pedidos do prestador:', url);
+
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = await response.json();
+
+      let pedidosRaw = [];
+      if (Array.isArray(data)) pedidosRaw = data;
+      else if (data?.response && Array.isArray(data.response)) pedidosRaw = data.response;
+      else if (data?.HEADER && Array.isArray(data.HEADER.response)) pedidosRaw = data.HEADER.response;
+
+      if (pedidosRaw.length > 0) {
+        return pedidosRaw.map(item => ({
+          id: item.id_pedido || item.id,
+          clientName: item.nome_cliente || item.cliente_nome || item.nomeCliente || 'Cliente',
+          clientAvatar: item.foto_cliente || item.avatar_cliente || item.foto || '',
+          email_cliente: item.email_cliente || item.email || '',
+          categoria: item.categoria || '',
+          date: item.data_solicitacao || item.data_pedido || item.data || new Date().toLocaleDateString('pt-BR'),
+          origin: item.endereco_origem || item.origem || 'Local não informado',
+          destination: item.endereco_destino || item.destino || 'Local não informado',
+          status: item.status_pedido || item.status || 'Concluído',
+          descricao: item.descricao || '',
+          distancia_km: item.distancia_km || 0
+        }));
+      }
+    } catch (fetchError) {
+      console.warn('[pedidos.js] Erro ao buscar pedidos do prestador:', fetchError.message);
+    }
+
+    return [];
+  } catch (error) {
+    console.error('[pedidos.js] Erro geral ao buscar pedidos do prestador:', error);
+    return [];
+  }
+}
+
 export async function buscarPedidos() {
   try {
     const clienteId = userStorage.getClienteId();
